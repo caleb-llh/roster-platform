@@ -180,7 +180,7 @@ describe('no-clash descriptor', () => {
 
   it('flags a member already in an overlapping event', () => {
     const v = rule.check({ memberId: 'm1', role: 'cam', event: target }, ctx([otherSameDay]), CONSTRAINT_MODES.WOULD_PLACE)
-    expect(v).toEqual({ code: 'clash', params: { memberId: 'm1', date: '2026-04-01', otherDate: '2026-04-01' } })
+    expect(v).toEqual({ code: 'clash', params: { memberId: 'm1', date: '2026-04-01', otherDate: '2026-04-01', external: false } })
   })
 
   it('ignores overlapping events the member is not in', () => {

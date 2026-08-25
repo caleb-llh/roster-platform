@@ -30,6 +30,15 @@ export const CONSTRAINT_KEYS = {
   ONLY_ONCE_PER_WEEK: 'ONLY_ONCE_PER_WEEK',
   MAX_ASSIGNMENTS_PER_MONTH: 'MAX_ASSIGNMENTS_PER_MONTH',
   ENFORCE_UNDERSTUDY_BEFORE_ROLE: 'ENFORCE_UNDERSTUDY_BEFORE_ROLE',
+  // Cross-team (multi-tenant Phase 2). Both OFF by default so single-team
+  // rosters are byte-for-byte unaffected — they only ever consult the
+  // read-only externalAssignments snapshot when explicitly enabled, and that
+  // snapshot is empty in single-team mode. See specs/multi-tenant.md.
+  ENFORCE_CROSS_TEAM_CAPS: 'ENFORCE_CROSS_TEAM_CAPS',
+  // Hard, BLOCKING rule (not a warning): a member cannot be scheduled on two
+  // teams for overlapping events. Named ENFORCE_* to match its enforcement
+  // class (feasibility), alongside ENFORCE_NO_CLASH.
+  ENFORCE_CROSS_TEAM_CLASH: 'ENFORCE_CROSS_TEAM_CLASH',
 }
 
 // Coercion functions per constraint value. Return the coerced value, or null
@@ -48,6 +57,8 @@ const constraintCoercers = {
   [CONSTRAINT_KEYS.ONLY_ONCE_PER_WEEK]: coerceBoolean,
   [CONSTRAINT_KEYS.MAX_ASSIGNMENTS_PER_MONTH]: coerceNonNegativeInt,
   [CONSTRAINT_KEYS.ENFORCE_UNDERSTUDY_BEFORE_ROLE]: coerceBoolean,
+  [CONSTRAINT_KEYS.ENFORCE_CROSS_TEAM_CAPS]: coerceBoolean,
+  [CONSTRAINT_KEYS.ENFORCE_CROSS_TEAM_CLASH]: coerceBoolean,
 }
 
 export const CONSTRAINT_METADATA = {
@@ -91,6 +102,18 @@ export const CONSTRAINT_METADATA = {
     label: 'Understudy Before Role',
     description: 'A member training for a role must be scheduled as its understudy before performing it',
     userFriendly: 'Trainees must understudy a role before performing it',
+    type: 'boolean',
+  },
+  [CONSTRAINT_KEYS.ENFORCE_CROSS_TEAM_CAPS]: {
+    label: 'Cross-Team Load Caps',
+    description: "Count a member's weekly/monthly assignments across ALL their teams when applying the once-per-week and max-per-month caps",
+    userFriendly: 'Weekly/monthly caps count a member’s shifts across all their teams',
+    type: 'boolean',
+  },
+  [CONSTRAINT_KEYS.ENFORCE_CROSS_TEAM_CLASH]: {
+    label: 'Cross-Team Clash',
+    description: 'A member cannot be scheduled on two teams for events whose times overlap',
+    userFriendly: 'A member can’t be double-booked across teams at the same time',
     type: 'boolean',
   },
 }

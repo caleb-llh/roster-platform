@@ -4,7 +4,10 @@
 
 import { 
   isAssignedToEvent,
-  eventsClash
+  eventsClash,
+  externalEventsFor,
+  externalWeeklyCount,
+  externalMonthlyCount
 } from '../constraintPrimitives'
 import { CONSTRAINT_KEYS, isConstraintEnabled } from '../../schema/rosterSchema'
 import { understudySlotRole, isRoleCapable } from '../understudy'
@@ -22,13 +25,12 @@ export class EligibilityChecker {
     // reflects the current assignments. Empty by default (some call sites build
     // a checker without events, e.g. stats — the clash rule then finds nothing).
     this.events = options.events || []
-    // Cross-team seam (multi-tenant Phase 0): a read-only snapshot of the
+    // Cross-team primitive (multi-tenant): a read-only snapshot of the
     // member's assignments in OTHER teams (`{ memberId: [dateOrDatetime, ...] }`).
-    // The single cross-team primitive — any load/cap count is derived from it,
-    // the same way the tracker derives counters from local assignments.
-    // Consulted only once the cross-team cap/clash constraints exist; empty by
-    // default so single-team eligibility is unchanged. See
-    // specs/multi-tenant.md (Compatibility seam).
+    // Any load/cap count is derived from it, the same way the tracker derives
+    // counters from local assignments. Folded into the ctx counting methods when
+    // ENFORCE_CROSS_TEAM_CAPS / ENFORCE_CROSS_TEAM_CLASH are on; empty by default
+    // so single-team eligibility is unchanged. See specs/multi-tenant.md.
     this.externalAssignments = options.externalAssignments || {}
   }
   
@@ -68,7 +70,13 @@ export class EligibilityChecker {
       getConstraint('once-per-week'),
       getConstraint('max-per-month'),
     ]) {
-      if (!constraint.enabled(this)) continue
+      // no-clash runs when EITHER the local rule OR cross-team clash is on;
+      // its own `enabled` reads only ENFORCE_NO_CLASH, so OR in the cross-team
+      // flag here. overlappingEvents() folds local/external per which is on.
+      const forceRun =
+        constraint.key === 'no-clash' &&
+        isConstraintEnabled(this.rosterConstraints, CONSTRAINT_KEYS.ENFORCE_CROSS_TEAM_CLASH)
+      if (!forceRun && !constraint.enabled(this)) continue
       const violation = constraint.check({ memberId, role, event }, this, CONSTRAINT_MODES.WOULD_PLACE)
       if (violation) {
         return { eligible: false, reason: this._reasonFor(violation) }
@@ -83,19 +91,37 @@ export class EligibilityChecker {
     return (this._currentRoster || []).filter(s => s.member_id)
   }
   weeklyCount(memberId, date) {
-    return this.tracker.getWeeklyAssignmentCount(memberId, date)
+    const local = this.tracker.getWeeklyAssignmentCount(memberId, date)
+    if (!isConstraintEnabled(this.rosterConstraints, CONSTRAINT_KEYS.ENFORCE_CROSS_TEAM_CAPS)) return local
+    // Cross-team caps: load is person-global — add the member's external
+    // in-week assignments (derived from the snapshot, never a stored count).
+    return local + externalWeeklyCount(memberId, date, this.externalAssignments)
   }
   monthlyCount(memberId, date) {
-    return this.tracker.getMonthlyAssignmentCount(memberId, date)
+    const local = this.tracker.getMonthlyAssignmentCount(memberId, date)
+    if (!isConstraintEnabled(this.rosterConstraints, CONSTRAINT_KEYS.ENFORCE_CROSS_TEAM_CAPS)) return local
+    return local + externalMonthlyCount(memberId, date, this.externalAssignments)
   }
   priorUnderstudySessions(memberId, baseRole, date) {
     return this.tracker.getRoleCountBefore(memberId, understudySlotRole(baseRole), date)
   }
-  // OTHER events whose time span overlaps the placement's event. Scans the live
-  // events reference (excluding the same event object) so the clash constraint
-  // sees current assignments. Same-event duplicates are once-per-event's job.
+  // OTHER events whose time span overlaps the placement's event. Local events
+  // are scanned when ENFORCE_NO_CLASH is on; the member's external (other-team)
+  // assignments are folded in when ENFORCE_CROSS_TEAM_CLASH is on. Either source
+  // may be active independently. Same-event duplicates are once-per-event's job.
   overlappingEvents(placement) {
-    return this.events.filter(e => e !== placement.event && eventsClash(e, placement.event))
+    const out = []
+    if (isConstraintEnabled(this.rosterConstraints, CONSTRAINT_KEYS.ENFORCE_NO_CLASH)) {
+      for (const e of this.events) {
+        if (e !== placement.event && eventsClash(e, placement.event)) out.push(e)
+      }
+    }
+    if (isConstraintEnabled(this.rosterConstraints, CONSTRAINT_KEYS.ENFORCE_CROSS_TEAM_CLASH)) {
+      for (const e of externalEventsFor(placement.memberId, this.externalAssignments)) {
+        if (eventsClash(e, placement.event)) out.push(e)
+      }
+    }
+    return out
   }
 
   // Generator-specific wording for each violation code (kept close to prior
@@ -105,7 +131,9 @@ export class EligibilityChecker {
     switch (code) {
       case 'unavailable': return 'Member unavailable on this date'
       case 'once-per-event': return 'Member already assigned to another role on this event'
-      case 'clash': return `Member already assigned to an overlapping event (${violation.params.otherDate})`
+      case 'clash': return params.external
+        ? `Member rostered on another team on an overlapping event (${params.otherDate})`
+        : `Member already assigned to an overlapping event (${params.otherDate})`
       case 'once-per-week': return 'Member already assigned this week'
       case 'max-per-month': return `Member has reached max assignments this month (${params.cap})`
       case 'understudy-before-role':

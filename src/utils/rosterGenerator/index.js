@@ -71,12 +71,12 @@ export function generateRoster(
   const {
     logging = true,
     optimizeExisting = false,
-    // Cross-team seam (multi-tenant Phase 0): a read-only snapshot of the
-    // member's assignments in OTHER teams' rosters, consulted only when the
+    // Cross-team primitive (multi-tenant): a read-only snapshot of the
+    // member's assignments in OTHER teams' rosters, consulted when the
     // cross-team constraints are enabled. Any "load" count is derived from this
     // (the same rollup the tracker uses locally), so it is the single primitive.
     // Default empty → single-team behaviour is byte-for-byte identical.
-    // See specs/multi-tenant.md (Compatibility seam).
+    // See specs/multi-tenant.md.
     externalAssignments = {},
   } = options
   const logger = new ActionLogger(logging)

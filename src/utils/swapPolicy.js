@@ -1,6 +1,6 @@
 import { canFillSlotRole, isUnderstudyRole, isPromotedForRole } from './understudy'
 import { getConstraint, CONSTRAINT_MODES, formatViolation } from './constraints'
-import { eventsClash } from './constraintPrimitives'
+import { eventsClash, externalEventsFor } from './constraintPrimitives'
 
 /**
  * Validate a proposed swap/move between two roster slots, returning both
@@ -33,7 +33,7 @@ import { eventsClash } from './constraintPrimitives'
  */
 export const explainSwap = ({
   memberA, memberB, eventA, eventB, sourceIndex, targetIndex,
-  slotA, slotB, members, memberConstraints, allEvents,
+  slotA, slotB, members, memberConstraints, allEvents, externalAssignments = {},
 }) => {
   const memberById = (id) => members.find(m => m.id === id)
   const nameOf = (id) => memberById(id)?.name || id || 'someone'
@@ -72,17 +72,28 @@ export const explainSwap = ({
     // span overlaps the destination — ignoring the event they are vacating.
     // Enforced always-on (like availability): being in two overlapping events at
     // once is physically impossible, not a toggleable cadence policy, and swap
-    // isn't handed the rosterConstraints flags anyway.
+    // isn't handed the rosterConstraints flags anyway. The member's assignments
+    // on OTHER teams (externalAssignments — empty in single-team mode) fold into
+    // the same scan, so a manual move can't double-book a person across teams.
     const clash = noClash.check(
       { memberId, role: slot.role, event },
       {
-        overlappingEvents: (placement) => events.filter(
-          e => e !== placement.event && e !== fromEvent && eventsClash(e, placement.event)
-        ),
+        overlappingEvents: (placement) => [
+          ...events.filter(
+            e => e !== placement.event && e !== fromEvent && eventsClash(e, placement.event)
+          ),
+          ...externalEventsFor(placement.memberId, externalAssignments).filter(
+            e => eventsClash(e, placement.event)
+          ),
+        ],
       },
       CONSTRAINT_MODES.WOULD_PLACE
     )
-    if (clash) return `${nameOf(memberId)} is already rostered on an overlapping event (${clash.params.otherDate}).`
+    if (clash) {
+      return clash.params.external
+        ? `${nameOf(memberId)} is rostered on another team on an overlapping event (${clash.params.otherDate}).`
+        : `${nameOf(memberId)} is already rostered on an overlapping event (${clash.params.otherDate}).`
+    }
 
     return null
   }

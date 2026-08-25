@@ -783,11 +783,11 @@ describe('Roster Generator', () => {
     })
   })
 
-  // Multi-tenant Phase 0 seam: the engine accepts an optional cross-team
-  // snapshot (externalAssignments) that defaults to no-op. Passing an empty one
-  // must produce byte-for-byte identical output to omitting it entirely, so
-  // single-team generation is provably unchanged.
-  describe('cross-team seam (Phase 0 no-op)', () => {
+  // Cross-team primitive (multi-tenant): the engine accepts an optional
+  // cross-team snapshot (externalAssignments) that defaults to no-op. Passing an
+  // empty one must produce byte-for-byte identical output to omitting it
+  // entirely, so single-team generation is provably unchanged.
+  describe('cross-team seam (empty externalAssignments is a no-op)', () => {
     it('empty externalAssignments matches the default output', () => {
       const baseline = generateRoster(
         createTestEvents(),

@@ -299,3 +299,70 @@ export const getMembersWithMultipleRoles = (eventRoster) => {
     .filter(([_, roles]) => roles.length > 1)
     .map(([memberId, roles]) => ({ memberId, roles }))
 }
+
+// ============================================================================
+// Cross-team fold (multi-tenant Phase 2)
+//
+// `externalAssignments` is the single cross-team primitive — a read-only
+// snapshot of each member's assignments in OTHER teams' rosters, shaped
+// `{ memberId: [entry, ...] }`. An entry is one of:
+//   - a bare date string 'YYYY-MM-DD'            → whole-day interval
+//   - a datetime string 'YYYY-MM-DDTHH:mm'       → point/day depending on end
+//   - an object { date }                          → whole-day interval
+//   - an object { start, end }                    → explicit half-open interval
+// Every cross-team count/clash is DERIVED from this list by folding it through
+// the SAME primitives local assignments use (eventInterval/eventsClash, week/
+// month keys) — never a separate precomputed load, so it can't drift. All
+// helpers are no-ops on an empty/absent snapshot, keeping single-team identical.
+// ============================================================================
+
+/** Normalize one externalAssignments entry to an event-like `{ date?, start?, end? }`. */
+const externalEntryToEvent = (entry) => {
+  if (entry == null) return null
+  if (typeof entry === 'string') {
+    // A datetime keeps its time (eventInterval reads `start`); a bare date is a day.
+    return entry.includes('T') ? { start: entry } : { date: entry }
+  }
+  if (typeof entry === 'object') {
+    if (entry.start) return { start: entry.start, end: entry.end }
+    if (entry.date) return { date: entry.date }
+  }
+  return null
+}
+
+/**
+ * A member's external assignments as event-like objects (for clash checks).
+ * Each carries a one-slot `roster` naming the member so the shared `no-clash`
+ * descriptor — which asks `other.roster.some(s => s.member_id === …)` — matches
+ * unchanged; and a `_external: true` marker so consumers can word the message
+ * as a cross-team clash. `date` is set (falling back from an explicit start) so
+ * the descriptor's `params.otherDate` is always populated.
+ */
+export const externalEventsFor = (memberId, externalAssignments) => {
+  const entries = (externalAssignments && externalAssignments[memberId]) || []
+  return entries
+    .map(externalEntryToEvent)
+    .filter(Boolean)
+    .map(e => ({ ...e, date: e.date || e.start, _external: true, roster: [{ member_id: memberId }] }))
+}
+
+/** Count a member's external assignments falling in the SAME week as `date`. */
+export const externalWeeklyCount = (memberId, date, externalAssignments) => {
+  const target = getWeekKey(date)
+  if (!target) return 0
+  return externalEventsFor(memberId, externalAssignments).filter(e => {
+    const d = e.date || e.start
+    return d && getWeekKey(d) === target
+  }).length
+}
+
+/** Count a member's external assignments falling in the SAME month as `date`. */
+export const externalMonthlyCount = (memberId, date, externalAssignments) => {
+  const t = new Date(date)
+  const tm = t.getMonth()
+  const ty = t.getFullYear()
+  return externalEventsFor(memberId, externalAssignments).filter(e => {
+    const d = new Date(e.date || e.start)
+    return !Number.isNaN(d.getTime()) && d.getMonth() === tm && d.getFullYear() === ty
+  }).length
+}

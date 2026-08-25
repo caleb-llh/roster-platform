@@ -101,6 +101,23 @@ the counts **exclude** the pending placement (`count >= cap`); in `is-placed`
 mode they **include** it (`count > cap`) — same cap, one extra already-counted
 self.
 
+**Design Decision — cross-team load/clash folds *through* the counting seam, not
+around it.** The multi-tenant `externalAssignments` snapshot (a member's
+assignments on OTHER teams) is enforced by adding it *inside* the same `ctx`
+methods above: `weeklyCount`/`monthlyCount` add the external in-week/in-month
+count when `ENFORCE_CROSS_TEAM_CAPS` is on, and `overlappingEvents` folds in the
+member's external events when `ENFORCE_CROSS_TEAM_CLASH` is on. Because the fold is
+in the plumbing, the `no-clash`/`once-per-week`/`max-per-month` *descriptors* are
+untouched (the clash descriptor only gained a `params.external` flag so a
+consumer can word a cross-team clash distinctly). Both keys default **OFF** and
+the snapshot is empty in single-team mode, so single-team output is byte-for-byte
+identical. Two subtleties, owned in detail by
+[multi-tenant.md](multi-tenant.md#phased-delivery): cross-team **caps depend on
+the local cap** being enabled (they change *what counts*, not *whether the cap
+applies*); cross-team **clash BLOCKS during generation** (it is feasibility, not
+a soft cadence), so the generator OR-s `ENFORCE_CROSS_TEAM_CLASH` into the
+`no-clash` run condition even when `ENFORCE_NO_CLASH` is off.
+
 **Registry shape (ratified).** Each constraint is one descriptor in a
 `CONSTRAINTS` list (named to pair with `SCORERS`; "constraint" is already the
 domain word — `rosterConstraints`, `CONSTRAINT_KEYS`):

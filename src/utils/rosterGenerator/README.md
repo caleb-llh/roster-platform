@@ -110,14 +110,16 @@ Also exposes `canBePromotedTo(memberId, role, event)` — a lookahead probe
 (capability + availability + not-already-assigned; ignores the understudy gate)
 used by Phase 0 seeding to rank promotable trainees.
 
-> **Cross-team seam (multi-tenant Phase 0).** The constructor accepts an optional
-> `{ externalAssignments }` — a read-only snapshot of a member's assignments in
-> *other* teams' rosters (`{ memberId: [dateOrDatetime, ...] }`). It is the
-> **single** cross-team primitive: any load/cap figure is *derived* from it by the
-> same rollup the tracker applies to local assignments (no separate, drift-prone
-> "load" input). It defaults to empty and is **unused today** (single-team
-> behaviour is unchanged); it exists so the future cross-team cap/clash
-> constraints have a place to read from without reshaping the engine. See the
+> **Cross-team seam (multi-tenant Phase 2 — active).** The constructor accepts an
+> optional `{ externalAssignments }` — a read-only snapshot of a member's
+> assignments in *other* teams' rosters (`{ memberId: [dateOrDatetime, ...] }`).
+> It is the **single** cross-team primitive: any load/cap figure is *derived*
+> from it by the same rollup the tracker applies to local assignments (no
+> separate, drift-prone "load" input). It defaults to empty, so single-team
+> behaviour is byte-for-byte unchanged. When `ENFORCE_CROSS_TEAM_CAPS` /
+> `ENFORCE_CROSS_TEAM_CLASH` are enabled it is folded through the `ctx` counting
+> methods (`weeklyCount`/`monthlyCount`/`overlappingEvents`) so the constraint
+> descriptors are untouched. See the
 > [multi-tenant spec](../../../specs/multi-tenant.md).
 
 ### ScoringEngine

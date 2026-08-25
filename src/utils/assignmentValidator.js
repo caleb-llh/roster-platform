@@ -15,9 +15,12 @@ import {
   getWeekAssignments,
   countMonthlyAssignments,
   areConsecutiveWeekends,
-  eventsClash
+  eventsClash,
+  externalEventsFor,
+  externalWeeklyCount,
+  externalMonthlyCount
 } from './constraintPrimitives'
-import { PREFERENCE_KEYS, isPreferenceEnabled, MEMBER_PREF_FIELDS } from '../schema/rosterSchema'
+import { PREFERENCE_KEYS, isPreferenceEnabled, MEMBER_PREF_FIELDS, CONSTRAINT_KEYS, isConstraintEnabled } from '../schema/rosterSchema'
 import { countUnderstudySessionsBefore } from './understudy'
 import { getConstraint, CONSTRAINT_MODES } from './constraints'
 
@@ -119,24 +122,46 @@ const checkRosterPeriodViolation = (event, rosterPeriod) => {
  * offending events (clashing dates, month totals) for a richer message. See the
  * "one authority, three consumers" decision in specs/generation.md.
  */
-const checkRosterConstraints = (event, allEvents, rosterConstraints, members) => {
+const checkRosterConstraints = (event, allEvents, rosterConstraints, members, externalAssignments = {}) => {
   const errors = []
   
   if (!event.roster || !rosterConstraints) return errors
 
+  const crossCaps = isConstraintEnabled(rosterConstraints, CONSTRAINT_KEYS.ENFORCE_CROSS_TEAM_CAPS)
+  const crossClash = isConstraintEnabled(rosterConstraints, CONSTRAINT_KEYS.ENFORCE_CROSS_TEAM_CLASH)
+  const localClash = isConstraintEnabled(rosterConstraints, CONSTRAINT_KEYS.ENFORCE_NO_CLASH)
+
   // ctx for registry decisions: counts come from whole-roster scans of allEvents
   // (the validator has no stateful tracker). currentRoster excludes the
   // assignment under test so once-per-event asks "is this member in ANOTHER
-  // slot?" — matching the generator's would-place semantics.
+  // slot?" — matching the generator's would-place semantics. When the cross-team
+  // flags are on, counts/overlaps fold in the person-global externalAssignments,
+  // exactly as the generator's ctx does — same rule, different plumbing.
   const makeCtx = (excludeRole) => ({
     rosterConstraints,
     members,
     currentRoster: () => event.roster.filter(r => r.member_id && r.role !== excludeRole),
-    weeklyCount: (memberId, date) => getWeekAssignments(memberId, date, allEvents).length,
-    monthlyCount: (memberId, date) => countMonthlyAssignments(memberId, date, allEvents),
-    // OTHER events whose time span overlaps this one (excludes it by identity).
-    overlappingEvents: (placement) =>
-      allEvents.filter(e => e !== placement.event && eventsClash(e, placement.event)),
+    weeklyCount: (memberId, date) =>
+      getWeekAssignments(memberId, date, allEvents).length +
+      (crossCaps ? externalWeeklyCount(memberId, date, externalAssignments) : 0),
+    monthlyCount: (memberId, date) =>
+      countMonthlyAssignments(memberId, date, allEvents) +
+      (crossCaps ? externalMonthlyCount(memberId, date, externalAssignments) : 0),
+    // OTHER events whose time span overlaps this one. Local events (excluding
+    // this one by identity) count when ENFORCE_NO_CLASH is on; the member's
+    // external assignments count when ENFORCE_CROSS_TEAM_CLASH is on.
+    overlappingEvents: (placement) => {
+      const out = []
+      if (localClash) {
+        for (const e of allEvents) if (e !== placement.event && eventsClash(e, placement.event)) out.push(e)
+      }
+      if (crossClash) {
+        for (const e of externalEventsFor(placement.memberId, externalAssignments)) {
+          if (eventsClash(e, placement.event)) out.push(e)
+        }
+      }
+      return out
+    },
   })
 
   const oncePerEvent = getConstraint('once-per-event')
@@ -158,20 +183,29 @@ const checkRosterConstraints = (event, allEvents, rosterConstraints, members) =>
     .filter(r => r.member_id)
     .map(r => r.member_id)
 
-  // ENFORCE_NO_CLASH — registry decides (member in an overlapping OTHER event);
-  // the validator names the clashing event's date so the message is actionable.
-  if (noClash.enabled(makeCtx())) {
+  // ENFORCE_NO_CLASH / ENFORCE_CROSS_TEAM_CLASH — registry decides (member in an
+  // overlapping OTHER event); the validator names the clashing event's date, and
+  // labels a cross-team clash so the message distinguishes the two.
+  if (localClash || crossClash) {
     const ctx = makeCtx()
     assignedMemberIds.forEach(memberId => {
       const violation = noClash.check({ memberId, role: null, event }, ctx, CONSTRAINT_MODES.IS_PLACED)
       if (!violation) return
       const member = members.find(m => m.id === memberId)
-      errors.push(`${member?.name || memberId} is also rostered on ${violation.params.otherDate}, which overlaps this event`)
+      const isExternal = violation.params.external
+      errors.push(
+        isExternal
+          ? `${member?.name || memberId} is rostered on another team on ${violation.params.otherDate}, which overlaps this event`
+          : `${member?.name || memberId} is also rostered on ${violation.params.otherDate}, which overlaps this event`
+      )
     })
   }
   
   // ONLY_ONCE_PER_WEEK — registry decides (IS_PLACED: count-in-week > 1); the
-  // validator enumerates the other in-week events for the message.
+  // validator enumerates the other in-week events for the message. When the
+  // overage is entirely cross-team (no OTHER local in-week event), the registry
+  // still flags it (weeklyCount folds external load); surface that as a
+  // cross-team message rather than dropping the error silently.
   if (oncePerWeek.enabled(makeCtx())) {
     const ctx = makeCtx()
     assignedMemberIds.forEach(memberId => {
@@ -180,9 +214,13 @@ const checkRosterConstraints = (event, allEvents, rosterConstraints, members) =>
       const weekAssignments = getWeekAssignments(memberId, event.date, allEvents)
       const otherWeekEvents = weekAssignments.filter(e => e.date !== event.date)
       const member = members.find(m => m.id === memberId)
-      otherWeekEvents.forEach(weekEvent => {
-        errors.push(`${member?.name || memberId} is already rostered on ${weekEvent.date} (${weekEvent.day_of_week}) this week`)
-      })
+      if (otherWeekEvents.length) {
+        otherWeekEvents.forEach(weekEvent => {
+          errors.push(`${member?.name || memberId} is already rostered on ${weekEvent.date} (${weekEvent.day_of_week}) this week`)
+        })
+      } else if (crossCaps) {
+        errors.push(`${member?.name || memberId} is already rostered on another team this week`)
+      }
     })
   }
   
@@ -267,7 +305,7 @@ const checkMemberPreferences = (event, memberPreferences, members) => {
 /**
  * Validate all events
  */
-export const validateEventAssignments = (events, members, memberConstraints, memberPreferences, rosterConstraints, rosterPreferences, rosterPeriod) => {
+export const validateEventAssignments = (events, members, memberConstraints, memberPreferences, rosterConstraints, rosterPreferences, rosterPeriod, externalAssignments = {}) => {
   const validationResults = {}
   
   events.forEach((event, index) => {
@@ -276,7 +314,7 @@ export const validateEventAssignments = (events, members, memberConstraints, mem
     const errors = [
       ...checkRosterPeriodViolation(event, rosterPeriod),
       ...checkUnavailabilityViolation(event, memberConstraints, members),
-      ...checkRosterConstraints(event, events, rosterConstraints, members),
+      ...checkRosterConstraints(event, events, rosterConstraints, members, externalAssignments),
       ...checkUnderstudyBeforeRole(event, events, rosterConstraints, members)
     ]
     

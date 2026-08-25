@@ -117,7 +117,14 @@ export const CONSTRAINTS = [
         if (other.roster?.some(s => s.member_id === placement.memberId)) {
           return {
             code: 'clash',
-            params: { memberId: placement.memberId, date: placement.event.date, otherDate: other.date },
+            params: {
+              memberId: placement.memberId,
+              date: placement.event.date,
+              otherDate: other.date,
+              // A synthetic other-team event is marked _external so consumers can
+              // word it as a cross-team clash. Local overlaps leave this falsy.
+              external: !!other._external,
+            },
           }
         }
       }
