@@ -42,7 +42,7 @@ const MonthCalendar = ({ year, month, unavailable }) => {
   )
 }
 
-export const MemberCard = ({ member, roleColorMap, memberConstraints, memberPreferences }) => {
+export const MemberCard = ({ member, roleColorMap, memberConstraints, memberPreferences, activeTeamName, otherTeams = [] }) => {
   const [showUnavailability, setShowUnavailability] = useState(false)
   const [showPreferences, setShowPreferences] = useState(false)
   
@@ -75,6 +75,16 @@ export const MemberCard = ({ member, roleColorMap, memberConstraints, memberPref
       {member.telegram && (
         <div className="text-xs text-gray-400 mb-3">{member.telegram}</div>
       )}
+      {/* Multi-tenant: divider + label marking the transition from tenant-level
+          IDENTITY (name/telegram/global unavailability above) to this team's
+          CAPABILITY (roles/understudy below). Only shown in a tenant context
+          (activeTeamName present); flat/single-team cards look unchanged. */}
+      {activeTeamName && (
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">on {activeTeamName}</span>
+          <span className="h-px flex-1 bg-gray-200" />
+        </div>
+      )}
       <div className="flex flex-wrap gap-1.5 mb-3">
         {member.roles?.map((role, i) => (
           <span key={i} className={`px-1.5 py-0.5 rounded border border-gray-200/70 bg-white/30 text-xs font-medium ${roleColorMap[role] || 'text-gray-700'}`}>
@@ -91,6 +101,12 @@ export const MemberCard = ({ member, roleColorMap, memberConstraints, memberPref
           </span>
         ))}
       </div>
+      {/* Cross-team visibility — only for members who also serve on OTHER teams. */}
+      {otherTeams.length > 0 && (
+        <div className="text-xs text-gray-400 mb-3">
+          Also on: <span className="text-gray-500">{otherTeams.join(', ')}</span>
+        </div>
+      )}
       {constraintNote && (
         <div className="text-xs text-gray-600 bg-gray-100/70 px-2 py-1.5 rounded border border-gray-200/60 mb-3">
           {constraintNote}
@@ -111,7 +127,7 @@ export const MemberCard = ({ member, roleColorMap, memberConstraints, memberPref
               disabled={!hasUnavailability}
               className={`flex items-center gap-1 w-full text-left ${tierSection} ${hasUnavailability ? 'hover:text-gray-700' : 'cursor-default'}`}
             >
-              {hasUnavailability ? (showUnavailability ? '▼' : '▶') : <span className="opacity-0">▶</span>} Unavailable{' '}
+              {hasUnavailability ? (showUnavailability ? '▼' : '▶') : <span className="opacity-0">▶</span>} {activeTeamName ? 'Unavailable (global)' : 'Unavailable'}{' '}
               <span className="text-gray-400 font-normal normal-case tracking-normal">
                 {hasUnavailability ? `(${unavailableDays.size} day${unavailableDays.size !== 1 ? 's' : ''})` : '(none)'}
               </span>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getDerivedState, resolveDerivedState } from './derivedState'
+import { getDerivedState, resolveDerivedState, isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEvents } from './derivedState'
 import { CONSTRAINT_KEYS, PREFERENCE_KEYS } from '../schema/rosterSchema'
 import { DEFAULT_ROSTER_CONSTRAINTS, DEFAULT_ROSTER_PREFERENCES } from '../config/rosterDefaults'
 
@@ -467,6 +467,188 @@ describe('derivedState', () => {
       expect(resolved.members).toEqual([])
       expect(resolved.events).toEqual([])
       expect(resolved.externalAssignments).toEqual({})
+    })
+  })
+
+  // Multi-tenant Phase 1: nested tenant shape resolves to today's FLAT document
+  // (see specs/multi-tenant.md "Phase 1 contract"). The acceptance test is that
+  // flat input is untouched and the resolved flat doc feeds getDerivedState to
+  // the SAME normalized shape.
+  describe('nested tenant resolver (Phase 1)', () => {
+    const tenant = {
+      tenant: { name: 'Grace' },
+      members: [
+        {
+          id: 'm-alice', name: 'Alice', telegram: '@alice',
+          unavailable_dates: ['2026-02-14', { start: '2026-03-05', end: '2026-03-10' }],
+          note: 'No Sundays',
+        },
+        { id: 'm-bob', name: 'Bob', telegram: '@bob' },
+      ],
+      teams: [
+        {
+          name: 'Worship',
+          roles: [{ name: 'lead' }, { name: 'support' }],
+          team_members: [
+            { member_id: 'm-alice', include: true, roles: [{ name: 'lead' }, { name: 'support' }] },
+            { member_id: 'm-bob', include: true, roles: [{ name: 'support' }, { name: 'lead', understudy: true }] },
+          ],
+          rosters: [
+            {
+              roster: { start_date: '2026-02-01', end_date: '2026-03-31' },
+              events: [{ date: '2026-02-07', roster: [{ role: 'lead', member_id: '' }] }],
+              roster_constraints: { MAX_ASSIGNMENTS_PER_MONTH: 3 },
+            },
+            {
+              roster: { start_date: '2026-04-01', end_date: '2026-05-31' },
+              events: [{ date: '2026-04-04', roster: [{ role: 'lead', member_id: '' }] }],
+              // This period, Bob is not active (e.g. on sabbatical).
+              member_overrides: [{ member_id: 'm-bob', include: false }],
+            },
+          ],
+        },
+        {
+          name: 'Hospitality',
+          roles: [{ name: 'host' }],
+          team_members: [
+            { member_id: 'm-alice', include: true, roles: [{ name: 'host' }] },
+          ],
+          rosters: [{ roster: { start_date: '2026-02-01', end_date: '2026-03-31' }, events: [] }],
+        },
+      ],
+    }
+
+    it('detects nested vs. flat shape', () => {
+      expect(isTenantShape(tenant)).toBe(true)
+      expect(isTenantShape({ members: [], events: [] })).toBe(false)
+      expect(isTenantShape(null)).toBe(false)
+    })
+
+    it('enumerates teams and their rosters with stable ids', () => {
+      const sel = tenantSelection(tenant)
+      expect(sel.teams.map(t => t.name)).toEqual(['Worship', 'Hospitality'])
+      expect(sel.teams[0].id).toBe('team-0')
+      expect(sel.teams[0].rosters.map(r => r.id)).toEqual(['roster-0', 'roster-1'])
+      expect(sel.teams[1].id).toBe('team-1')
+    })
+
+    it('flat documents resolve to one default team + roster', () => {
+      const flat = { members: [{ id: 'a', name: 'A' }], events: [] }
+      // isTenantShape false → resolveTenant returns input untouched.
+      expect(resolveTenant(flat, {})).toBe(flat)
+      const sel = tenantSelection(flat)
+      expect(sel.teams).toHaveLength(1)
+      expect(sel.teams[0].rosters).toHaveLength(1)
+    })
+
+    it('joins registry + team_members into the flat member shape', () => {
+      const flat = resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' })
+      const state = getDerivedState(flat)
+      expect(state.members.map(m => m.id)).toEqual(['m-alice', 'm-bob'])
+      // Per-team roles; understudy normalization applies downstream.
+      expect(state.members.find(m => m.id === 'm-alice').roles).toEqual(['lead', 'support'])
+      const bob = state.members.find(m => m.id === 'm-bob')
+      expect(bob.roles).toEqual(['support'])
+      expect(bob.understudyFor).toEqual(['lead'])
+      expect(state.roles).toEqual(['lead', 'support'])
+      expect(state.events).toHaveLength(1)
+      expect(state.rosterConstraints.MAX_ASSIGNMENTS_PER_MONTH).toBe(3)
+    })
+
+    it('resolves the SAME member to different per-team roles', () => {
+      const worship = getDerivedState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
+      const hospitality = getDerivedState(resolveTenant(tenant, { teamId: 'team-1', rosterId: 'roster-0' }))
+      expect(worship.members.find(m => m.id === 'm-alice').roles).toEqual(['lead', 'support'])
+      expect(hospitality.members.find(m => m.id === 'm-alice').roles).toEqual(['host'])
+      // Bob is not on Hospitality.
+      expect(hospitality.members.map(m => m.id)).toEqual(['m-alice'])
+    })
+
+    it('surfaces global unavailability as member_constraints for the team', () => {
+      const state = getDerivedState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
+      const alice = state.memberConstraints.find(c => c.member_id === 'm-alice')
+      expect(alice.unavailable_dates).toEqual(['2026-02-14', { start: '2026-03-05', end: '2026-03-10' }])
+      // The registry member's free-text note travels with the constraint.
+      expect(alice.note).toBe('No Sundays')
+      // Bob has none → no constraint row.
+      expect(state.memberConstraints.find(c => c.member_id === 'm-bob')).toBeUndefined()
+      // Global unavailability follows the member across teams.
+      const hosp = getDerivedState(resolveTenant(tenant, { teamId: 'team-1', rosterId: 'roster-0' }))
+      expect(hosp.memberConstraints.find(c => c.member_id === 'm-alice').unavailable_dates).toHaveLength(2)
+    })
+
+    it('selects a specific roster within a team', () => {
+      const r1 = getDerivedState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-1' }))
+      expect(r1.rosterPeriod.start_date).toBe('2026-04-01')
+      expect(r1.events[0].date).toBe('2026-04-04')
+    })
+
+    it('applies a roster member_override for include over the team default', () => {
+      // Team default: Bob is include:true. roster-0 has no override → active.
+      const r0 = getDerivedState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
+      expect(r0.members.find(m => m.id === 'm-bob').include).toBe(true)
+      // roster-1 overrides Bob to include:false → still on the team, but inactive
+      // (eligibility/generator treat include:false as opted out).
+      const r1 = getDerivedState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-1' }))
+      expect(r1.members.find(m => m.id === 'm-bob').include).toBe(false)
+      // Alice has no override → unaffected in both rosters.
+      expect(r0.members.find(m => m.id === 'm-alice').include).toBe(true)
+      expect(r1.members.find(m => m.id === 'm-alice').include).toBe(true)
+    })
+
+    it('defaults to the first team + roster when selection omitted', () => {
+      const state = getDerivedState(resolveTenant(tenant, {}))
+      expect(state.rosterPeriod.start_date).toBe('2026-02-01')
+      expect(state.members.map(m => m.id)).toEqual(['m-alice', 'm-bob'])
+    })
+
+    it('memberTeams maps each member to every team they are on', () => {
+      const map = memberTeams(tenant)
+      expect(map['m-alice']).toEqual(['Worship', 'Hospitality'])
+      expect(map['m-bob']).toEqual(['Worship'])
+      // Flat documents have no teams → empty map (no "Also on" line).
+      expect(memberTeams({ members: [{ id: 'a' }], events: [] })).toEqual({})
+      expect(memberTeams(null)).toEqual({})
+    })
+
+    describe('writeBackEvents (Phase 1 write-back)', () => {
+      const edited = [{ date: '2026-02-07', roster: [{ role: 'lead', member_id: 'm-alice' }] }]
+
+      it('writes events back into the addressed roster without mutating the input', () => {
+        const next = writeBackEvents(tenant, { teamId: 'team-0', rosterId: 'roster-0' }, edited)
+        // Input untouched (still an empty member_id).
+        expect(tenant.teams[0].rosters[0].events[0].roster[0].member_id).toBe('')
+        // New doc has the edit.
+        expect(next.teams[0].rosters[0].events).toEqual(edited)
+        // Resolving the new doc surfaces the edited events.
+        expect(getDerivedState(resolveTenant(next, { teamId: 'team-0', rosterId: 'roster-0' })).events)
+          .toEqual(edited)
+      })
+
+      it('only touches the addressed roster; siblings + other teams are intact', () => {
+        const next = writeBackEvents(tenant, { teamId: 'team-0', rosterId: 'roster-0' }, edited)
+        // Sibling roster within the same team is unchanged.
+        expect(next.teams[0].rosters[1].events).toEqual(tenant.teams[0].rosters[1].events)
+        // Other team is unchanged.
+        expect(next.teams[1]).toEqual(tenant.teams[1])
+        // Registry + team_members untouched.
+        expect(next.members).toEqual(tenant.members)
+        expect(next.teams[0].team_members).toEqual(tenant.teams[0].team_members)
+      })
+
+      it('round-trips: edit team-0/roster-0, switch away, come back preserves it', () => {
+        const next = writeBackEvents(tenant, { teamId: 'team-0', rosterId: 'roster-1' }, edited)
+        // roster-1 now has the edit; roster-0 still original.
+        const r1 = getDerivedState(resolveTenant(next, { teamId: 'team-0', rosterId: 'roster-1' }))
+        expect(r1.events).toEqual(edited)
+        const r0 = getDerivedState(resolveTenant(next, { teamId: 'team-0', rosterId: 'roster-0' }))
+        expect(r0.events).toEqual(tenant.teams[0].rosters[0].events)
+      })
+
+      it('is identity for flat documents', () => {
+        const flat = { members: [{ id: 'a', name: 'A' }], events: [{ date: '2026-01-01' }] }
+        expect(writeBackEvents(flat, { teamId: 'team-0', rosterId: 'roster-0' }, edited)).toBe(flat)
+      })
     })
   })
 })

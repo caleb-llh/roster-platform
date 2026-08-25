@@ -117,6 +117,47 @@ specified when built.
    clashes) are **read-only inputs** to that roster's generation/validation;
    they never make one roster's Save mutate another roster.
 
+6. **Identity: one member, many providers, one `auth.users`.** The four
+   entities tie to a single human through **`members.claimed_user_id`** as the
+   sole hinge — it is the only FK from the person-side (`members` →
+   `team_members`) to the auth-side (`auth.users` ← `tenant_users`), and the
+   `self` relation (`member.claimed_user_id === actor.user_id`) is the bridge
+   ([permissions.md](permissions.md#target-model-planned-tenant-scoped--not-yet-built)).
+   The subtlety this decision pins is that **`auth.users` is itself the
+   multi-identity account**: Supabase keeps one `auth.identities` row *per login
+   provider* (Google today; Telegram later), and account-linking collapses them
+   to **one** `auth.users.id`. So the target is: many login providers → one
+   `auth.users` row → one claimed `members` row. Concretely:
+   - **`members.telegram` is promoted from a notify string to a login
+     identity** when Telegram sign-in lands. Today it is a display/notification
+     handle only; for "log in with Telegram → I *am* this member" it must feed
+     `auth.identities` (as a Supabase provider) or a `member_identities
+     (member_id, provider, provider_uid)` side table, **not** stay free text.
+     The notification use keeps working either way.
+   - **Google + Telegram must resolve to the same `auth.users`.** If a member
+     signs in with Google once and Telegram another time, those are two
+     `auth.identities` rows that MUST link to one `auth.users.id`, or they become
+     two claimed members. This relies on Supabase **account-linking**, keyed on a
+     verified shared factor (e.g. email) or an explicit "link account" step — it
+     is *not* automatic across dissimilar providers.
+   - **The claim/match rule is explicit, not implicit.** An anonymous OAuth login
+     is matched to its intended `members` row by a defined mechanism — carried
+     forward from the current invite-email claim
+     ([architecture.md](architecture.md#data-model-supabase-production-only)):
+     Google → invite-email match; Telegram → handle-match against
+     `members.telegram` **or** an invite. Matching is never "same display name".
+   - **Rationale (rejected alternative):** treating each provider login as its own
+     identity (no linking) was rejected — it fragments one person into several
+     claimed members, breaking `self`, cross-team load and clash (which all
+     assume one identity per human, Design Decision 2). The member registry is the
+     canonical person; providers are *credentials that resolve to it*, never
+     identities in their own right.
+   - **Phase note:** local YAML mode has no auth, so Phase 1 stores `telegram` as
+     today and needs no `auth.users`. This decision constrains **Phase 3** and the
+     `0004_tenants_teams.sql` shape (keep `claimed_user_id` the single auth FK;
+     leave room for `member_identities` / provider linking) so Phase 1's registry
+     shape does not paint us into a corner.
+
 ## Data-model changes (Supabase, Phase 3)
 
 New/changed tables (all RLS-scoped to the tenant):
@@ -125,7 +166,7 @@ New/changed tables (all RLS-scoped to the tenant):
 | --- | --- | --- |
 | `tenants` | org boundary | `id, name, created_at` |
 | `tenant_users` | **RBAC** (replaces the per-roster owner/editor/viewer grant) | `(tenant_id, user_id, role)` where role ∈ `owner/admin/viewer` (governance roles; `self` is an orthogonal automatic relation, not stored here — see [permissions.md](permissions.md#target-model-planned-tenant-scoped--not-yet-built)); a user can hold different roles in different tenants |
-| `members` | tenant member registry (people) | `id, tenant_id, name, telegram, avatar, claimed_user_id → auth.users` (nullable — onboarding "claim" links identity) |
+| `members` | tenant member registry (people) | `id, tenant_id, name, telegram, avatar, claimed_user_id → auth.users` (nullable — onboarding "claim" links identity). **Multiple login providers (Google, Telegram) resolve to one `auth.users` → one member** via Supabase account-linking; `claimed_user_id` stays the single auth FK — see Design Decision 6. |
 | `member_constraints` | **global** per-member unavailability | `(member_id)` → date list/ranges; tenant-scoped |
 | `teams` | scheduling unit | `id, tenant_id, name, colour/gradient` |
 | `team_members` | who's on a team + capability **on that team** | `(team_id, member_id, roles jsonb, understudy_for jsonb, include bool)` |
@@ -310,6 +351,11 @@ Ordered by how much each is affected.
   normalized time on events).
 - **Cross-tenant members** (same human in two orgs) — explicitly *out*: a
   member belongs to exactly one tenant; two orgs = two member rows.
+- **Provider-linking mechanism** (Phase 3): whether Telegram sign-in is a
+  first-class Supabase auth provider or a `member_identities` side table, and the
+  exact account-linking trigger (verified-email match vs. explicit "link
+  account" step). The *decision* — many providers resolve to one `auth.users` →
+  one member — is settled (Design Decision 6); only the encoding is deferred.
 - **Versioning**: modelling roster *versions* as sibling rosters of a team is
   compatible with this design but specified separately.
 
@@ -338,10 +384,53 @@ keeps `npx vitest run` + `npm run build` green.
   owns the registry). The rule is written once against intervals, so Phase 2's
   cross-team clash is the *same* rule extended to fold in `externalAssignments`,
   not a new one.
-- **Phase 1 — local model.** New nested YAML shape + `getDerivedState`
-  resolver + updated `sample.yaml`; MembersView split (registry vs. team
-  membership); global unavailability; team selector above roster selector.
-  Cross-team clash/caps computed locally across the in-memory tenant.
+- **Phase 1 — local model. ✅ Landed.** New nested YAML shape + `getDerivedState`
+  resolver + nested `sample_tenant.yaml`; MembersView split (registry vs. team
+  membership); global unavailability; team selector above roster selector;
+  events write-back into the tenant doc. The concrete Phase 1 contract — nested
+  YAML shape, flat-shape back-compat rule, and the selection layer — is pinned in
+  [Phase 1 contract](#phase-1-contract-local-model) below. Cross-team clash/caps
+  enforcement is deferred to Phase 2 (the seam exists; only the enforcement is
+  pending).
+  - **Resolver + selection + nested sample: ✅ Landed.** `isTenantShape`,
+    `tenantSelection` and `resolveTenant` in
+    [`derivedState.js`](../src/utils/derivedState.js) detect the nested shape and
+    flatten a selected team+roster into today's flat document (registry ⋈
+    `team_members`, global `unavailable_dates` — and its free-text `note` —
+    → per-team `member_constraints`),
+    which `getDerivedState` consumes unchanged. Flat input is returned untouched
+    (`resolveTenant` is identity when there is no `teams` key) — all 352 prior
+    tests still pass. The provider contract gained `teams` / `activeTeamId` /
+    `selectTeam` above `rosters` / `activeRosterId` / `selectRoster`; the local
+    provider holds the raw tenant doc and re-resolves the flat working document on
+    selection, and App renders a team selector above the roster selector when a
+    nested doc is loaded. [`public/sample_tenant.yaml`](../public/sample_tenant.yaml)
+    is the canonical nested example (sibling of the flat `sample.yaml`); a
+    validator test resolves *every* team+roster to a valid flat document.
+  - **Write-back: ✅ Landed.** Committing an edit while a nested tenant doc is
+    loaded also persists the events into the active roster INSIDE the tenant doc,
+    so switching team/roster and returning preserves the edit.
+    `writeBackEvents(tenantDoc, {teamId, rosterId}, events)` in
+    [`derivedState.js`](../src/utils/derivedState.js) is the pure inverse of
+    `resolveTenant` for the events portion (returns a new doc; only the addressed
+    roster's `events` change; identity for flat docs). The local provider's
+    committed-events sink calls it via refs (the sink is captured by the draft
+    hook) — see [`useLocalRosterProvider.js`](../src/data/useLocalRosterProvider.js).
+    Scope note: only the **events** round-trip. Non-event edits (members, roles,
+    roster overrides via the YAML editor) still apply to the flat working view
+    only; durable per-team persistence of those lands with the Supabase provider
+    in Phase 3.
+  - **MembersView split: ✅ Landed.** Each member card now separates
+    tenant-level IDENTITY (name, telegram, global unavailability — relabelled
+    "Unavailable (global)" in a tenant context) from this team's CAPABILITY
+    (roles/understudy), via a subtle divider labelled "on &lt;team&gt;". A
+    read-only **"Also on: …"** line shows the OTHER teams a member serves —
+    rendered only for members with multi-team membership. Cross-team visibility
+    is derived by `memberTeams(tenantDoc)` in
+    [`derivedState.js`](../src/utils/derivedState.js) (member id → team names),
+    exposed via the provider (`memberTeams`, `activeTeamName`) and threaded
+    App → MembersView → MemberCard. In flat/single-team mode the divider, team
+    label and "Also on" line are all absent, so single-team cards are unchanged.
 - **Phase 2 — cross-team constraints.** New constraint keys + merge chain +
   clash/cap enforcement wired into generation, swap validation and stats, with
   tests.
@@ -354,3 +443,172 @@ keeps `npx vitest run` + `npm run build` green.
 
 Each phase updates the relevant binding spec files and this file's status per
 [`../AGENTS.md`](../AGENTS.md).
+
+## Phase 1 contract (local model)
+
+This section pins the three things Phase 1 must implement so the work can start
+without re-deciding shape mid-implementation. It is binding for Phase 1.
+
+### 1. Canonical nested YAML shape (full tenant in one file)
+
+A tenant document is one YAML file. The **member registry lives at tenant level**
+(identity + *global* `unavailable_dates`); **capability lives per team** on
+`team_members`; each team owns its `roles` catalog and one or more `rosters`,
+each a schedule document identical in shape to today's flat document minus the
+embedded member registry. Field names reuse the existing constants
+([`YAML_FIELDS`](../src/schema/rosterSchema.js)) so the resolver and validators
+are shared, not forked.
+
+```yaml
+tenant:
+  name: "Grace Community"
+
+# Tenant-level member registry — the PEOPLE. Identity + GLOBAL constraints only.
+# No per-team capability here (that lives on each team's team_members).
+members:
+  - id: member-1-alice
+    name: Alice Johnson
+    telegram: "@alice"
+    # Global unavailability — every team/roster that references Alice sees this.
+    unavailable_dates:
+      - "2026-02-14"
+      - start: "2026-03-05"
+        end: "2026-03-10"
+  - id: member-2-bob
+    name: Bob Smith
+    telegram: "@bob"
+
+teams:
+  - name: "Worship"
+    # Per-team role catalog. Two teams may share a role NAME by coincidence;
+    # they are not the same role.
+    roles:
+      - name: lead
+      - name: support
+    # Which registry members are on THIS team + their capability ON this team.
+    # roles / understudy flag / include are team-local (Design Decision 2).
+    team_members:
+      - member_id: member-1-alice
+        include: true
+        roles:
+          - name: lead
+          - name: support
+      - member_id: member-2-bob
+        include: true
+        roles:
+          - name: support
+          - name: lead        # training for lead on THIS team
+            understudy: true
+    # A team can have MANY rosters (Design Decision 1). Each roster is today's
+    # document shape: roster period + events (+ optional roster_constraints /
+    # roster_preferences / member_preferences overrides).
+    rosters:
+      - roster:
+          start_date: "2026-02-01"
+          end_date: "2026-03-31"
+        events:
+          - name: "Weekend Service"
+            date: "2026-02-07"
+            roster:
+              - role: lead
+                member_id:
+              - role: support
+                member_id:
+        # Optional per-roster overrides (merged over team, then tenant defaults).
+        roster_constraints:
+          MAX_ASSIGNMENTS_PER_MONTH: 3
+  - name: "Hospitality"
+    roles:
+      - name: host
+    team_members:
+      - member_id: member-1-alice   # same person, DIFFERENT team → different roles
+        include: true
+        roles:
+          - name: host
+    rosters:
+      - roster:
+          start_date: "2026-02-01"
+          end_date: "2026-03-31"
+        events: []
+```
+
+Notes that make this non-ambiguous:
+
+- **`members[].unavailable_dates`** replaces the flat file's top-level
+  `member_constraints` list — unavailability is now a property of the person, so
+  it sits on the registry row (Design Decision 4, global unavailability). The
+  resolver feeds it into `memberConstraints` for *every* team the member is on.
+- **`team_members[]`** is the join: `member_id` references a registry `id`;
+  `roles` (with the `understudy: true` object form) and `include` are exactly
+  today's per-member fields, just relocated. A member absent from a team's
+  `team_members` is simply not on that team.
+- **`teams[].rosters[].member_overrides[]`** (optional) is the *per-roster*
+  escape hatch for a member's **active status**. A team's `roles` catalog and
+  `team_members` are shared across all of that team's rosters, but whether a
+  member is *active* can genuinely differ per period (e.g. someone joins mid-year,
+  or sits out a quarter). Each override is `{ member_id, include }` and wins over
+  the `team_members` `include` for **that roster only**; a member with no override
+  keeps the team default. This is deliberately scoped to `include` (not `roles`):
+  *capability* is a stable team-level fact, *availability to serve this period* is
+  the thing that varies. (Global calendar `unavailable_dates` still handles
+  date-level absence; `member_overrides` handles a whole-period opt-out without
+  editing the registry.) A member absent from the team entirely for a period is
+  modelled as `include: false` on both `team_members` (default) and/or the
+  roster override — the resolver still lists them (so cross-team "Also on"
+  visibility is intact) but the engine treats `include: false` as opted out.
+- **`teams[].rosters[]`** each hold `roster` (period), `events`, and optional
+  `roster_constraints` / `roster_preferences` / `member_preferences`. These are
+  the *same* keys as the flat document; [data-layer.md](data-layer.md) still owns
+  their semantics — this section only owns *where they nest*.
+- Member `roles` accept the object form and a bare string exactly as today
+  (`normalizeMemberRoles`); the nested shape does not change that.
+
+### 2. Flat shape stays working (back-compat rule)
+
+**A flat document (today's `sample.yaml`) is a valid tenant.** The resolver
+detects shape and, when there is no top-level `teams` key, treats the whole
+document as a **single default tenant → single default team → single default
+roster**:
+
+- top-level `members` (with embedded `roles`) + top-level `member_constraints`
+  are lifted into that one team's `team_members` + the registry's global
+  `unavailable_dates`;
+- top-level `roles`, `events`, `roster`, `roster_constraints`,
+  `roster_preferences`, `member_preferences` become that single roster.
+
+This is a *read-time* adaptation, not a migration: the flat file is not
+rewritten. The **acceptance test is that every existing fixture and the current
+flat `sample.yaml` parse, validate, and resolve byte-for-byte identically** —
+same resolved `{ members, events, roles, memberConstraints, … }` — which is the
+same no-op guarantee the [compatibility seam](#compatibility-seam-how-we-avoid-rewriting-the-engine)
+already established for `externalAssignments`. `sample.yaml` gains a *sibling*
+nested example (or a second sample) demonstrating the tenant shape without
+removing the flat one, so both code paths stay exercised.
+
+Detection is by the presence of `teams:` at the top level (nested) vs. its
+absence (flat). No version flag; the shapes are structurally distinguishable.
+
+### 3. Team/roster selection contract
+
+The provider contract ([`providerContract.js`](../src/data/providerContract.js))
+today exposes `rosters`, `activeRosterId`, `selectRoster(id)`, `createRoster`,
+and `LOCAL_PERMISSIONS`. Phase 1 adds a **team-selection layer above roster
+selection**, mirroring that shape one level up:
+
+- `teams: [{ id, name }]` — the tenant's teams.
+- `activeTeamId` — the currently selected team; `rosters` becomes the
+  **active team's** rosters (team-scoped list), and `activeRosterId` selects
+  within it.
+- `selectTeam(id)` — switches team. Switching team resets `activeRosterId` to
+  that team's first roster (a team always has ≥1 roster).
+- `members` (registry) is **tenant-level**, not team-scoped: it is the same list
+  regardless of `activeTeamId`; per-team capability is resolved via the active
+  team's `team_members` when building derived state.
+
+Invariant: **the engine still receives one resolved single-team derived state**
+— `activeTeamId` + `activeRosterId` together pick exactly one roster document,
+which `getDerivedState` resolves (joining the registry with that team's
+`team_members`) into today's normalized shape. The selection layer is UI/provider
+state; it does not change the engine contract (Design Decision 5 and the
+compatibility seam). In the flat/default case there is exactly one synthetic team
+and `selectTeam` is a no-op, so single-team UX is unchanged.

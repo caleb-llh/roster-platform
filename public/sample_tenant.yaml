@@ -1,0 +1,107 @@
+##############################################################
+#### Nested MULTI-TENANT example (multi-tenant Phase 1)   ####
+##############################################################
+#
+# This is the NESTED tenant shape: one file describes a tenant, its member
+# registry, and its teams (each owning a role catalog, team membership, and one
+# or more rosters). It is the sibling of the FLAT `sample.yaml` — both are valid
+# inputs. A flat document has no top-level `teams:` key; a nested one does.
+#
+# The resolver (`resolveTenant`) flattens a selected team + roster back into the
+# SAME shape `sample.yaml` uses, so everything downstream is unchanged. See
+# specs/multi-tenant.md "Phase 1 contract".
+
+tenant:
+  name: "Grace Community"
+
+########################################
+#### Tenant-level member registry   ####
+########################################
+#
+# The PEOPLE. Identity + GLOBAL constraints only. Per-team capability (roles,
+# understudy, include) does NOT live here — it lives on each team's
+# `team_members`. `unavailable_dates` is global: every team the member is on
+# sees the same calendar.
+
+members:
+  - id: member-1-alice
+    name: Alice Johnson
+    telegram: "@alice"
+    unavailable_dates:
+      - "2026-02-14"
+      - start: "2026-03-05"
+        end: "2026-03-10"
+
+  - id: member-2-bob
+    name: Bob Smith
+    telegram: "@bob"
+
+  - id: member-3-charlie
+    name: Charlie Davis
+    telegram: "@charlie"
+
+##################
+#### Teams    ####
+##################
+#
+# Each team owns its `roles` catalog, its `team_members` (which registry members
+# are on the team + their capability ON this team), and one or more `rosters`.
+# Each roster is today's document shape (period + events + optional overrides).
+
+teams:
+  - name: "Worship"
+    roles:
+      - name: lead
+      - name: support
+    team_members:
+      - member_id: member-1-alice
+        include: true
+        roles:
+          - name: lead
+          - name: support
+      - member_id: member-2-bob
+        include: true
+        roles:
+          - name: support
+          - name: lead          # training for lead ON THIS team
+            understudy: true
+    rosters:
+      - roster:
+          start_date: "2026-02-01"
+          end_date: "2026-03-31"
+        events:
+          - name: "Weekend Service"
+            date: "2026-02-07"
+            day_of_week: "Saturday"
+            roster:
+              - role: lead
+                member_id:
+              - role: support
+                member_id:
+        # Optional per-roster override (merged over defaults).
+        roster_constraints:
+          MAX_ASSIGNMENTS_PER_MONTH: 3
+
+  - name: "Hospitality"
+    roles:
+      - name: host
+    team_members:
+      - member_id: member-1-alice   # same person, DIFFERENT team → different role
+        include: true
+        roles:
+          - name: host
+      - member_id: member-3-charlie
+        include: true
+        roles:
+          - name: host
+    rosters:
+      - roster:
+          start_date: "2026-02-01"
+          end_date: "2026-03-31"
+        events:
+          - name: "Sunday Welcome"
+            date: "2026-02-08"
+            day_of_week: "Sunday"
+            roster:
+              - role: host
+                member_id:

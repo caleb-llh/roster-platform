@@ -3,7 +3,7 @@ import { IssueSummary } from './SharedComponents'
 import { MemberCard } from './MemberCard'
 import { headingPage, hoverRow } from '../utils/statsTheme'
 
-export default function MembersView({ members, roles, roleColorMap, warnings, searchQuery, memberConstraints, memberPreferences }) {
+export default function MembersView({ members, roles, roleColorMap, warnings, searchQuery, memberConstraints, memberPreferences, activeTeamName, memberTeams = {} }) {
   const [selectedRole, setSelectedRole] = useState('All')
 
   const searchLower = searchQuery.toLowerCase()
@@ -62,9 +62,23 @@ export default function MembersView({ members, roles, roleColorMap, warnings, se
 
       {/* Member Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {filteredMembers.map((member, i) => (
-          <MemberCard key={i} member={member} roleColorMap={roleColorMap} memberConstraints={memberConstraints} memberPreferences={memberPreferences} />
-        ))}
+        {filteredMembers.map((member, i) => {
+          // Cross-team visibility: other teams this member serves on, excluding
+          // the active team. Only present in multi-team tenants (empty otherwise),
+          // so the "Also on" line only shows for multi-team members.
+          const otherTeams = (memberTeams[member.id] || []).filter(t => t !== activeTeamName)
+          return (
+            <MemberCard
+              key={i}
+              member={member}
+              roleColorMap={roleColorMap}
+              memberConstraints={memberConstraints}
+              memberPreferences={memberPreferences}
+              activeTeamName={activeTeamName}
+              otherTeams={otherTeams}
+            />
+          )
+        })}
       </div>
 
       {filteredMembers.length === 0 && (

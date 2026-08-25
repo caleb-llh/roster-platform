@@ -14,6 +14,7 @@ import {
   validateDates,
   runAllValidators
 } from './validators'
+import { isTenantShape, tenantSelection, resolveTenant } from './utils/derivedState'
 
 describe('validators', () => {
   describe('ValidationBuilder', () => {
@@ -393,6 +394,48 @@ describe('validators', () => {
         expect(typeof entry.name).toBe('string')
       })
       expect(allRoleEntries.some(e => e.understudy === true)).toBe(true)
+    })
+  })
+
+  // Multi-tenant Phase 1: public/sample_tenant.yaml is the canonical NESTED
+  // tenant example (sibling of the flat sample.yaml). It must be detected as a
+  // tenant shape and RESOLVE — for every team+roster — to a flat document that
+  // passes every validator (see specs/multi-tenant.md "Phase 1 contract").
+  describe('public/sample_tenant.yaml (canonical nested tenant example)', () => {
+    const samplePath = join(process.cwd(), 'public', 'sample_tenant.yaml')
+    const tenant = yaml.load(readFileSync(samplePath, 'utf8'))
+
+    it('is detected as the nested tenant shape', () => {
+      expect(isTenantShape(tenant)).toBe(true)
+      expect(Array.isArray(tenant.teams)).toBe(true)
+    })
+
+    it('resolves the first team + roster to a valid flat document', () => {
+      const flat = resolveTenant(tenant, {})
+      const result = runAllValidators(flat)
+      expect(result.errors).toEqual([])
+      expect(result.isValid).toBe(true)
+    })
+
+    it('resolves every team + roster to a valid flat document', () => {
+      const sel = tenantSelection(tenant)
+      for (const team of sel.teams) {
+        for (const roster of team.rosters) {
+          const flat = resolveTenant(tenant, { teamId: team.id, rosterId: roster.id })
+          const result = runAllValidators(flat)
+          expect(result.isValid, `${team.name}/${roster.name}`).toBe(true)
+        }
+      }
+    })
+
+    it('resolves the same member to different roles across teams', () => {
+      const sel = tenantSelection(tenant)
+      const worship = resolveTenant(tenant, { teamId: sel.teams[0].id })
+      const hospitality = resolveTenant(tenant, { teamId: sel.teams[1].id })
+      const aliceWorship = worship.members.find(m => m.id === 'member-1-alice')
+      const aliceHospitality = hospitality.members.find(m => m.id === 'member-1-alice')
+      expect(aliceWorship.roles.map(r => r.name)).toContain('lead')
+      expect(aliceHospitality.roles.map(r => r.name)).toEqual(['host'])
     })
   })
 })
