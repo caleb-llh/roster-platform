@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getDerivedState, resolveDerivedState, isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEvents } from './derivedState'
+import { getDerivedState, resolveDerivedState, isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEvents, deriveExternalAssignments, validateTenantRosters } from './derivedState'
 import { CONSTRAINT_KEYS, PREFERENCE_KEYS } from '../schema/rosterSchema'
 import { DEFAULT_ROSTER_CONSTRAINTS, DEFAULT_ROSTER_PREFERENCES } from '../config/rosterDefaults'
 
@@ -419,8 +419,8 @@ describe('derivedState', () => {
     })
   })
 
-  // Multi-tenant Phase 0 compatibility seam. resolveDerivedState is the single
-  // contract the engine consumes; for a single team it must be identical to
+  // resolveDerivedState is the convenience aggregator naming the resolved
+  // derived-state contract; for a single team it must be identical to
   // getDerivedState plus empty/no-op cross-team inputs.
   describe('resolveDerivedState (seam)', () => {
     const data = {
@@ -600,6 +600,236 @@ describe('derivedState', () => {
       const state = getDerivedState(resolveTenant(tenant, {}))
       expect(state.rosterPeriod.start_date).toBe('2026-02-01')
       expect(state.members.map(m => m.id)).toEqual(['m-alice', 'm-bob'])
+    })
+
+    // Multi-tenant Phase 2: constraint/preference merge chain tenant → team →
+    // roster (later wins), mirroring today's DEFAULT → document merge one level
+    // deeper. A team sets house rules; a roster may still override a key.
+    describe('constraint merge chain (Phase 2)', () => {
+      const layered = {
+        tenant: { name: 'Grace' },
+        members: [{ id: 'm-alice', name: 'Alice' }],
+        roster_constraints: { ENFORCE_CROSS_TEAM_CAPS: true, MAX_ASSIGNMENTS_PER_MONTH: 5 },
+        teams: [
+          {
+            name: 'Video',
+            roles: [{ name: 'cam' }],
+            team_members: [{ member_id: 'm-alice', include: true, roles: [{ name: 'cam' }] }],
+            roster_constraints: { MAX_ASSIGNMENTS_PER_MONTH: 4, ENFORCE_CROSS_TEAM_CLASH: true },
+            rosters: [
+              {
+                roster: { start_date: '2026-02-01', end_date: '2026-03-31' },
+                events: [],
+                roster_constraints: { MAX_ASSIGNMENTS_PER_MONTH: 3 },
+              },
+              // No roster-level constraints → team+tenant only.
+              { roster: { start_date: '2026-04-01', end_date: '2026-05-31' }, events: [] },
+            ],
+          },
+        ],
+      }
+
+      it('merges tenant → team → roster with later layers winning', () => {
+        const state = getDerivedState(resolveTenant(layered, { teamId: 'team-0', rosterId: 'roster-0' }))
+        const c = state.rosterConstraints
+        // Roster wins over team (4) and tenant (5).
+        expect(c.MAX_ASSIGNMENTS_PER_MONTH).toBe(3)
+        // Team-only key survives.
+        expect(c.ENFORCE_CROSS_TEAM_CLASH).toBe(true)
+        // Tenant-only key survives.
+        expect(c.ENFORCE_CROSS_TEAM_CAPS).toBe(true)
+      })
+
+      it('falls back to team then tenant when a roster omits the key', () => {
+        const state = getDerivedState(resolveTenant(layered, { teamId: 'team-0', rosterId: 'roster-1' }))
+        const c = state.rosterConstraints
+        // Team wins over tenant when the roster has no layer.
+        expect(c.MAX_ASSIGNMENTS_PER_MONTH).toBe(4)
+        expect(c.ENFORCE_CROSS_TEAM_CLASH).toBe(true)
+        expect(c.ENFORCE_CROSS_TEAM_CAPS).toBe(true)
+      })
+
+      it('leaves flat single-team docs unchanged (no injected constraint object)', () => {
+        const flat = { members: [{ id: 'a', name: 'A' }], events: [] }
+        // No layer supplied → resolveTenant is a no-op on flat input, and a doc
+        // with only defaults still yields the source-code defaults.
+        const state = getDerivedState(resolveTenant(flat, {}))
+        expect(state.rosterConstraints).toEqual({ ...DEFAULT_ROSTER_CONSTRAINTS })
+      })
+    })
+
+    // Multi-tenant Phase 2 — cross-team enforcement is wired end-to-end: a
+    // multi-team tenant auto-enables the cross-team keys, and the read-only
+    // externalAssignments snapshot is derived from OTHER teams' rosters.
+    describe('cross-team auto-enable + externalAssignments deriver (Phase 2)', () => {
+      it('auto-enables cross-team keys for a multi-team tenant', () => {
+        // `tenant` has two teams (Worship + Hospitality) and no explicit
+        // cross-team constraints, so both keys default ON.
+        const state = getDerivedState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
+        expect(state.rosterConstraints.ENFORCE_CROSS_TEAM_CAPS).toBe(true)
+        expect(state.rosterConstraints.ENFORCE_CROSS_TEAM_CLASH).toBe(true)
+      })
+
+      it('leaves a single-team tenant with cross-team keys OFF', () => {
+        // A single-team tenant → nothing to be cross-team about. Its explicit
+        // tenant layer sets ENFORCE_CROSS_TEAM_CAPS; auto-enable never touches a
+        // single-team doc, but the explicit layer stands.
+        const single = {
+          tenant: { name: 'Grace' },
+          members: [{ id: 'm-alice', name: 'Alice' }],
+          roster_constraints: { ENFORCE_CROSS_TEAM_CAPS: true },
+          teams: [
+            {
+              name: 'Video',
+              roles: [{ name: 'cam' }],
+              team_members: [{ member_id: 'm-alice', include: true, roles: [{ name: 'cam' }] }],
+              rosters: [{ roster: { start_date: '2026-02-01', end_date: '2026-03-31' }, events: [] }],
+            },
+          ],
+        }
+        const state = getDerivedState(resolveTenant(single, { teamId: 'team-0', rosterId: 'roster-0' }))
+        // Absent key = off (there is no default for the cross-team keys — they
+        // are OFF by absence), so it reads falsy rather than an explicit false.
+        expect(state.rosterConstraints.ENFORCE_CROSS_TEAM_CLASH).toBeFalsy()
+        expect(state.rosterConstraints.ENFORCE_CROSS_TEAM_CAPS).toBe(true)
+      })
+
+      it('explicit YAML overrides the auto-enabled default (lowest precedence)', () => {
+        const opted = {
+          ...tenant,
+          teams: tenant.teams.map((t, i) =>
+            i === 0
+              ? { ...t, roster_constraints: { ENFORCE_CROSS_TEAM_CLASH: false } }
+              : t
+          ),
+        }
+        const state = getDerivedState(resolveTenant(opted, { teamId: 'team-0', rosterId: 'roster-0' }))
+        // Team layer explicitly turned the auto-default back off.
+        expect(state.rosterConstraints.ENFORCE_CROSS_TEAM_CLASH).toBe(false)
+        // The other auto-default is untouched.
+        expect(state.rosterConstraints.ENFORCE_CROSS_TEAM_CAPS).toBe(true)
+      })
+
+      it('derives externalAssignments from OTHER teams only', () => {
+        // Give Hospitality (team-1) a placed event for Alice; derive for the
+        // active Worship team (team-0). Alice's Hospitality date should appear;
+        // Worship's own events must NOT (they are local, not external).
+        const doc = {
+          ...tenant,
+          teams: tenant.teams.map((t, i) =>
+            i === 1
+              ? {
+                  ...t,
+                  rosters: [
+                    {
+                      roster: { start_date: '2026-02-01', end_date: '2026-03-31' },
+                      events: [{ date: '2026-02-08', roster: [{ role: 'host', member_id: 'm-alice' }] }],
+                    },
+                  ],
+                }
+              : t
+          ),
+        }
+        const external = deriveExternalAssignments(doc, { teamId: 'team-0' })
+        expect(external).toEqual({ 'm-alice': ['2026-02-08'] })
+      })
+
+      it('excludes the active team’s own sibling rosters from the snapshot', () => {
+        // team-0 (Worship) has two rosters with placed-less events; deriving for
+        // team-0 must skip BOTH of its own rosters even the sibling period.
+        const doc = {
+          ...tenant,
+          teams: tenant.teams.map((t, i) =>
+            i === 0
+              ? {
+                  ...t,
+                  rosters: t.rosters.map(r => ({
+                    ...r,
+                    events: [{ date: r.roster.start_date, roster: [{ role: 'lead', member_id: 'm-alice' }] }],
+                  })),
+                }
+              : t
+          ),
+        }
+        const external = deriveExternalAssignments(doc, { teamId: 'team-0' })
+        // No Worship dates; Hospitality (team-1) has empty events in the fixture.
+        expect(external['m-alice']).toBeUndefined()
+      })
+
+      it('returns {} for flat documents (no cross-team enforcement)', () => {
+        expect(deriveExternalAssignments({ members: [], events: [] }, { teamId: 'team-0' })).toEqual({})
+        expect(deriveExternalAssignments(null, {})).toEqual({})
+      })
+    })
+
+    // The sibling-partition invariant deriveExternalAssignments depends on: a
+    // team's rosters must cover disjoint date periods (validateTenantRosters).
+    describe('validateTenantRosters — sibling rosters must not overlap (Phase 2)', () => {
+      it('passes a well-formed tenant (disjoint sibling periods)', () => {
+        // team-0 has Feb–Mar + Apr–May (disjoint); team-1 has one roster.
+        expect(validateTenantRosters(tenant)).toEqual([])
+      })
+
+      it('warns when two rosters on the same team overlap', () => {
+        const doc = {
+          ...tenant,
+          teams: tenant.teams.map((t, i) =>
+            i === 0
+              ? {
+                  ...t,
+                  rosters: [
+                    { roster: { start_date: '2026-02-01', end_date: '2026-03-31' }, events: [] },
+                    // Overlaps the first period (March).
+                    { roster: { start_date: '2026-03-15', end_date: '2026-04-30' }, events: [] },
+                  ],
+                }
+              : t
+          ),
+        }
+        const warnings = validateTenantRosters(doc)
+        expect(warnings).toHaveLength(1)
+        expect(warnings[0]).toContain('Worship')
+        expect(warnings[0]).toMatch(/overlapping/i)
+      })
+
+      it('treats a shared boundary day as overlapping (inclusive)', () => {
+        const doc = {
+          ...tenant,
+          teams: [
+            {
+              ...tenant.teams[0],
+              rosters: [
+                { roster: { start_date: '2026-02-01', end_date: '2026-03-31' }, events: [] },
+                // Starts on the previous roster's last day.
+                { roster: { start_date: '2026-03-31', end_date: '2026-04-30' }, events: [] },
+              ],
+            },
+          ],
+        }
+        expect(validateTenantRosters(doc)).toHaveLength(1)
+      })
+
+      it('skips rosters missing a start or end date', () => {
+        const doc = {
+          ...tenant,
+          teams: [
+            {
+              ...tenant.teams[0],
+              rosters: [
+                { roster: { start_date: '2026-02-01' }, events: [] }, // no end_date
+                { roster: { start_date: '2026-02-15', end_date: '2026-03-31' }, events: [] },
+              ],
+            },
+          ],
+        }
+        // The incomplete period can't be checked, so no overlap is reported.
+        expect(validateTenantRosters(doc)).toEqual([])
+      })
+
+      it('returns [] for flat documents', () => {
+        expect(validateTenantRosters({ members: [], events: [] })).toEqual([])
+        expect(validateTenantRosters(null)).toEqual([])
+      })
     })
 
     it('memberTeams maps each member to every team they are on', () => {

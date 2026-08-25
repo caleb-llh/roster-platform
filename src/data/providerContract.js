@@ -48,8 +48,24 @@
  *
  * @property {('owner'|'editor'|'viewer'|null)} role  Caller's role on the active
  *   roster (production); null in local mode. The admin UI is gated on role === 'owner'.
- * @property {{id: string, name: string, role: string}[]} rosters  All rosters the
- *   user belongs to (production); empty in local mode.
+ * @property {{id: string, name: string}[]} teams  The tenant's teams (multi-tenant
+ *   Phase 1). A team-selection layer sits ABOVE roster selection; `rosters` is the
+ *   ACTIVE team's rosters. Flat/single-team documents resolve to one synthetic team.
+ * @property {(string|null)} activeTeamId  Currently-selected team id.
+ * @property {(string|null)} activeTeamName  Display name of the active team (for
+ *   the members-view team-membership zone label); null in flat/single-team mode.
+ * @property {Object<string, string[]>} memberTeams  Map of member id → names of
+ *   ALL teams that member is on, for the members-view "Also on" line. `{}` in
+ *   flat/single-team mode, so the line never shows.
+ * @property {Object<string, string[]>} externalAssignments  Cross-team snapshot
+ *   (multi-tenant Phase 2): map of member id → the dates that member is assigned
+ *   on OTHER teams' rosters. Folded through the shared counting seam by the
+ *   generator/validator when cross-team caps/clash are enabled. `{}` in
+ *   flat/single-team mode, so cross-team enforcement is a no-op.
+ * @property {(id: string) => void} selectTeam  Switch the active team; resets
+ *   `activeRosterId` to that team's first roster.
+ * @property {{id: string, name: string, role: string}[]} rosters  The ACTIVE team's
+ *   rosters (production); empty in local mode until a tenant document is loaded.
  * @property {(string|null)} activeRosterId  Currently-loaded roster id.
  * @property {(id: string) => void} selectRoster  Switch the active roster.
  * @property {(name: string) => Promise<MutationResult>} createRoster

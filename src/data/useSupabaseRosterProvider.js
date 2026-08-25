@@ -308,6 +308,16 @@ export function useSupabaseRosterProvider() {
     permissions,
     // Admin surface (production only).
     role,
+    // Multi-tenant team-selection layer (Phase 1 contract). The Supabase
+    // provider does not yet expose real teams (Phase 3 adds the tenant/team
+    // tables + join); it reports no teams so the local-mode team selector stays
+    // hidden and roster selection continues to work exactly as before.
+    teams: [],
+    activeTeamId: null,
+    activeTeamName: null,
+    memberTeams: {},
+    externalAssignments: {},
+    selectTeam: () => {},
     rosters,
     activeRosterId: rosterId,
     selectRoster,

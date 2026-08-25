@@ -60,6 +60,12 @@ function App({ auth }) {
     actionLog,
     permissions,
     role,
+    teams,
+    activeTeamId,
+    activeTeamName,
+    memberTeams,
+    externalAssignments,
+    selectTeam,
     rosters,
     activeRosterId,
     selectRoster,
@@ -114,7 +120,8 @@ function App({ auth }) {
     memberPreferences,
     rosterConstraints,
     rosterPreferences,
-    rosterPeriod
+    rosterPeriod,
+    externalAssignments
   )
 
   // Generate dynamic algorithm description based on configuration
@@ -196,7 +203,8 @@ function App({ auth }) {
         memberPreferences,
         rosterConstraints,
         rosterPreferences,
-        rosterPeriod
+        rosterPeriod,
+        { externalAssignments }
       )
 
       updateEvents(result.events)
@@ -398,6 +406,7 @@ function App({ auth }) {
       memberA, memberB, eventA, eventB,
       sourceIndex: source.roleIndex, targetIndex: target.roleIndex,
       slotA, slotB, members, memberConstraints, allEvents: events,
+      externalAssignments,
     })
 
     if (!ok) {
@@ -633,6 +642,37 @@ function App({ auth }) {
                 </div>
               )}
             </div>
+            {/* Multi-tenant Phase 1: team + roster selectors, shown when a
+                nested tenant document is loaded (local mode). Team sits ABOVE
+                roster; switching team resets to that team's first roster. */}
+            {teams.length > 0 && (
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                {teams.length > 1 && (
+                  <select
+                    value={activeTeamId || ''}
+                    onChange={(e) => selectTeam(e.target.value)}
+                    className="max-w-[160px] rounded-md border border-gray-300 px-2 py-1 font-medium text-gray-700 touch-manipulation"
+                    title="Switch team"
+                  >
+                    {teams.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                )}
+                {rosters.length > 1 && (
+                  <select
+                    value={activeRosterId || ''}
+                    onChange={(e) => selectRoster(e.target.value)}
+                    className="max-w-[160px] rounded-md border border-gray-300 px-2 py-1 font-medium text-gray-700 touch-manipulation"
+                    title="Switch roster"
+                  >
+                    {rosters.map((r) => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
             {auth?.mode === 'production' && auth.user && (
               <div className="flex items-center gap-2 text-xs text-gray-600">
                 {rosters.length > 1 && (
@@ -801,6 +841,8 @@ function App({ auth }) {
             searchQuery={searchQuery}
             memberConstraints={memberConstraints}
             memberPreferences={memberPreferences}
+            activeTeamName={activeTeamName}
+            memberTeams={memberTeams}
           />
         </div>
       </div>

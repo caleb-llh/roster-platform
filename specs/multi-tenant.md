@@ -290,9 +290,8 @@ Ordered by how much each is affected.
    `rosterSchema`) — **medium.** `isMemberUnavailable` fed the global calendar;
    `canSwapRosterSlots` and the manual-assignment picker gain an optional
    cross-team clash check; add tenant→team→roster constraint merge; new
-   constraint keys: `ENFORCE_CROSS_TEAM_CAPS`, `WARN_CROSS_TEAM_CLASH` (or
-   `ENFORCE_`), with sensible defaults (clash = warn, caps = off) so existing
-   single-team rosters are unaffected.
+   constraint keys: `ENFORCE_CROSS_TEAM_CAPS`, `ENFORCE_CROSS_TEAM_CLASH`, with
+   sensible defaults (both off) so existing single-team rosters are unaffected.
 
 6. **Roster statistics & availability heatmap** (`data-layer.md`,
    `events-ui.md`) — **medium.** Everything stays real-time and per roster.
@@ -370,7 +369,8 @@ keeps `npx vitest run` + `npm run build` green.
   [`derivedState.js`](../src/utils/derivedState.js) — a single-team identity pass
   over `getDerivedState` plus the empty/no-op cross-team assignments snapshot.
   `generateRoster` threads `externalAssignments` (defaulting `{}`) into the
-  `EligibilityChecker`, which stores it unused until Phase 2. `externalLoad` is
+  `EligibilityChecker`, which stored it unused until Phase 2 (now consulted by
+  the cross-team cap/clash fold). `externalLoad` is
   deliberately *not* an input — load derives from the assignments snapshot. Tests
   lock in the no-op: the full suite stays green, `resolveDerivedState` is proven
   identical to `getDerivedState`, and an empty `externalAssignments` produces
@@ -431,9 +431,78 @@ keeps `npx vitest run` + `npm run build` green.
     exposed via the provider (`memberTeams`, `activeTeamName`) and threaded
     App → MembersView → MemberCard. In flat/single-team mode the divider, team
     label and "Also on" line are all absent, so single-team cards are unchanged.
-- **Phase 2 — cross-team constraints.** New constraint keys + merge chain +
-  clash/cap enforcement wired into generation, swap validation and stats, with
-  tests.
+- **Phase 2 — cross-team constraints.**
+  - **Enforcement core: ✅ Landed.** Two new constraint keys in
+    [`rosterSchema.js`](../src/schema/rosterSchema.js) —
+    `ENFORCE_CROSS_TEAM_CAPS` and `ENFORCE_CROSS_TEAM_CLASH` — fold a member's
+    `externalAssignments` (their assignments on OTHER teams) into the *same*
+    counting/clash seam every consumer already reads, so no new rule is
+    introduced. Both default **OFF** and the snapshot is empty in single-team
+    mode, so single-team behaviour is byte-for-byte unchanged (locked by tests).
+    - The fold helpers `externalEventsFor` / `externalWeeklyCount` /
+      `externalMonthlyCount` live in
+      [`constraintPrimitives.js`](../src/utils/constraintPrimitives.js) and derive
+      every cross-team figure from the assignments snapshot (never a stored,
+      drift-prone load). The `no-clash` descriptor now emits `params.external`
+      so consumers can word a cross-team clash distinctly.
+    - **Caps depend on the local cap.** `ENFORCE_CROSS_TEAM_CAPS` only *adds* the
+      external week/month load to `weeklyCount` / `monthlyCount`; those counts
+      are consulted only when the LOCAL `ONLY_ONCE_PER_WEEK` /
+      `MAX_ASSIGNMENTS_PER_MONTH` are themselves enabled. It does not force those
+      rules to run. (Rationale: the cap threshold is a local policy; cross-team
+      caps change *what counts toward it*, not *whether it applies*.)
+    - **Cross-team clash BLOCKS during generation.** Unlike a soft warning, a
+      cross-team clash is a feasibility failure (a person can't be in two
+      overlapping events across teams), so the generator's `EligibilityChecker`
+      OR-s `ENFORCE_CROSS_TEAM_CLASH` into the `no-clash` run condition (a
+      `forceRun` seam) and the swap validator folds externals into its
+      always-on clash scan. The validator surfaces a cross-team weekly overage
+      even when there is no OTHER *local* in-week event (it would otherwise drop
+      the error silently).
+    - **Constraint/preference merge chain: ✅ Landed.** `resolveTenant` merges
+      `roster_constraints` / `roster_preferences` **tenant → team → roster**
+      (later wins) via the `mergeLayers` helper in
+      [`derivedState.js`](../src/utils/derivedState.js), mirroring today's
+      `DEFAULT → document` merge one level deeper. It emits the merged object
+      only when a layer supplied one, so flat single-team docs are unchanged.
+  - **Data-sourcing + auto-enable + UI: ✅ Landed.** The read-only
+    `externalAssignments` snapshot is derived from the tenant document by
+    `deriveExternalAssignments(data, { teamId })` in
+    [`derivedState.js`](../src/utils/derivedState.js): it gathers every placed
+    date on the rosters of **other** teams, keyed by member id. "External" is
+    scoped to the active TEAM (not roster) — a team's own sibling rosters are
+    excluded, because they are different periods of the same team and the local
+    week/clash logic is already period-scoped (counting them would double-count).
+    The local provider ([`useLocalRosterProvider.js`](../src/data/useLocalRosterProvider.js))
+    computes it for the active team and exposes it on the provider contract;
+    [`App.jsx`](../src/App.jsx) threads it into `generateRoster`,
+    `validateEventAssignments` and `explainSwap`.
+    - **Invariant — a team's rosters partition time (must not overlap).** The
+      "exclude sibling rosters" rule above is only sound if a team's rosters
+      cover *disjoint* date periods. If two sibling rosters overlapped, a genuine
+      within-team double-booking spanning both would be silently dropped
+      (excluded as "sibling", and each roster is validated in isolation).
+      `validateTenantRosters(data)` in
+      [`derivedState.js`](../src/utils/derivedState.js) enforces this: on import
+      the local provider surfaces a **non-fatal warning** (through the same
+      `data.warnings` channel the UI already shows) naming any two overlapping
+      rosters on a team. Overlap is inclusive on calendar days (sharing a
+      boundary day counts). It is a warning, not a hard error, because a
+      malformed period should not block loading the rest of the document — but it
+      must not pass silently.
+    - **Auto-enable for multi-team tenants.** `resolveTenant` turns both
+      cross-team keys ON as the **lowest-precedence** layer of the merge chain
+      **iff the tenant has >1 team**, so any explicit tenant/team/roster YAML
+      still overrides them and a single-team tenant leaves them off (nothing to
+      be cross-team about) — single-team output stays byte-for-byte identical.
+    - **UI surfacing reuses the existing validation renderer.** A cross-team
+      clash is already emitted by the validator as an error string ("… rostered
+      on another team …"); it flows through the per-event error badges and the
+      issue summary in [`EventsView.jsx`](../src/components/EventsView.jsx) with
+      no new component (isolated-vs-shared: reuse, don't duplicate).
+  - **Deferred (follow-ups):** a dedicated cross-team *load* view in stats (the
+    clash badges are done); production wiring of `externalAssignments` in the
+    Supabase provider (a `{}` stub today) lands with Phase 3.
 - **Phase 3 — production (Supabase).** `0004_tenants_teams.sql` (tables, RLS
   re-scoped to tenant, RPCs, backfill migration), provider join to the resolved
   shape, tenant/team admin UI. **RLS/RPC tests run against the local Supabase

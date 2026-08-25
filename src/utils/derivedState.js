@@ -4,8 +4,9 @@
  *     engine/validators/stats consume (active members, role colours, resolved
  *     constraints/preferences).
  *  2. Nested-tenant resolution — `resolveTenant` and friends flatten a
- *     multi-team tenant document into that same flat shape. Flat input passes
- *     through untouched, so single-team behaviour is unchanged.
+ *     multi-team tenant document into that same flat shape, plus the cross-team
+ *     helpers (`deriveExternalAssignments`, `validateTenantRosters`). Flat input
+ *     passes through untouched, so single-team behaviour is unchanged.
  */
 
 import { YAML_FIELDS } from '../schema/rosterSchema'
@@ -134,6 +135,96 @@ export function writeBackEvents(data, { teamId: selTeamId, rosterId: selRosterId
 }
 
 /**
+ * Derive the read-only cross-team `externalAssignments` snapshot for the active
+ * team: `{ memberId: ['YYYY-MM-DD', ...] }`, gathering every assignment a member
+ * holds on rosters belonging to *other* teams.
+ *
+ * "External" is defined per the active TEAM, not the active roster: the active
+ * team's own sibling rosters are excluded (they are different periods of the
+ * same team, and the local once-per-week/clash logic is already period-scoped —
+ * counting them here would double-count). Every roster on every other team
+ * contributes its placed dates. Flat documents (no `teams`) have no other teams,
+ * so this is `{}` and single-team enforcement stays a no-op.
+ *
+ * Only the *dates* are needed (the fold in constraintPrimitives derives week/
+ * month/clash from them); role and team identity are irrelevant to the caps and
+ * to same-day clash. Duplicate dates are kept intentionally — a member rostered
+ * twice on another team the same week should count twice toward a weekly cap.
+ */
+export function deriveExternalAssignments(data, { teamId: selTeamId } = {}) {
+  if (!isTenantShape(data)) return {}
+  const teams = data.teams || []
+  const activeIndex = teams.findIndex((t, i) => teamId(t, i) === selTeamId)
+  const external = {}
+  teams.forEach((team, ti) => {
+    if (ti === activeIndex) return // skip the active team's own rosters
+    ;(team.rosters || []).forEach(r => {
+      ;(r.events || []).forEach(ev => {
+        const date = ev && ev.date
+        if (!date) return
+        ;(ev.roster || []).forEach(slot => {
+          const mid = slot && slot.member_id
+          if (!mid) return
+          ;(external[mid] || (external[mid] = [])).push(date)
+        })
+      })
+    })
+  })
+  return external
+}
+
+/**
+ * Validate the structural invariant that a team's rosters PARTITION time: no two
+ * rosters on the same team may cover overlapping date periods.
+ *
+ * `deriveExternalAssignments` relies on this — it treats a team's own sibling
+ * rosters as "different periods of the same team" and excludes them from the
+ * cross-team snapshot to avoid double-counting. If two sibling rosters actually
+ * overlapped, a genuine within-team double-booking spanning both would be
+ * silently dropped (excluded as "sibling", and each roster is validated in
+ * isolation). This surfaces that authoring mistake loudly instead.
+ *
+ * Non-fatal by design (matches the app's warning style): returns an array of
+ * human-readable warning strings — `[]` for flat docs and for well-formed
+ * tenants. Rosters without both `start_date` and `end_date` are skipped (a
+ * missing period can't be checked). Overlap is inclusive on calendar days: two
+ * rosters that merely share a boundary day are considered overlapping.
+ */
+export function validateTenantRosters(data) {
+  if (!isTenantShape(data)) return []
+  const warnings = []
+  ;(data.teams || []).forEach((team, ti) => {
+    const teamName = (team && team.name) || `Team ${ti + 1}`
+    const periods = ((team && team.rosters) || [])
+      .map((r, ri) => {
+        const p = r && r.roster
+        if (!p || !p.start_date || !p.end_date) return null
+        const start = new Date(p.start_date).getTime()
+        const end = new Date(p.end_date).getTime()
+        if (Number.isNaN(start) || Number.isNaN(end)) return null
+        return { name: (r && r.name) || p.start_date, id: rosterId(r, ri), start, end }
+      })
+      .filter(Boolean)
+    // Pairwise overlap. A team has few rosters, so O(n²) is fine and keeps the
+    // message precise (names the two offending periods).
+    for (let a = 0; a < periods.length; a++) {
+      for (let b = a + 1; b < periods.length; b++) {
+        const pa = periods[a]
+        const pb = periods[b]
+        // Inclusive overlap: [aStart, aEnd] ∩ [bStart, bEnd] ≠ ∅.
+        if (pa.start <= pb.end && pb.start <= pa.end) {
+          warnings.push(
+            `${teamName}: rosters "${pa.name}" and "${pb.name}" cover overlapping date periods; ` +
+              `a team's rosters must not overlap (cross-team load excludes sibling rosters).`
+          )
+        }
+      }
+    }
+  })
+  return warnings
+}
+
+/**
  * Resolve a tenant document + selection into today's FLAT document shape.
  *
  * - Flat input (no `teams`) is returned unchanged.
@@ -216,10 +307,21 @@ export function resolveTenant(data, { teamId: selTeamId, rosterId: selRosterId }
   if (roster.roster) flat.roster = roster.roster
   // Constraint/preference merge chain: tenant → team → roster (later wins),
   // mirroring today's DEFAULT → document merge one level deeper. A team can set
-  // tenant-wide house rules that a specific roster may still override. Only emit
-  // the merged object when any layer supplied one, so flat single-team docs (no
-  // tenant/team layers) are unchanged.
+  // tenant-wide house rules (e.g. cross-team caps) that a specific roster may
+  // still override. Only emit the merged object when any layer supplied one, so
+  // flat single-team docs (no tenant/team layers) are unchanged.
+  //
+  // Auto-enable cross-team enforcement for genuinely multi-team tenants: when a
+  // tenant has >1 team, the cross-team cap/clash keys default ON as the LOWEST-
+  // precedence layer, so any explicit tenant/team/roster YAML still overrides
+  // them. A single-team tenant leaves both off (nothing to be cross-team about),
+  // keeping single-team output byte-for-byte identical.
+  const crossTeamDefaults =
+    teams.length > 1
+      ? { ENFORCE_CROSS_TEAM_CAPS: true, ENFORCE_CROSS_TEAM_CLASH: true }
+      : null
   const mergedConstraints = mergeLayers(
+    crossTeamDefaults,
     data.roster_constraints,
     team.roster_constraints,
     roster.roster_constraints
@@ -310,15 +412,17 @@ export function getDerivedState(data) {
 }
 
 /**
- * Resolve the single derived-state contract the engine/validators consume
- * (multi-tenant Phase 0 seam).
+ * Convenience aggregator: derived state + the cross-team `externalAssignments`
+ * snapshot in one object. Names the "resolved derived-state" contract the
+ * engine/validators consume, so a future tenant/team backend can resolve the
+ * SAME shape by joining `members` + `team_members` without the engine changing.
  *
- * Today a roster is one document and `getDerivedState` already yields the
- * normalized shape (`{ members: [{ id, name, roles, understudyFor, include }],
- * events, memberConstraints, ... }`). This seam names that contract explicitly
- * so the target tenant/team model can later resolve the SAME shape by joining
- * `members` + `team_members` (see specs/multi-tenant.md "Compatibility seam")
- * without the engine changing.
+ * NOTE ON WIRING: the live provider path assembles these two pieces separately —
+ * `getDerivedState(resolveTenant(...))` for the flat state and
+ * `deriveExternalAssignments(...)` for the snapshot — because they update on
+ * different triggers (selection vs. cross-team edits). This helper bundles them
+ * for callers/tests that want the whole contract in one call; both routes yield
+ * the same shape.
  *
  * For a single team it is an identity pass over `getDerivedState(data)` plus the
  * optional read-only cross-team **assignments**, which default to empty/no-op so
@@ -327,10 +431,9 @@ export function getDerivedState(data) {
  * `externalAssignments` is the single cross-team primitive: any "load" figure
  * (monthly/weekly/total counts) is *derived* from it by the same rollup the
  * `AssignmentTracker` already applies to local assignments, so it is never
- * passed or stored as a separate, drift-prone input. See
- * specs/multi-tenant.md "Compatibility seam".
+ * passed or stored as a separate, drift-prone input. See specs/multi-tenant.md.
  *
- * @param {object|null} data - the roster document (current single-team source)
+ * @param {object|null} data - the roster document (flat, or already-resolved)
  * @param {object} [external] - { externalAssignments } read-only snapshot of the
  *   member's assignments in OTHER teams (`{ memberId: [dateOrDatetime, ...] }`);
  *   empty by default.
