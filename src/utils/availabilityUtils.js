@@ -1,5 +1,6 @@
 import { canFillSlotRole, isUnderstudyRole } from './understudy'
 import { isMemberUnavailable } from './constraintPrimitives'
+import { isMemberIncluded } from '../schema/rosterSchema'
 
 /**
  * Compute, for each real role, how many members are AVAILABLE for that role on
@@ -40,7 +41,7 @@ import { isMemberUnavailable } from './constraintPrimitives'
  */
 export function computeAvailabilityByRole(events, members, roles, memberConstraints) {
   const realRoles = (roles || []).filter(r => typeof r === 'string' && !isUnderstudyRole(r))
-  const activeMembers = (members || []).filter(m => m && m.include !== false)
+  const activeMembers = (members || []).filter(isMemberIncluded)
 
   // Unique event dates, chronological.
   const dates = Array.from(new Set((events || []).map(e => e && e.date).filter(Boolean)))

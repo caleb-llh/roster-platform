@@ -32,6 +32,7 @@
 
 import { understudySlotRole, UNDERSTUDY_MIN_SESSIONS } from '../understudy'
 import { NULL_LOGGER } from './actionLog'
+import { isMemberIncluded } from '../../schema/rosterSchema'
 
 /**
  * @param {Array} events    cloned, chronologically-sorted events (mutated)
@@ -48,7 +49,7 @@ export function planPromotions(events, members, eligibilityChecker, tracker, opt
   // Base roles that have trainees.
   const baseRoles = new Set()
   members.forEach(m => {
-    if (m.include === false) return
+    if (!isMemberIncluded(m)) return
     ;(m.understudyFor || []).forEach(r => baseRoles.add(r))
   })
   if (baseRoles.size === 0) return 0
@@ -62,7 +63,7 @@ export function planPromotions(events, members, eligibilityChecker, tracker, opt
     // performed the real role. Capture the latest understudy date so promotions
     // are strictly later.
     const trainees = members
-      .filter(m => m.include !== false && (m.understudyFor || []).includes(baseRole))
+      .filter(m => isMemberIncluded(m) && (m.understudyFor || []).includes(baseRole))
       .map(m => {
         const understudyDates = tracker.getRoleDates(m.id, slotRole)
         const performed = tracker.getRoleAssignmentCount(m.id, baseRole)

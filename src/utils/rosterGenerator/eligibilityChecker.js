@@ -9,7 +9,7 @@ import {
   externalWeeklyCount,
   externalMonthlyCount
 } from '../constraintPrimitives'
-import { CONSTRAINT_KEYS, isConstraintEnabled } from '../../schema/rosterSchema'
+import { CONSTRAINT_KEYS, isConstraintEnabled, isMemberIncluded } from '../../schema/rosterSchema'
 import { understudySlotRole, isRoleCapable } from '../understudy'
 import { getConstraint, CONSTRAINT_MODES } from '../constraints'
 
@@ -45,7 +45,7 @@ export class EligibilityChecker {
       return { eligible: false, reason: 'Member not found' }
     }
     
-    if (member.include === false) {
+    if (!isMemberIncluded(member)) {
       return { eligible: false, reason: 'Member not included in roster' }
     }
     
@@ -154,7 +154,7 @@ export class EligibilityChecker {
    */
   canBePromotedTo(memberId, role, event) {
     const member = this.members.find(m => m.id === memberId)
-    if (!member || member.include === false) return false
+    if (!isMemberIncluded(member)) return false
     if (!isRoleCapable(member, role)) return false
     if (getConstraint('availability').check({ memberId, role, event }, this, CONSTRAINT_MODES.WOULD_PLACE)) return false
     if (isAssignedToEvent(memberId, (event.roster || []).filter(s => s.member_id))) return false
@@ -168,7 +168,7 @@ export class EligibilityChecker {
     const eligibleMembers = []
     
     this.members.forEach(member => {
-      if (member.include === false) return
+      if (!isMemberIncluded(member)) return
       
       const result = this.isEligible(member.id, role, event, currentRoster)
       if (result.eligible) {

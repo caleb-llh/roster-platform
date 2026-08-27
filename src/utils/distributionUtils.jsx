@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { glassPopup, glassArrow, tierUnit } from './statsTheme'
 import { formatDate } from './colorUtils'
 import { availabilityCellColor } from './availabilityUtils'
+import { isMemberIncluded } from '../schema/rosterSchema'
 
 /**
  * Calculate shift distribution from generation result
@@ -56,7 +57,7 @@ export function calculateDistribution(generationResult, members) {
     ? Math.max(...sortedDistribution.map(d => d.memberCount)) 
     : 1
     
-  const activeMembers = members?.filter(m => m.include !== false) || []
+  const activeMembers = members?.filter(isMemberIncluded) || []
   const averageShifts = activeMembers.length > 0 
     ? (generationResult.stats.assignedRoles / activeMembers.length).toFixed(1)
     : '0.0'

@@ -58,6 +58,18 @@ a day can't slip a timezone. Member unavailability remains a set of **day keys**
   keep grouping visually by day while the *model* is datetime. Surfacing
   time-of-day editing in the UI — and displaying multiple events per day — is a
   deliberately separate, not-yet-built change.
+- **`include` is the ONE "is this member schedulable?" field.** The predicate is
+  centralized in `isMemberIncluded(member)`
+  ([`rosterSchema.js`](../src/schema/rosterSchema.js)): a member is schedulable
+  unless they opt out with `include: false` (absent = included). The schema,
+  `sample.yaml`, generator, validator, stats and the tenant resolver
+  (`member_overrides`) all key off this one field, so `getDerivedState`'s
+  `activeMembers` cannot disagree with generation/stats. A legacy `active: false`
+  is still honoured **only as an alias** so very old documents don't silently
+  start scheduling opted-out members — there is no separate `active` concept.
+  (This fixes a real bug: `getDerivedState` previously filtered on `m.active`,
+  which is *absent* on tenant-resolved members, so `member_overrides` sabbaticals
+  were silently ignored in the schedulable count.)
 
 ## `sample.yaml` is the canonical valid-schema example
 

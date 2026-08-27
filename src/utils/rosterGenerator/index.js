@@ -49,7 +49,7 @@ import { seedUnderstudySlots } from './understudySeeding'
 import { planPromotions, clearPromotionPins } from './promotionPlanning'
 import { isUnderstudyRole } from '../understudy'
 import { areConsecutiveWeekends } from '../constraintPrimitives'
-import { CONSTRAINT_KEYS, PREFERENCE_KEYS, isConstraintEnabled, isPreferenceEnabled } from '../../schema/rosterSchema'
+import { CONSTRAINT_KEYS, PREFERENCE_KEYS, isConstraintEnabled, isPreferenceEnabled, isMemberIncluded } from '../../schema/rosterSchema'
 
 /**
  * Main entry point.
@@ -83,7 +83,7 @@ export function generateRoster(
 
   logger.info('Roster generation started', {
     events: events.length,
-    members: members.filter(m => m.include !== false).length,
+    members: members.filter(isMemberIncluded).length,
   })
 
   const result = generateRosterSingleRun(

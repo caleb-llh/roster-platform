@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { IssueSummary } from './SharedComponents'
 import { MemberCard } from './MemberCard'
 import { headingPage, hoverRow } from '../utils/statsTheme'
+import { isMemberIncluded } from '../schema/rosterSchema'
 
 export default function MembersView({ members, roles, roleColorMap, warnings, searchQuery, memberConstraints, memberPreferences, activeTeamName, memberTeams = {} }) {
   const [selectedRole, setSelectedRole] = useState('All')
 
   const searchLower = searchQuery.toLowerCase()
-  const isActive = (m) => m.include !== false
+  const isActive = (m) => isMemberIncluded(m)
 
   // A member matches a selected role if they can perform it OR are training for
   // it as an understudy.

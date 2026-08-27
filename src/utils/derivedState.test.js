@@ -303,24 +303,28 @@ describe('derivedState', () => {
       expect(state.members[0]).toMatchObject({ id: 'alice', name: 'Alice' })
     })
 
-    it('should handle legacy include field vs active field', () => {
+    it('treats `include` as canonical, with `active: false` only a legacy alias', () => {
       const data = {
         members: [
-          { id: 'alice', name: 'Alice', include: true, active: false },
-          { id: 'bob', name: 'Bob', include: false, active: true },
+          // include:false always excludes, regardless of a stray active:true.
+          { id: 'alice', name: 'Alice', include: false, active: true },
+          // include:true is schedulable; a legacy active:false still opts out
+          // (old documents used `active`), so this member is excluded.
+          { id: 'bob', name: 'Bob', include: true, active: false },
           { id: 'charlie', name: 'Charlie', include: true },
-          { id: 'dave', name: 'Dave', active: true }
+          // No include, legacy active:true → included (absent include = in).
+          { id: 'dave', name: 'Dave', active: true },
+          // No fields at all → included by default.
+          { id: 'erin', name: 'Erin' },
         ]
       }
-      
+
       const state = getDerivedState(data)
-      
-      // Should respect active field when present
       const activeIds = state.activeMembers.map(m => m.id)
-      expect(activeIds).toContain('bob')
-      expect(activeIds).toContain('charlie')
-      expect(activeIds).toContain('dave')
-      expect(activeIds).not.toContain('alice') // active: false
+
+      expect(activeIds).toEqual(['charlie', 'dave', 'erin'])
+      expect(activeIds).not.toContain('alice') // include:false
+      expect(activeIds).not.toContain('bob') // legacy active:false opts out
     })
 
     it('should handle Tailwind color classes correctly', () => {

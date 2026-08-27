@@ -11,6 +11,7 @@
 
 import { canFillSlotRole, isUnderstudyRole, isPromotedForRole } from './understudy'
 import { getConstraint, CONSTRAINT_MODES } from './constraints'
+import { isMemberIncluded } from '../schema/rosterSchema'
 
 /**
  * Check if a member is unavailable on a specific date
@@ -87,7 +88,7 @@ export const getAvailableMembersForEvent = (event, members, constraints, allEven
     //    picker can reproduce the generator's promotions. Trainees who haven't
     //    understudied yet stay out, honouring the understudy-before-role rule.
     const qualifiedMembers = members.filter(m => {
-      if (m.include === false) return false
+      if (!isMemberIncluded(m)) return false
       if (canFillSlotRole(m, role)) return true
       if (!isUnderstudyRole(role)) return isPromotedForRole(m, role, events, event.date)
       return false

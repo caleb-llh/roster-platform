@@ -9,7 +9,7 @@
  *     passes through untouched, so single-team behaviour is unchanged.
  */
 
-import { YAML_FIELDS } from '../schema/rosterSchema'
+import { YAML_FIELDS, isMemberIncluded } from '../schema/rosterSchema'
 import { createRoleColorMap } from './colorUtils'
 import { DEFAULT_ROSTER_CONSTRAINTS, DEFAULT_ROSTER_PREFERENCES } from '../config/rosterDefaults'
 import { normalizeMemberRoles } from './understudy'
@@ -381,8 +381,9 @@ export function getDerivedState(data) {
   // Generate role color map (shared palette from colorUtils)
   const roleColorMap = createRoleColorMap(roles)
 
-  // Filter active members
-  const activeMembers = members.filter(m => m && m.active !== false)
+  // Filter to schedulable members (see isMemberIncluded — `include` is the one
+  // canonical field; `active` is only a legacy alias).
+  const activeMembers = members.filter(isMemberIncluded)
 
   // Extract member constraints from member_constraints (top-level array in YAML)
   const memberConstraints = data[YAML_FIELDS.MEMBER_CONSTRAINTS] || []

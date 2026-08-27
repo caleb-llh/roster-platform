@@ -3,6 +3,7 @@
  */
 
 import { getWeekKey } from '../constraintPrimitives'
+import { isMemberIncluded } from '../../schema/rosterSchema'
 
 export class AssignmentTracker {
   constructor(members, events, rosterPeriod) {
@@ -13,7 +14,7 @@ export class AssignmentTracker {
     this.memberRoleAssignments = {}
     this.memberRoleDates = {}
     members.forEach(m => {
-      if (m.include !== false) {
+      if (isMemberIncluded(m)) {
         this.memberAssignments[m.id] = {
           total: 0,
           byMonth: {},

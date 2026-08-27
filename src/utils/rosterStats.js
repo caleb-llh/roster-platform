@@ -7,6 +7,7 @@
  */
 import { AssignmentTracker } from './rosterGenerator/assignmentTracker'
 import { EligibilityChecker } from './rosterGenerator/eligibilityChecker'
+import { isMemberIncluded } from '../schema/rosterSchema'
 
 export const calculateRosterStats = (events, members, rosterPeriod, memberConstraints = {}, rosterConstraints = {}) => {
   if (!events || !members || !rosterPeriod) {
@@ -22,7 +23,7 @@ export const calculateRosterStats = (events, members, rosterPeriod, memberConstr
     }
   }
 
-  const activeMembers = members.filter(m => m.include !== false)
+  const activeMembers = members.filter(isMemberIncluded)
   
   // Count total slots needed across all events
   let totalSlots = 0

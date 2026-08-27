@@ -3,6 +3,7 @@
  */
 
 import { normalizeMemberRoles, understudySlotRole, isUnderstudyRole, baseRoleOf } from './utils/understudy'
+import { isMemberIncluded } from './schema/rosterSchema'
 
 export class ValidationBuilder {
   constructor(data) {
@@ -328,7 +329,7 @@ export const validateMemberConstraints = (data) => {
   if (!data?.members) return { errors, warnings }
 
   // Check for members without constraints
-  const includedMembers = data.members.filter(m => m.include !== false)
+  const includedMembers = data.members.filter(isMemberIncluded)
   const constraintMap = new Map()
   
   if (data.member_constraints && Array.isArray(data.member_constraints)) {

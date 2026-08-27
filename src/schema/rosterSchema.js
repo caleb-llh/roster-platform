@@ -172,6 +172,23 @@ export const MEMBER_PREF_FIELDS = {
 // ============================================================================
 
 /**
+ * The single "is this member schedulable?" predicate. A member is included
+ * unless they explicitly opt out with `include: false` (absent = included).
+ *
+ * `include` is the ONE canonical field — the schema, sample YAML, generator,
+ * validator, stats and the tenant resolver (`member_overrides`) all key off it.
+ * There is deliberately no separate `active` field; a legacy `active: false`
+ * (from very old documents) is still honoured as an alias so those docs don't
+ * silently start scheduling opted-out members.
+ */
+export function isMemberIncluded(member) {
+  if (!member) return false
+  if (member.include === false) return false
+  if (member.active === false) return false // legacy alias
+  return true
+}
+
+/**
  * Get the constraint value with type coercion
  */
 export function getConstraintValue(rosterConstraints, constraintKey) {

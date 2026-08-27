@@ -1,6 +1,7 @@
 import { canFillSlotRole, isUnderstudyRole, isPromotedForRole } from './understudy'
 import { getConstraint, CONSTRAINT_MODES, formatViolation } from './constraints'
 import { eventsClash, externalEventsFor } from './constraintPrimitives'
+import { isMemberIncluded } from '../schema/rosterSchema'
 
 /**
  * Validate a proposed swap/move between two roster slots, returning both
@@ -49,7 +50,7 @@ export const explainSwap = ({
   const rejection = (memberId, event, slot, ignoreRoleIndex, fromEvent) => {
     if (!memberId) return null // clearing a slot is always valid
     const member = memberById(memberId)
-    if (!member || member.include === false) {
+    if (!isMemberIncluded(member)) {
       return `${nameOf(memberId)} is inactive and can't be assigned.`
     }
 

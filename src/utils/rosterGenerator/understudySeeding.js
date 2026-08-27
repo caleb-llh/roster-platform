@@ -33,6 +33,7 @@
 
 import { understudySlotRole, UNDERSTUDY_MIN_SESSIONS } from '../understudy'
 import { NULL_LOGGER } from './actionLog'
+import { isMemberIncluded } from '../../schema/rosterSchema'
 
 /**
  * Inject understudy shadowing slots into feasible events.
@@ -52,7 +53,7 @@ export function seedUnderstudySlots(events, members, eligibilityChecker, tracker
   // Group trainees by the base role they are training for.
   const traineesByBaseRole = new Map()
   members.forEach(member => {
-    if (member.include === false) return
+    if (!isMemberIncluded(member)) return
     ;(member.understudyFor || []).forEach(baseRole => {
       if (!traineesByBaseRole.has(baseRole)) traineesByBaseRole.set(baseRole, [])
       traineesByBaseRole.get(baseRole).push(member)
