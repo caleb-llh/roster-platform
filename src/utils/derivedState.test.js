@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { getDerivedState, resolveDerivedState, isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEvents, deriveExternalAssignments, validateTenantRosters } from './derivedState'
+import { getDerivedState, resolveDerivedState } from './derivedState'
+import { isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEvents, deriveExternalAssignments, validateTenantRosters } from './tenantResolver'
 import { CONSTRAINT_KEYS, PREFERENCE_KEYS } from '../schema/rosterSchema'
 import { DEFAULT_ROSTER_CONSTRAINTS, DEFAULT_ROSTER_PREFERENCES } from '../config/rosterDefaults'
 

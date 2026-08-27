@@ -3,7 +3,7 @@ import yaml from 'js-yaml'
 import { runAllValidators } from '../validators'
 import { LOCAL_PERMISSIONS } from './providerContract'
 import { useDraftHistory } from './useDraftHistory'
-import { isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEvents, deriveExternalAssignments, validateTenantRosters } from '../utils/derivedState'
+import { isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEvents, deriveExternalAssignments, validateTenantRosters } from '../utils/tenantResolver'
 
 /**
  * Local (in-memory) implementation of the roster data provider contract.

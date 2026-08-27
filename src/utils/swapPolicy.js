@@ -1,5 +1,5 @@
 import { canFillSlotRole, isUnderstudyRole, isPromotedForRole } from './understudy'
-import { getConstraint, CONSTRAINT_MODES, formatViolation } from './constraints'
+import { getConstraintRule, CONSTRAINT_MODES, formatViolation } from './constraints'
 import { eventsClash, externalEventsFor } from './constraintPrimitives'
 import { isMemberIncluded } from '../schema/rosterSchema'
 
@@ -41,7 +41,7 @@ export const explainSwap = ({
   const sameEvent = eventA === eventB
   const events = allEvents || [eventA, eventB]
 
-  const noClash = getConstraint('no-clash')
+  const noClash = getConstraintRule('no-clash')
 
   // Returns null when the member may occupy the slot, otherwise a reason string
   // naming the specific member, role, and cause so the toast can be actionable.
@@ -58,7 +58,7 @@ export const explainSwap = ({
       (!isUnderstudyRole(slot.role) && isPromotedForRole(member, slot.role, events, event.date))
     if (!roleOk) return `${nameOf(memberId)} can't fill the ${slot.role} role.`
 
-    const availability = getConstraint('availability')
+    const availability = getConstraintRule('availability')
     const unavailable = availability.check(
       { memberId, role: slot.role, event },
       { memberConstraints },

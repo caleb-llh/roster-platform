@@ -3,7 +3,7 @@ import {
   CONSTRAINTS,
   CONSTRAINT_MODES,
   checkConstraints,
-  getConstraint,
+  getConstraintRule,
   formatViolation,
 } from './constraints'
 import { CONSTRAINT_KEYS } from '../schema/rosterSchema'
@@ -17,7 +17,7 @@ const event = { date: '2026-01-10', roster: [] }
 const freeEvent = { date: '2026-01-11', roster: [] }
 
 describe('availability constraint descriptor', () => {
-  const availability = getConstraint('availability')
+  const availability = getConstraintRule('availability')
 
   it('is a feasibility constraint', () => {
     expect(availability.kind).toBe('feasibility')
@@ -120,7 +120,7 @@ describe('load-cadence descriptors (mode-sensitive counting)', () => {
   const placement = { memberId: 'm1', role: 'lead', event: { date: '2026-03-10' } }
 
   describe('once-per-week (cap 1)', () => {
-    const rule = getConstraint('once-per-week')
+    const rule = getConstraintRule('once-per-week')
     it('would-place: blocks at >= 1 prior', () => {
       expect(rule.check(placement, makeCtx({}, { weekly: 1 }), CONSTRAINT_MODES.WOULD_PLACE)).not.toBeNull()
       expect(rule.check(placement, makeCtx({}, { weekly: 0 }), CONSTRAINT_MODES.WOULD_PLACE)).toBeNull()
@@ -132,7 +132,7 @@ describe('load-cadence descriptors (mode-sensitive counting)', () => {
   })
 
   describe('max-per-month (cap 2)', () => {
-    const rule = getConstraint('max-per-month')
+    const rule = getConstraintRule('max-per-month')
     it('would-place: blocks at >= cap', () => {
       expect(rule.check(placement, makeCtx({}, { monthly: 2 }), CONSTRAINT_MODES.WOULD_PLACE)).not.toBeNull()
       expect(rule.check(placement, makeCtx({}, { monthly: 1 }), CONSTRAINT_MODES.WOULD_PLACE)).toBeNull()
@@ -149,7 +149,7 @@ describe('load-cadence descriptors (mode-sensitive counting)', () => {
 })
 
 describe('once-per-event descriptor', () => {
-  const rule = getConstraint('once-per-event')
+  const rule = getConstraintRule('once-per-event')
   const ctx = (roster) => ({
     rosterConstraints: { ONLY_ONCE_PER_EVENT: true },
     currentRoster: () => roster,
@@ -165,7 +165,7 @@ describe('once-per-event descriptor', () => {
 })
 
 describe('no-clash descriptor', () => {
-  const rule = getConstraint('no-clash')
+  const rule = getConstraintRule('no-clash')
   const target = { date: '2026-04-01', roster: [] }
   // Same-day event the member is already in → overlaps (bare dates are whole days).
   const otherSameDay = { date: '2026-04-01', roster: [{ role: 'lead', member_id: 'm1' }] }
@@ -204,7 +204,7 @@ describe('no-clash descriptor', () => {
 })
 
 describe('understudy-before-role descriptor', () => {
-  const rule = getConstraint('understudy-before-role')
+  const rule = getConstraintRule('understudy-before-role')
   const members = [
     { id: 'trainee', name: 'Trainee', roles: [], understudyFor: ['lead'] },
     { id: 'perf', name: 'Perf', roles: ['lead'], understudyFor: [] },

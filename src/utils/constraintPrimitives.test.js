@@ -3,7 +3,6 @@ import {
   getMondayOfWeek,
   getWeekKey,
   isMemberAvailable,
-  isMemberRoleCompatible,
   isMemberUnavailable,
   getAvailableMembersForEvent,
   isAssignedToEvent,
@@ -113,22 +112,6 @@ describe('constraintPrimitives', () => {
 
     it('should return true when member is available', () => {
       expect(isMemberAvailable('alice', '2026-02-08', constraints)).toBe(true)
-    })
-  })
-
-  describe('isMemberRoleCompatible', () => {
-    const member = { id: 'alice', roles: ['vm', 'cam-1'] }
-
-    it('should return true when member can perform role', () => {
-      expect(isMemberRoleCompatible(member, 'vm')).toBe(true)
-    })
-
-    it('should return false when member cannot perform role', () => {
-      expect(isMemberRoleCompatible(member, 'cam-2')).toBe(false)
-    })
-
-    it('should return false when member is null', () => {
-      expect(isMemberRoleCompatible(null, 'vm')).toBe(false)
     })
   })
 

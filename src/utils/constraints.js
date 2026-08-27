@@ -235,7 +235,7 @@ export function checkConstraints(placement, ctx, opts = {}) {
 }
 
 /** Look up a single descriptor by key (for consumers migrating rule-by-rule). */
-export function getConstraint(key) {
+export function getConstraintRule(key) {
   return CONSTRAINTS_BY_KEY[key]
 }
 

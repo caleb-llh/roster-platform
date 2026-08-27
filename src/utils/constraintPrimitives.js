@@ -10,7 +10,7 @@
  */
 
 import { canFillSlotRole, isUnderstudyRole, isPromotedForRole } from './understudy'
-import { getConstraint, CONSTRAINT_MODES } from './constraints'
+import { getConstraintRule, CONSTRAINT_MODES } from './constraints'
 import { isMemberIncluded } from '../schema/rosterSchema'
 
 /**
@@ -101,7 +101,7 @@ export const getAvailableMembersForEvent = (event, members, constraints, allEven
     // NOT a private re-check. Called directly (bypassing `enabled`) because the
     // dropdown always SHOWS unavailability as a cue regardless of whether the
     // ENFORCE_MEMBER_AVAILABILITY flag gates generation — matching the validator.
-    const availability = getConstraint('availability')
+    const availability = getConstraintRule('availability')
     const ctx = { memberConstraints: constraints }
 
     // Check availability for each qualified member
@@ -208,14 +208,6 @@ export const getWeekKey = (date) => {
  */
 export const isMemberAvailable = (memberId, date, memberConstraints) => {
   return !isMemberUnavailable(memberId, date, memberConstraints)
-}
-
-/**
- * Is the member listed as able to perform a role?
- */
-export const isMemberRoleCompatible = (member, role) => {
-  if (!member) return false
-  return member.roles && member.roles.includes(role)
 }
 
 /**

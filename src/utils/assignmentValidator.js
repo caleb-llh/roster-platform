@@ -22,7 +22,7 @@ import {
 } from './constraintPrimitives'
 import { PREFERENCE_KEYS, isPreferenceEnabled, MEMBER_PREF_FIELDS, CONSTRAINT_KEYS, isConstraintEnabled } from '../schema/rosterSchema'
 import { countUnderstudySessionsBefore } from './understudy'
-import { getConstraint, CONSTRAINT_MODES } from './constraints'
+import { getConstraintRule, CONSTRAINT_MODES } from './constraints'
 
 /**
  * Check if member is assigned on unavailable date
@@ -35,7 +35,7 @@ const checkUnavailabilityViolation = (event, memberConstraints, members) => {
   // Availability is always reported here (NOT gated by the roster flag, unlike
   // the generator), so call the descriptor's `check` directly rather than
   // through `enabled`. Wording stays validator-specific.
-  const availability = getConstraint('availability')
+  const availability = getConstraintRule('availability')
   event.roster.forEach(assignment => {
     if (assignment.member_id) {
       const violation = availability.check(
@@ -66,7 +66,7 @@ const checkUnderstudyBeforeRole = (event, allEvents, rosterConstraints, members)
 
   if (!event.roster || !Array.isArray(event.roster)) return errors
 
-  const understudyGate = getConstraint('understudy-before-role')
+  const understudyGate = getConstraintRule('understudy-before-role')
   const ctx = {
     rosterConstraints,
     members,
@@ -164,10 +164,10 @@ const checkRosterConstraints = (event, allEvents, rosterConstraints, members, ex
     },
   })
 
-  const oncePerEvent = getConstraint('once-per-event')
-  const noClash = getConstraint('no-clash')
-  const oncePerWeek = getConstraint('once-per-week')
-  const maxPerMonth = getConstraint('max-per-month')
+  const oncePerEvent = getConstraintRule('once-per-event')
+  const noClash = getConstraintRule('no-clash')
+  const oncePerWeek = getConstraintRule('once-per-week')
+  const maxPerMonth = getConstraintRule('max-per-month')
   
   // ONLY_ONCE_PER_EVENT — decision from the registry, per member; wording lists
   // the specific roles so the message stays actionable.

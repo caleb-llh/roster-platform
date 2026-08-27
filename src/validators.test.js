@@ -14,7 +14,7 @@ import {
   validateDates,
   runAllValidators
 } from './validators'
-import { isTenantShape, tenantSelection, resolveTenant } from './utils/derivedState'
+import { isTenantShape, tenantSelection, resolveTenant } from './utils/tenantResolver'
 
 describe('validators', () => {
   describe('ValidationBuilder', () => {

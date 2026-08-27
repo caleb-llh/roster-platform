@@ -86,7 +86,7 @@ export function generateRoster(
     members: members.filter(isMemberIncluded).length,
   })
 
-  const result = generateRosterSingleRun(
+  const result = runGeneration(
     events,
     members,
     memberConstraints,
@@ -110,9 +110,9 @@ export function generateRoster(
 }
 
 /**
- * Single generation run (core algorithm)
+ * The core generation algorithm: seeded greedy construction + local search.
  */
-function generateRosterSingleRun(
+function runGeneration(
   events,
   members,
   memberConstraints,
@@ -237,7 +237,7 @@ function generateRosterSingleRun(
       }
       
       // Score and rank eligible members (seeded shuffle breaks ties randomly
-      // but reproducibly, giving each restart a different initial solution).
+      // but reproducibly, so equally-ranked members aren't order-biased).
       const rankedMembers = scoringEngine.scoreAndRankMembers(rng.shuffle(eligibleMembers), role, event)
       
       // Assign the best-scored member via the reversible move layer
@@ -332,8 +332,8 @@ function recomputeStats(events, stats) {
 }
 
 /**
- * Calculate overall roster quality score (higher is better).
- * Wrapper kept for multi-start selection; delegates to evaluateState.
+ * Compute the final reported roster quality score (higher is better).
+ * Delegates to evaluateState against the finished result.
  */
 function calculateRosterQuality(result, memberPreferences, rosterPreferences) {
   return evaluateState(
@@ -345,8 +345,9 @@ function calculateRosterQuality(result, memberPreferences, rosterPreferences) {
 
 /**
  * Roster quality objective (higher is better), computed directly from a
- * RosterState-like object ({ events, tracker }). Shared by the multi-start
- * selection and the local-search loop so both optimize the same objective.
+ * RosterState-like object ({ events, tracker }). Shared by the final quality
+ * report (calculateRosterQuality) and the local-search loop so both optimize
+ * the same objective.
  */
 function evaluateState(state, memberPreferences, rosterPreferences) {
   const { events, tracker } = state

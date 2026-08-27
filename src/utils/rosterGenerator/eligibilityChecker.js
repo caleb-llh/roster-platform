@@ -11,7 +11,7 @@ import {
 } from '../constraintPrimitives'
 import { CONSTRAINT_KEYS, isConstraintEnabled, isMemberIncluded } from '../../schema/rosterSchema'
 import { understudySlotRole, isRoleCapable } from '../understudy'
-import { getConstraint, CONSTRAINT_MODES } from '../constraints'
+import { getConstraintRule, CONSTRAINT_MODES } from '../constraints'
 
 export class EligibilityChecker {
   constructor(members, constraints, rosterConstraints, tracker, options = {}) {
@@ -63,12 +63,12 @@ export class EligibilityChecker {
     // slots placed so far in this event.
     this._currentRoster = currentRoster
     for (const constraint of [
-      getConstraint('understudy-before-role'),
-      getConstraint('availability'),
-      getConstraint('once-per-event'),
-      getConstraint('no-clash'),
-      getConstraint('once-per-week'),
-      getConstraint('max-per-month'),
+      getConstraintRule('understudy-before-role'),
+      getConstraintRule('availability'),
+      getConstraintRule('once-per-event'),
+      getConstraintRule('no-clash'),
+      getConstraintRule('once-per-week'),
+      getConstraintRule('max-per-month'),
     ]) {
       // no-clash runs when EITHER the local rule OR cross-team clash is on;
       // its own `enabled` reads only ENFORCE_NO_CLASH, so OR in the cross-team
@@ -156,7 +156,7 @@ export class EligibilityChecker {
     const member = this.members.find(m => m.id === memberId)
     if (!isMemberIncluded(member)) return false
     if (!isRoleCapable(member, role)) return false
-    if (getConstraint('availability').check({ memberId, role, event }, this, CONSTRAINT_MODES.WOULD_PLACE)) return false
+    if (getConstraintRule('availability').check({ memberId, role, event }, this, CONSTRAINT_MODES.WOULD_PLACE)) return false
     if (isAssignedToEvent(memberId, (event.roster || []).filter(s => s.member_id))) return false
     return true
   }
