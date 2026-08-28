@@ -32,8 +32,8 @@
 - [ ] mobile-first experience - single pane of glass for to view roster and plan swaps (these are the core user experiences)
 
 **domain modelling**
-- [ ] introuce tenant and teams concept, clean up yaml. each tenant can have multiple teams, each team can have multiple members. members can be cross-team, constraints need to be cross-team aware too.
-- [ ] yaml only for local, no yaml for production. reuse core but separate state providers - local and production should still share the same data models. is the current schema enforcement too complicated?
+- [ ] introuce tenant and teams concept, align yaml. each tenant can have multiple teams, each team can have multiple members. members can be cross-team, constraints need to be cross-team aware too.
+- [ ] yaml as a way for agents to share a text-based state. reuse core but separate state providers - local and production should still share the same data models. is the current schema enforcement too complicated?
 - [ ] tables: users, roster, teams, events, members, member_preferences, member_constraints - did i miss any?
 - [ ] draw the relations. is this scalable?
 - [ ] multi-version support integrated into the draft and save concept? what would be the workflow and how will the underlying data structure change?
@@ -65,6 +65,10 @@
 - [ ] team members - members onboarding form and claiming (link identity) process
   - [ ] include avatar
 - [ ] roster builder - templating engine
+
+**playground mode**
+- [ ] change local mode to playground mode, with a walkthrough for users to get started and understand the system.
+- [ ] make sure playground mode and production mode underlying logic and models are reused as much as possible, so they do not drift apart
 
 **settings page**
 - [ ] bot management
