@@ -34,6 +34,12 @@
  *
  * @typedef {Object} RosterProvider
  * @property {any} data                       Parsed working document (or null).
+ *   May carry a transient `data.warnings` (string[]): document-level, non-fatal
+ *   warnings surfaced by the provider on load — the merge of `runAllValidators`
+ *   document warnings and any tenant-structure warnings (e.g. overlapping team
+ *   rosters from `validateTenantRosters`). It is display-only (rendered by the
+ *   members/events views) and is stripped before persistence, so it never round-
+ *   trips into the stored document.
  * @property {any} originalData               Snapshot for diffing (or null).
  * @property {{type: string, message: string}|null} error
  * @property {boolean} loading
