@@ -1,3 +1,7 @@
+### outstanding
+- architecture-overhaul.plan.md
+
+### backlog
 **scalable harness**
 - [x] add an agents.md file and specs feedback loop
 - [x] update readme/specs
@@ -32,7 +36,7 @@
 - [ ] mobile-first experience - single pane of glass for to view roster and plan swaps (these are the core user experiences)
 
 **domain modelling**
-- [ ] introuce tenant and teams concept, align yaml. each tenant can have multiple teams, each team can have multiple members. members can be cross-team, constraints need to be cross-team aware too.
+- [x] introuce tenant and teams concept, align yaml. each tenant can have multiple teams, each team can have multiple members. members can be cross-team, constraints need to be cross-team aware too.
 - [ ] yaml as a way for agents to share a text-based state. reuse core but separate state providers - local and production should still share the same data models. is the current schema enforcement too complicated?
 - [ ] tables: users, roster, teams, events, members, member_preferences, member_constraints - did i miss any?
 - [ ] draw the relations. is this scalable?
@@ -77,7 +81,7 @@
 - [ ] expose algorithm parameters/stages for tuning
 
 ---
-TODO:
+### for launch
 - refactor data model
 - make everything editable
 - mobile view
