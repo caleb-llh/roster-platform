@@ -54,15 +54,18 @@ members:
       - '2026-04-05'
       - '2026-04-11'
       - '2026-04-12'
+      - '2026-08-22'
       - '2026-08-29'
       - '2026-08-30'
       - '2026-09-05'
       - '2026-09-06'
       - '2026-09-12'
       - '2026-09-13'
+      - '2026-09-19'
       - '2026-09-26'
       - '2026-10-03'
       - '2026-10-17'
+      - '2026-10-24'
   - id: denise
     name: Denise
     telegram: '@oodeldoodle'
@@ -79,6 +82,8 @@ members:
       - '2026-09-06'
       - '2026-09-19'
       - '2026-09-26'
+      - '2026-10-04'
+      - '2026-10-24'
   - id: elijah
     name: Elijah
     telegram: '@3l!j@h'
@@ -189,6 +194,7 @@ members:
         end: '2026-09-20'
       - start: '2026-10-10'
         end: '2026-10-11'
+      - '2026-10-31'
   - id: kate
     name: Kate
     telegram: '@katetannn'
@@ -196,15 +202,18 @@ members:
     unavailable_dates:
       - '2026-08-02'
       - '2026-08-09'
+      - '2026-08-15'
       - '2026-08-16'
       - '2026-08-23'
       - '2026-08-30'
+      - '2026-09-05'
       - '2026-09-06'
       - '2026-09-13'
       - '2026-09-20'
       - '2026-09-27'
       - '2026-10-04'
       - '2026-10-11'
+      - '2026-10-17'
       - '2026-10-18'
       - '2026-10-25'
       - '2026-08-29'
@@ -229,9 +238,12 @@ members:
       - '2026-04-18'
       - '2026-04-19'
       - start: '2026-08-01'
-        end: '2026-08-31'
-      - start: '2026-09-01'
-        end: '2026-09-30'
+        end: '2026-08-29'
+      - '2026-09-05'
+      - '2026-09-06'
+      - '2026-09-12'
+      - '2026-09-13'
+      - '2026-09-27'
   - id: ozborn
     name: Ozborn
     telegram: '@ozzy_p'
@@ -306,6 +318,8 @@ members:
       - '2026-09-20'
       - '2026-09-26'
       - '2026-09-27'
+      - '2026-10-10'
+      - '2026-10-11'
   - id: rasey
     name: Rasey
     telegram: '@runthegoodrase'
@@ -489,7 +503,7 @@ teams:
           - name: main-cam
           - name: roving-cam
       - member_id: kaylie
-        include: true            # Aug–Oct only (excluded from Feb–Apr)
+        include: false            # joined in aug, away for maternity
         roles:
           - name: main-cam
             understudy: true
@@ -917,9 +931,6 @@ teams:
           - member_id: rystine
             days:
               - Sunday
-          - member_id: kaylie
-            days:
-              - Saturday
         # Per-roster active status where it differs from the team default.
         member_overrides:
           - member_id: paul        # not on the team this period
@@ -1109,29 +1120,18 @@ teams:
                 member_id: caleb
                 isGenerated: true
             reminder: vm remember to record PGM on SD.
-          - name: Final Saturday Service of the Month
+          - name: Saturday Service
             date: '2026-09-26'
             day_of_week: Saturday
-            reporting_time: 3:30 PM
+            reporting_time: 4:00 PM
             roster:
-              - role: multi-vm
+              - role: vm
                 member_id: rasey
                 isGenerated: true
               - role: main-cam
                 member_id: grace
                 isGenerated: true
-              - role: roving-cam
-                member_id: ozborn
-                isGenerated: true
-              - role: roving-cam
-                member_id: jane
-                isGenerated: true
-              - role: multi-vm-understudy
-                member_id: jia-lin
-                isGenerated: true
-            reminder: >-
-              multi-vm remember to record PGM during worship and Cam 1 during sermon on SD. roving-cam and roving-cam remember
-              to wear black/dark clothing!
+            reminder: vm remember to record Cam 1 on SD.
           - name: Sunday Service
             date: '2026-09-27'
             day_of_week: Sunday
