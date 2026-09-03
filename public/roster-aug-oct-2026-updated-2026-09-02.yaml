@@ -1,0 +1,865 @@
+members:
+  - id: amanda
+    name: Amanda
+    telegram: '@amandakwek'
+    roles:
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: false
+  - id: caleb
+    name: Caleb
+    telegram: '@caleb_llh'
+    roles:
+      - name: multi-vm
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: true
+  - id: denise
+    name: Denise
+    telegram: '@oodeldoodle'
+    roles:
+      - name: multi-vm
+        understudy: true
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: true
+  - id: elijah
+    name: Elijah
+    telegram: '@3l!j@h'
+    roles:
+      - name: main-cam
+        understudy: true
+    include: true
+  - id: grace
+    name: Grace
+    telegram: '@tgraceee'
+    roles:
+      - name: multi-vm
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: true
+  - id: isaac-matthew
+    name: Isaac Matthew
+    roles:
+      - name: multi-vm
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: true
+  - id: jane
+    name: Jane
+    telegram: '@janeyjj'
+    roles:
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: true
+  - id: jason
+    name: Jason
+    telegram: '@jasonyolt'
+    roles:
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: false
+  - id: jia-lin
+    name: Jia Lin
+    telegram: '@jials'
+    roles:
+      - name: multi-vm
+        understudy: true
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: true
+  - id: kate
+    name: Kate
+    telegram: '@katetannn'
+    roles:
+      - name: multi-vm
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: true
+  - id: kaylie
+    name: Kaylie
+    roles:
+      - name: main-cam
+        understudy: true
+    include: false
+  - id: nanxin
+    name: Nanxin
+    telegram: '@Joyyy1996'
+    roles:
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: true
+  - id: ozborn
+    name: Ozborn
+    telegram: '@ozzy_p'
+    roles:
+      - name: multi-vm
+        understudy: true
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: true
+  - id: paul
+    name: Paul
+    telegram: '@PL24351'
+    roles:
+      - name: main-cam
+      - name: roving-cam
+    include: false
+  - id: rachael
+    name: Rachael
+    telegram: '@rachaelesther'
+    roles:
+      - name: main-cam
+      - name: roving-cam
+    include: true
+  - id: rae
+    name: Rae
+    telegram: '@raelenehannah'
+    roles:
+      - name: multi-vm
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: true
+  - id: rasey
+    name: Rasey
+    telegram: '@runthegoodrase'
+    roles:
+      - name: multi-vm
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: true
+  - id: ryan
+    name: Ryan
+    telegram: '@simmyboi'
+    roles:
+      - name: main-cam
+      - name: roving-cam
+    include: true
+  - id: rystine
+    name: Rystine
+    telegram: '@rysttan'
+    roles:
+      - name: multi-vm
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: true
+  - id: su-fang
+    name: Su Fang
+    telegram: '@cuppacinobella'
+    roles:
+      - name: main-cam
+    include: true
+  - id: viv
+    name: Viv
+    telegram: '@vivttt'
+    roles:
+      - name: vm
+      - name: main-cam
+      - name: roving-cam
+    include: true
+roles:
+  - name: multi-vm
+  - name: vm
+  - name: main-cam
+  - name: roving-cam
+events:
+  - name: Saturday Service
+    date: '2026-08-01'
+    day_of_week: Saturday
+    reporting_time: 4:00 PM
+    roster:
+      - role: vm
+        member_id: kate
+      - role: main-cam
+        member_id: su-fang
+      - role: main-cam-understudy
+        member_id: elijah
+    reminder: vm remember to record Cam 1 on SD.
+  - name: Sunday Service
+    date: '2026-08-02'
+    day_of_week: Sunday
+    reporting_time: 9:00 AM
+    roster:
+      - role: vm
+        member_id: caleb
+      - role: main-cam
+        member_id: isaac-matthew
+    reminder: vm remember to record PGM on SD.
+  - name: Saturday Service
+    date: '2026-08-08'
+    day_of_week: Saturday
+    reporting_time: 4:00 PM
+    roster:
+      - role: vm
+        member_id: rasey
+      - role: main-cam
+        member_id: ryan
+    reminder: vm remember to record Cam 1 on SD.
+  - name: Sunday Service
+    date: '2026-08-09'
+    day_of_week: Sunday
+    reporting_time: 9:00 AM
+    roster:
+      - role: vm
+        member_id: rystine
+      - role: main-cam
+        member_id: viv
+    reminder: vm remember to record PGM on SD.
+  - name: Saturday Service
+    date: '2026-08-15'
+    day_of_week: Saturday
+    reporting_time: 4:00 PM
+    roster:
+      - role: vm
+        member_id: kate
+      - role: main-cam
+        member_id: elijah
+    reminder: vm remember to record Cam 1 on SD.
+  - name: Sunday Service
+    date: '2026-08-16'
+    day_of_week: Sunday
+    reporting_time: 9:00 AM
+    roster:
+      - role: vm
+        member_id: caleb
+      - role: main-cam
+        member_id: rasey
+    reminder: vm remember to record PGM on SD.
+  - name: Saturday Service
+    date: '2026-08-22'
+    day_of_week: Saturday
+    reporting_time: 4:00 PM
+    roster:
+      - role: vm
+        member_id: ozborn
+        isGenerated: true
+      - role: main-cam
+        member_id: grace
+        isGenerated: true
+    reminder: vm remember to record Cam 1 on SD.
+  - name: Sunday Service
+    date: '2026-08-23'
+    day_of_week: Sunday
+    reporting_time: 9:00 AM
+    roster:
+      - role: vm
+        member_id: rystine
+        isGenerated: true
+      - role: main-cam
+        member_id: denise
+        isGenerated: true
+    reminder: vm remember to record PGM on SD.
+  - name: Saturday Service
+    date: '2026-08-29'
+    day_of_week: Saturday
+    reporting_time: 4:00 PM
+    roster:
+      - role: main-cam
+        member_id: rystine
+        isGenerated: false
+      - role: vm
+        member_id: viv
+        isGenerated: true
+    reminder: >-
+      multi-vm remember to record PGM during worship and Cam 1 during sermon on SD. roving-cam and roving-cam remember
+      to wear black/dark clothing!
+  - name: Sunday Service
+    date: '2026-08-30'
+    day_of_week: Sunday
+    reporting_time: 9:00 AM
+    roster:
+      - role: vm
+        member_id: grace
+        isGenerated: true
+      - role: main-cam
+        member_id: isaac-matthew
+        isGenerated: true
+    reminder: vm remember to record PGM on SD.
+  - name: Saturday Service
+    date: '2026-09-05'
+    day_of_week: Saturday
+    reporting_time: 4:00 PM
+    roster:
+      - role: vm
+        member_id: jia-lin
+        isGenerated: false
+      - role: main-cam
+        member_id: elijah
+        isGenerated: false
+    reminder: vm remember to record Cam 1 on SD.
+  - name: Sunday Service
+    date: '2026-09-06'
+    day_of_week: Sunday
+    reporting_time: 9:00 AM
+    roster:
+      - role: vm
+        member_id: rystine
+        isGenerated: true
+      - role: main-cam
+        member_id: rae
+        isGenerated: false
+    reminder: vm remember to record PGM on SD.
+  - name: Saturday Service
+    date: '2026-09-12'
+    day_of_week: Saturday
+    reporting_time: 4:00 PM
+    roster:
+      - role: vm
+        member_id: kate
+        isGenerated: false
+      - role: main-cam
+        member_id: ryan
+        isGenerated: true
+    reminder: vm remember to record Cam 1 on SD.
+  - name: Sunday Service
+    date: '2026-09-13'
+    day_of_week: Sunday
+    reporting_time: 9:00 AM
+    roster:
+      - role: vm
+        member_id: viv
+        isGenerated: true
+      - role: main-cam
+        member_id: denise
+        isGenerated: true
+    reminder: vm remember to record PGM on SD.
+  - name: Saturday Service
+    date: '2026-09-19'
+    day_of_week: Saturday
+    reporting_time: 4:00 PM
+    roster:
+      - role: vm
+        member_id: jane
+        isGenerated: true
+      - role: main-cam
+        member_id: ozborn
+        isGenerated: true
+    reminder: vm remember to record Cam 1 on SD.
+  - name: Sunday Service
+    date: '2026-09-20'
+    day_of_week: Sunday
+    reporting_time: 9:00 AM
+    roster:
+      - role: vm
+        member_id: rasey
+        isGenerated: true
+      - role: main-cam
+        member_id: caleb
+        isGenerated: true
+    reminder: vm remember to record PGM on SD.
+  - name: Saturday Service
+    date: '2026-09-26'
+    day_of_week: Saturday
+    reporting_time: 4:00 PM
+    roster:
+      - role: vm
+        member_id: nanxin
+        isGenerated: true
+      - role: main-cam
+        member_id: jia-lin
+        isGenerated: true
+    reminder: vm remember to record Cam 1 on SD.
+  - name: Sunday Service
+    date: '2026-09-27'
+    day_of_week: Sunday
+    reporting_time: 9:00 AM
+    roster:
+      - role: vm
+        member_id: isaac-matthew
+        isGenerated: true
+      - role: main-cam
+        member_id: grace
+        isGenerated: true
+    reminder: vm remember to record PGM on SD.
+  - name: Saturday Service
+    date: '2026-10-03'
+    day_of_week: Saturday
+    reporting_time: 4:00 PM
+    roster:
+      - role: vm
+        member_id: jane
+        isGenerated: true
+      - role: main-cam
+        member_id: ryan
+        isGenerated: true
+    reminder: vm remember to record Cam 1 on SD.
+  - name: Sunday Service
+    date: '2026-10-04'
+    day_of_week: Sunday
+    reporting_time: 9:00 AM
+    roster:
+      - role: vm
+        member_id: rae
+        isGenerated: true
+      - role: main-cam
+        member_id: jia-lin
+        isGenerated: true
+    reminder: vm remember to record PGM on SD.
+  - name: Saturday Service
+    date: '2026-10-10'
+    day_of_week: Saturday
+    reporting_time: 4:00 PM
+    roster:
+      - role: vm
+        member_id: kate
+        isGenerated: true
+      - role: main-cam
+        member_id: ozborn
+        isGenerated: true
+    reminder: vm remember to record Cam 1 on SD.
+  - name: Sunday Service
+    date: '2026-10-11'
+    day_of_week: Sunday
+    reporting_time: 9:00 AM
+    roster:
+      - role: vm
+        member_id: viv
+        isGenerated: true
+      - role: main-cam
+        member_id: caleb
+        isGenerated: true
+    reminder: vm remember to record PGM on SD.
+  - name: Saturday Service
+    date: '2026-10-17'
+    day_of_week: Saturday
+    reporting_time: 4:00 PM
+    roster:
+      - role: vm
+        member_id: nanxin
+        isGenerated: true
+      - role: main-cam
+        member_id: rachael
+        isGenerated: true
+    reminder: vm remember to record Cam 1 on SD.
+  - name: Sunday Service
+    date: '2026-10-18'
+    day_of_week: Sunday
+    reporting_time: 9:00 AM
+    roster:
+      - role: vm
+        member_id: jia-lin
+        isGenerated: true
+      - role: main-cam
+        member_id: isaac-matthew
+        isGenerated: true
+    reminder: vm remember to record PGM on SD.
+  - name: Saturday Service
+    date: '2026-10-24'
+    day_of_week: Saturday
+    reporting_time: 4:00 PM
+    roster:
+      - role: vm
+        member_id: jane
+        isGenerated: true
+      - role: main-cam
+        member_id: ryan
+        isGenerated: true
+    reminder: vm remember to record Cam 1 on SD.
+  - name: Sunday Service
+    date: '2026-10-25'
+    day_of_week: Sunday
+    reporting_time: 9:00 AM
+    roster:
+      - role: vm
+        member_id: rasey
+        isGenerated: true
+      - role: main-cam
+        member_id: rae
+        isGenerated: true
+    reminder: vm remember to record PGM on SD.
+  - name: Final Saturday Service of the Month
+    date: '2026-10-31'
+    day_of_week: Saturday
+    reporting_time: 3:30 PM
+    roster:
+      - role: multi-vm
+        member_id: grace
+        isGenerated: false
+      - role: main-cam
+        member_id: nanxin
+        isGenerated: true
+      - role: roving-cam
+        member_id: ozborn
+        isGenerated: true
+      - role: roving-cam
+        member_id: rachael
+        isGenerated: true
+      - role: multi-vm-understudy
+        member_id: denise
+        isGenerated: false
+    reminder: >-
+      multi-vm remember to record PGM during worship and Cam 1 during sermon on SD. roving-cam and roving-cam remember
+      to wear black/dark clothing!
+roster:
+  start_date: '2026-08-01'
+  end_date: '2026-10-31'
+roster_constraints:
+  ENFORCE_CROSS_TEAM_CAPS: true
+  ENFORCE_CROSS_TEAM_CLASH: true
+member_preferences:
+  - member_id: rystine
+    days:
+      - Sunday
+member_constraints:
+  - member_id: amanda
+    unavailable_dates:
+      - start: '2026-02-01'
+        end: '2026-02-28'
+      - '2026-03-28'
+      - '2026-03-29'
+      - '2026-04-04'
+  - member_id: caleb
+    unavailable_dates:
+      - '2026-02-07'
+      - '2026-02-08'
+      - '2026-03-07'
+      - '2026-03-08'
+      - '2026-03-14'
+      - '2026-03-15'
+      - '2026-04-04'
+      - '2026-04-05'
+      - '2026-04-11'
+      - '2026-04-12'
+      - '2026-08-22'
+      - '2026-08-29'
+      - '2026-08-30'
+      - '2026-09-05'
+      - '2026-09-06'
+      - '2026-09-12'
+      - '2026-09-13'
+      - '2026-09-19'
+      - '2026-09-26'
+      - '2026-10-03'
+      - '2026-10-17'
+      - '2026-10-24'
+  - member_id: denise
+    unavailable_dates:
+      - '2026-02-14'
+      - '2026-02-15'
+      - '2026-02-21'
+      - '2026-03-14'
+      - '2026-08-08'
+      - '2026-08-09'
+      - '2026-08-16'
+      - '2026-08-22'
+      - '2026-09-05'
+      - '2026-09-06'
+      - '2026-09-19'
+      - '2026-09-26'
+      - '2026-10-04'
+      - '2026-10-24'
+  - member_id: elijah
+    note: Available 1st and 3rd week of each month only; no Sundays
+    unavailable_dates:
+      - '2026-08-08'
+      - '2026-08-09'
+      - '2026-08-22'
+      - '2026-08-23'
+      - '2026-08-29'
+      - '2026-08-30'
+      - '2026-09-12'
+      - '2026-09-13'
+      - '2026-09-26'
+      - '2026-09-27'
+      - '2026-10-10'
+      - '2026-10-11'
+      - '2026-10-24'
+      - '2026-10-25'
+      - '2026-10-31'
+      - '2026-08-02'
+      - '2026-08-16'
+      - '2026-09-06'
+      - '2026-09-20'
+      - '2026-10-04'
+      - '2026-10-18'
+  - member_id: grace
+    unavailable_dates:
+      - start: '2026-02-07'
+        end: '2026-02-28'
+      - '2026-03-01'
+      - '2026-04-11'
+      - '2026-04-12'
+      - '2026-08-02'
+      - '2026-08-09'
+      - '2026-08-15'
+      - '2026-08-16'
+      - '2026-08-23'
+      - '2026-09-06'
+      - start: '2026-09-12'
+        end: '2026-09-20'
+      - '2026-10-04'
+      - '2026-10-10'
+      - '2026-10-11'
+      - '2026-10-18'
+  - member_id: isaac-matthew
+    unavailable_dates:
+      - '2026-02-08'
+      - '2026-04-11'
+      - '2026-04-12'
+      - '2026-08-15'
+      - '2026-08-16'
+      - '2026-09-05'
+      - '2026-09-06'
+      - '2026-09-12'
+      - '2026-09-13'
+      - '2026-10-10'
+      - '2026-10-11'
+      - '2026-10-24'
+      - '2026-10-25'
+  - member_id: jane
+    note: No Sundays
+    unavailable_dates:
+      - '2026-08-02'
+      - '2026-08-09'
+      - '2026-08-16'
+      - '2026-08-23'
+      - '2026-08-30'
+      - '2026-09-06'
+      - '2026-09-13'
+      - '2026-09-20'
+      - '2026-09-27'
+      - '2026-10-04'
+      - '2026-10-11'
+      - '2026-10-18'
+      - '2026-10-25'
+      - '2026-08-08'
+      - '2026-08-15'
+      - '2026-09-05'
+      - '2026-09-12'
+      - '2026-10-10'
+  - member_id: jason
+    unavailable_dates:
+      - '2026-02-22'
+      - '2026-04-11'
+  - member_id: jia-lin
+    note: Might be travelling in Mar-Apr but can't confirm now
+    unavailable_dates:
+      - '2026-01-31'
+      - '2026-02-01'
+      - '2026-02-14'
+      - '2026-03-15'
+      - '2026-08-15'
+      - '2026-08-16'
+      - '2026-08-29'
+      - start: '2026-09-12'
+        end: '2026-09-13'
+      - start: '2026-09-19'
+        end: '2026-09-20'
+      - start: '2026-10-10'
+        end: '2026-10-11'
+      - '2026-10-31'
+  - member_id: kate
+    note: No Sundays
+    unavailable_dates:
+      - '2026-08-02'
+      - '2026-08-09'
+      - '2026-08-15'
+      - '2026-08-16'
+      - '2026-08-23'
+      - '2026-08-30'
+      - '2026-09-05'
+      - '2026-09-06'
+      - '2026-09-13'
+      - '2026-09-20'
+      - '2026-09-27'
+      - '2026-10-04'
+      - '2026-10-11'
+      - '2026-10-17'
+      - '2026-10-18'
+      - '2026-10-25'
+      - '2026-08-29'
+      - '2026-09-19'
+      - '2026-10-31'
+  - member_id: kaylie
+    note: 'Blocked: Sep 5, 26; Oct 10, 31. Prefers Saturdays'
+    unavailable_dates:
+      - '2026-09-05'
+      - '2026-09-26'
+      - '2026-10-10'
+      - '2026-10-31'
+  - member_id: nanxin
+    unavailable_dates:
+      - '2026-01-31'
+      - '2026-02-01'
+      - start: '2026-02-28'
+        end: '2026-03-15'
+      - '2026-04-18'
+      - '2026-04-19'
+      - start: '2026-08-01'
+        end: '2026-08-29'
+      - '2026-09-05'
+      - '2026-09-06'
+      - '2026-09-12'
+      - '2026-09-13'
+      - '2026-09-27'
+  - member_id: ozborn
+    note: No Sundays
+    unavailable_dates:
+      - '2026-02-14'
+      - '2026-02-15'
+      - '2026-02-28'
+      - '2026-03-01'
+      - '2026-03-07'
+      - '2026-03-08'
+      - '2026-03-15'
+      - '2026-04-18'
+      - '2026-08-02'
+      - '2026-08-09'
+      - '2026-08-16'
+      - '2026-08-23'
+      - '2026-08-30'
+      - '2026-09-06'
+      - '2026-09-13'
+      - '2026-09-20'
+      - '2026-09-27'
+      - '2026-10-04'
+      - '2026-10-11'
+      - '2026-10-18'
+      - '2026-10-25'
+      - '2026-08-29'
+      - '2026-09-05'
+      - '2026-09-12'
+  - member_id: rachael
+    note: Rach Wee - no Aug and Sep; unavailable all Sundays
+    unavailable_dates:
+      - '2026-02-21'
+      - '2026-03-21'
+      - start: '2026-08-01'
+        end: '2026-08-31'
+      - start: '2026-09-01'
+        end: '2026-09-30'
+      - '2026-10-04'
+      - '2026-10-11'
+      - '2026-10-18'
+      - '2026-10-25'
+  - member_id: rae
+    unavailable_dates:
+      - '2026-02-14'
+      - '2026-02-15'
+      - '2026-03-07'
+      - '2026-03-08'
+      - '2026-03-21'
+      - '2026-03-22'
+      - '2026-03-28'
+      - '2026-03-29'
+      - '2026-04-04'
+      - '2026-04-05'
+      - '2026-08-02'
+      - '2026-08-08'
+      - '2026-08-09'
+      - '2026-08-15'
+      - '2026-08-16'
+      - '2026-08-22'
+      - '2026-08-23'
+      - '2026-08-29'
+      - '2026-08-30'
+      - '2026-09-19'
+      - '2026-09-20'
+      - '2026-09-26'
+      - '2026-09-27'
+      - '2026-10-10'
+      - '2026-10-11'
+  - member_id: rasey
+    unavailable_dates:
+      - '2026-02-01'
+      - '2026-02-14'
+      - '2026-03-07'
+      - '2026-04-04'
+      - '2026-08-01'
+      - '2026-08-02'
+      - '2026-08-09'
+      - '2026-08-29'
+      - '2026-08-30'
+      - '2026-09-05'
+      - '2026-09-06'
+      - '2026-09-13'
+      - '2026-10-03'
+      - '2026-10-04'
+      - '2026-10-10'
+      - '2026-10-11'
+      - '2026-10-17'
+      - '2026-10-18'
+  - member_id: ryan
+    note: No Sundays
+    unavailable_dates:
+      - '2026-02-07'
+      - '2026-02-14'
+      - '2026-02-15'
+      - '2026-02-22'
+      - start: '2026-03-14'
+        end: '2026-03-29'
+      - '2026-04-11'
+      - '2026-04-12'
+      - '2026-08-02'
+      - '2026-08-09'
+      - '2026-08-16'
+      - '2026-08-23'
+      - '2026-08-30'
+      - '2026-09-06'
+      - '2026-09-13'
+      - '2026-09-20'
+      - '2026-09-27'
+      - '2026-10-04'
+      - '2026-10-11'
+      - '2026-10-18'
+      - '2026-10-25'
+      - '2026-08-01'
+      - '2026-08-15'
+      - '2026-09-26'
+      - '2026-10-17'
+  - member_id: rystine
+    unavailable_dates:
+      - '2026-02-15'
+      - '2026-03-15'
+      - '2026-04-12'
+      - '2026-08-01'
+      - '2026-08-02'
+      - '2026-08-08'
+      - '2026-08-15'
+      - '2026-08-16'
+      - '2026-08-22'
+      - '2026-09-05'
+      - '2026-09-26'
+      - '2026-10-03'
+  - member_id: su-fang
+    note: Transiting to sound; unavailable from 1 Aug onwards
+    unavailable_dates:
+      - start: '2026-02-01'
+        end: '2026-02-21'
+      - '2026-03-21'
+      - '2026-03-22'
+      - start: '2026-08-02'
+        end: '2026-10-31'
+  - member_id: viv
+    unavailable_dates:
+      - '2026-02-01'
+      - '2026-02-15'
+      - '2026-03-01'
+      - '2026-03-08'
+      - '2026-03-15'
+      - '2026-03-21'
+      - '2026-03-22'
+      - '2026-03-28'
+      - '2026-03-29'
+      - '2026-08-02'
+      - '2026-08-08'
+      - '2026-08-15'
+      - '2026-08-16'
+      - '2026-09-06'
+      - '2026-09-20'
+      - '2026-10-04'
+      - '2026-10-18'

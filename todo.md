@@ -37,6 +37,7 @@
 
 **domain modelling**
 - [x] introuce tenant and teams concept, align yaml. each tenant can have multiple teams, each team can have multiple members. members can be cross-team, constraints need to be cross-team aware too.
+- [ ] should member active/inactive be tied to roster or team or global?
 - [ ] yaml as a way for agents to share a text-based state. reuse core but separate state providers - local and production should still share the same data models. is the current schema enforcement too complicated?
 - [ ] tables: users, roster, teams, events, members, member_preferences, member_constraints - did i miss any?
 - [ ] draw the relations. is this scalable?
