@@ -1,5 +1,5 @@
 import { canFillSlotRole, isUnderstudyRole } from './understudy'
-import { isMemberUnavailable } from './constraintPrimitives'
+import { isMemberUnavailable } from '../rules/constraintPrimitives'
 import { isMemberIncluded } from '../schema/rosterSchema'
 
 /**

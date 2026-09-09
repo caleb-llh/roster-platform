@@ -8,10 +8,10 @@ import {
   externalEventsFor,
   externalWeeklyCount,
   externalMonthlyCount
-} from '../constraintPrimitives'
+} from '../../rules/constraintPrimitives'
 import { CONSTRAINT_KEYS, isConstraintEnabled, isMemberIncluded } from '../../schema/rosterSchema'
 import { understudySlotRole, isRoleCapable } from '../understudy'
-import { getConstraintRule, CONSTRAINT_MODES } from '../constraints'
+import { getConstraintRule, CONSTRAINT_MODES } from '../../rules/constraints'
 
 export class EligibilityChecker {
   constructor(members, constraints, rosterConstraints, tracker, options = {}) {

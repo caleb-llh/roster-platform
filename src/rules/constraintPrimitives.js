@@ -9,7 +9,7 @@
  * this file's rules directly, except for the raw counters they still need.
  */
 
-import { canFillSlotRole, isUnderstudyRole, isPromotedForRole } from './understudy'
+import { canFillSlotRole, isUnderstudyRole, isPromotedForRole } from '../utils/understudy'
 import { getConstraintRule, CONSTRAINT_MODES } from './constraints'
 import { isMemberIncluded } from '../schema/rosterSchema'
 

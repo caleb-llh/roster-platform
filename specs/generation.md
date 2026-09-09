@@ -32,20 +32,34 @@ The soft rules already have a single authority: the [`SCORERS`](../src/utils/ros
 registry, consumed by **both** per-candidate scoring and the whole-roster
 `evaluateState` objective, so they can't drift (see the consecutive-weekend
 invariant above). **Hard constraints now follow the same shape** via the
-[`CONSTRAINTS`](../src/utils/constraints.js) registry. Several call sites *consume*
+[`CONSTRAINTS`](../src/rules/constraints.js) registry. Several call sites *consume*
 that one list rather than re-owning the rules — three read the **full** rule set,
 and the assignment dropdown reads the **feasibility** subset:
 
 - **`EligibilityChecker.isEligible`** ([`eligibilityChecker.js`](../src/utils/rosterGenerator/eligibilityChecker.js)) — the generator's **predictive** question: *"**may** I place M here?"* (`would-place` mode, tracker-backed counts).
 - **`validateEventAssignments`** ([`assignmentValidator.js`](../src/utils/assignmentValidator.js)) — the **diagnostic** question: *"is this **already-placed** assignment violating a rule?"* (`is-placed` mode, scan-backed counts; keeps its own enumerating wording).
 - **`explainSwap`** ([`swapPolicy.js`](../src/utils/swapPolicy.js)) — the manual **feasibility subset**, predictive, both directions.
-- **The assignment dropdown** ([`getAvailableMembersForEvent`](../src/utils/constraintPrimitives.js), rendered by [`EventsView.jsx`](../src/components/EventsView.jsx)) — a **UI feasibility consumer**: its per-candidate `available` flag comes from the `availability` descriptor (called directly, bypassing `enabled`, so unavailability always shows as a cue). Role capability is the UI `canFillSlotRole`/promotion rule (see [understudy.md](understudy.md), deliberately not a registry constraint), and once-per-slot filtering is positional UI logic; it does **not** apply load-cadence caps (a human picks freely, like a swap).
+- **The assignment dropdown** ([`getAvailableMembersForEvent`](../src/rules/constraintPrimitives.js), rendered by [`EventsView.jsx`](../src/components/EventsView.jsx)) — a **UI feasibility consumer**: its per-candidate `available` flag comes from the `availability` descriptor (called directly, bypassing `enabled`, so unavailability always shows as a cue). Role capability is the UI `canFillSlotRole`/promotion rule (see [understudy.md](understudy.md), deliberately not a registry constraint), and once-per-slot filtering is positional UI logic; it does **not** apply load-cadence caps (a human picks freely, like a swap).
 
-They share low-level helpers (`constraintPrimitives.js`, `understudy.js`) **and**
+They share low-level helpers ([`constraintPrimitives.js`](../src/rules/constraintPrimitives.js), `understudy.js`) **and**
 now the rule set itself. One difference remains, and it is intentional: the
 generator uses `count >= cap` (predictive — "would this *reach* the cap") while
 the validator uses `count > cap` (diagnostic — "has this *exceeded* the cap").
 That difference is a single line inside one `check`, selected by `mode`.
+
+**Design Decision — the rules live in [`src/rules/`](../src/rules/).** The
+registry ([`constraints.js`](../src/rules/constraints.js)) and the leaf predicates
+it composes ([`constraintPrimitives.js`](../src/rules/constraintPrimitives.js))
+were moved out of `src/utils/` into a dedicated `rules/` layer (overhaul step 1;
+see [architecture-overhaul.plan.md](architecture-overhaul.plan.md)). This is a
+pure move — the descriptors, `ctx` contract, and `mode` semantics are unchanged.
+The target boundary is *"`rules/` imports only Schema"*, so consumers depend on
+`rules/` and never the reverse. **Residual coupling (not yet clean):** both files
+still import role-capability vocabulary from `../utils/understudy` (e.g.
+`isUnderstudyRole`, `baseRoleOf`). That is deliberate for now — understudy is
+split by kind (vocabulary → Schema, policy → Rules) only at overhaul step 5; until
+then the import direction points *out of* `rules/`, which the step-10 dependency
+graph will forbid.
 
 **Design Decision — a single hard-constraint registry, many consumers.** Each
 hard constraint is modelled once as a descriptor (mirroring `SCORERS`), tagged by

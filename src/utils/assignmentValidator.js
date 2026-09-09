@@ -19,10 +19,10 @@ import {
   externalEventsFor,
   externalWeeklyCount,
   externalMonthlyCount
-} from './constraintPrimitives'
+} from '../rules/constraintPrimitives'
 import { PREFERENCE_KEYS, isPreferenceEnabled, MEMBER_PREF_FIELDS, CONSTRAINT_KEYS, isConstraintEnabled } from '../schema/rosterSchema'
 import { countUnderstudySessionsBefore } from './understudy'
-import { getConstraintRule, CONSTRAINT_MODES } from './constraints'
+import { getConstraintRule, CONSTRAINT_MODES } from '../rules/constraints'
 
 /**
  * Check if member is assigned on unavailable date

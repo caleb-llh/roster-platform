@@ -1,6 +1,6 @@
 import { canFillSlotRole, isUnderstudyRole, isPromotedForRole } from './understudy'
-import { getConstraintRule, CONSTRAINT_MODES, formatViolation } from './constraints'
-import { eventsClash, externalEventsFor } from './constraintPrimitives'
+import { getConstraintRule, CONSTRAINT_MODES, formatViolation } from '../rules/constraints'
+import { eventsClash, externalEventsFor } from '../rules/constraintPrimitives'
 import { isMemberIncluded } from '../schema/rosterSchema'
 
 /**

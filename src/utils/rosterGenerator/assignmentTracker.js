@@ -2,7 +2,7 @@
  * Track assignments during roster generation to maintain state
  */
 
-import { getWeekKey } from '../constraintPrimitives'
+import { getWeekKey } from '../../rules/constraintPrimitives'
 import { isMemberIncluded } from '../../schema/rosterSchema'
 
 export class AssignmentTracker {

@@ -21,7 +21,7 @@
  */
 
 import { PREFERENCE_KEYS, isPreferenceEnabled } from '../../schema/rosterSchema'
-import { areConsecutiveWeekends } from '../constraintPrimitives'
+import { areConsecutiveWeekends } from '../../rules/constraintPrimitives'
 
 /**
  * Single source of truth for scoring weights.

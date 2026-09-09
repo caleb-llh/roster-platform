@@ -35,7 +35,7 @@
 
 import { isMemberAvailable } from './constraintPrimitives'
 import { CONSTRAINT_KEYS, isConstraintEnabled, getConstraintValue } from '../schema/rosterSchema'
-import { isUnderstudyRole, baseRoleOf, UNDERSTUDY_MIN_SESSIONS } from './understudy'
+import { isUnderstudyRole, baseRoleOf, UNDERSTUDY_MIN_SESSIONS } from '../utils/understudy'
 
 export const CONSTRAINT_MODES = {
   WOULD_PLACE: 'would-place',
