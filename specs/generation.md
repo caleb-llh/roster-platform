@@ -28,7 +28,7 @@ The `availability` scorer (which prioritized members with fewer available dates)
 
 ## Hard constraints: one authority, many consumers
 
-The soft rules already have a single authority: the [`SCORERS`](../src/utils/rosterGenerator/scorers.js)
+The soft rules already have a single authority: the [`SCORERS`](../src/rules/scorers.js)
 registry, consumed by **both** per-candidate scoring and the whole-roster
 `evaluateState` objective, so they can't drift (see the consecutive-weekend
 invariant above). **Hard constraints now follow the same shape** via the
@@ -60,6 +60,20 @@ still import role-capability vocabulary from `../utils/understudy` (e.g.
 split by kind (vocabulary → Schema, policy → Rules) only at overhaul step 5; until
 then the import direction points *out of* `rules/`, which the step-10 dependency
 graph will forbid.
+
+**Design Decision — both registries share a `rules/` home and a descriptor
+factory.** `SCORERS` was moved from `rosterGenerator/scorers.js` to
+[`src/rules/scorers.js`](../src/rules/scorers.js), next to `CONSTRAINTS` (overhaul
+step 2). Both registries are now constructed through
+[`defineRule` / `defineScorer`](../src/rules/defineRule.js) — thin, explicit
+descriptor constructors that make the required shape self-documenting
+(`{ key, kind, enabled, check }` for a constraint; `{ key, enabled, score }` +
+optional `factor` for a scorer) and **fail loud at load time** if a field is
+missing, rather than deep inside the generator. The factories are deliberately
+*identity* — they validate and return the same plain object; there is no wrapping,
+no engine indirection, no rule DSL (the "shape, not machinery" line). A
+conformance test ([`registries.test.js`](../src/rules/registries.test.js)) locks
+in the shape, key-uniqueness, and that every scorer has a `SCORING_WEIGHTS` entry.
 
 **Design Decision — a single hard-constraint registry, many consumers.** Each
 hard constraint is modelled once as a descriptor (mirroring `SCORERS`), tagged by

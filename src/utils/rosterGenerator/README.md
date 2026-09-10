@@ -16,13 +16,17 @@ src/utils/rosterGenerator/
 ├── assignmentTracker.js     # Tracks assignment state (reversible: record/removeAssignment)
 ├── rosterState.js           # Reversible slot/move layer (applyMove/revertMove, applySwap, isLocked)
 ├── eligibilityChecker.js    # Validates hard constraints (+ understudy gate + canBePromotedTo)
-├── scorers.js               # Pluggable scorer registry + SCORING_WEIGHTS
-├── scoringEngine.js         # Thin adapter that ranks candidates via scorers.js
+├── scoringEngine.js         # Thin adapter that ranks candidates via ../../rules/scorers.js
 ├── localSearch.js           # Hill-climbing optimizer (swaps + fill-empty, skips locked)
 ├── rng.js                   # Seeded PRNG (deterministic randomization)
 ├── actionLog.js             # Verbose action logger (result.log / logEntries)
 └── rosterGenerator.test.js  # Comprehensive test suite
 ```
+
+> Scoring lives in the rules layer, not here: the `SCORERS` registry and
+> `SCORING_WEIGHTS` moved to `../../rules/scorers.js` (overhaul step 2), sharing a
+> home and a `defineRule`/`defineScorer` factory with `CONSTRAINTS`. `scoringEngine.js`
+> is a thin adapter that consumes them. See the [generation spec](../../../specs/generation.md).
 
 > Understudy semantics (`../understudy.js`) — the `X-understudy` slot suffix,
 > `UNDERSTUDY_MIN_SESSIONS`, `canFillSlotRole` vs `isRoleCapable` — and the full
@@ -124,7 +128,7 @@ used by Phase 0 seeding to rank promotable trainees.
 
 ### ScoringEngine
 Scores based on soft preferences (optimize for). Weights live in a single
-`SCORING_WEIGHTS` constant (defined in `scorers.js`, re-exported from
+`SCORING_WEIGHTS` constant (defined in `../../rules/scorers.js`, re-exported from
 `scoringEngine.js`) and are reused by
 the roster-quality evaluation so the two never drift apart:
 
@@ -176,7 +180,7 @@ const result = generateRoster(
 
 ### Scoring Weights
 
-Adjust the exported `SCORING_WEIGHTS` in `scorers.js`:
+Adjust the exported `SCORING_WEIGHTS` in `../../rules/scorers.js`:
 
 ```javascript
 export const SCORING_WEIGHTS = {
@@ -257,8 +261,8 @@ Tests cover:
 The modular design allows easy extensions:
 
 1. **New Constraints** - Add to `eligibilityChecker.js`
-2. **New Preferences** - Append one entry to the `SCORERS` list in `scorers.js`
-   (a `{ key, enabled, score }` descriptor); it is automatically used by both
+2. **New Preferences** - Append one entry to the `SCORERS` list in `../../rules/scorers.js`
+   (a `defineScorer({ key, enabled, score })` descriptor); it is automatically used by both
    per-candidate scoring and roster-quality evaluation
 3. **New Move Types** - Add to `localSearch.js` using the reversible primitives
    in `rosterState.js` (e.g. 3-way rotations, chain moves)

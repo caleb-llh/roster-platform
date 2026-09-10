@@ -1,14 +1,17 @@
-# Architecture overhaul (DESIGN — not yet built)
+# Architecture overhaul (IN PROGRESS — living migration doc)
 
-> **Status: proposal.** This is a *target* architecture, written to guide an
-> incremental refactor. It does **not** describe the current on-disk structure —
-> for that, see the [Module map](architecture.md#module-map) in
+> **Status: in progress (steps 1–2 landed).** This is a *target* architecture
+> plus the **living record** of an incremental refactor toward it — see the
+> [Migration progress log](#migration-progress-log-living) for what has landed
+> and what debt is outstanding. It does **not** describe the full current on-disk
+> structure — for that, see the [Module map](architecture.md#module-map) in
 > [architecture.md](architecture.md). Nothing here is binding until it lands as
 > code; each move is a mechanical, green-per-step refactor per
 > [`../AGENTS.md`](../AGENTS.md). This file owns the *target layer model, its
-> data flow, and the folder layout*; when a piece is built, the owning behaviour
-> spec (generation.md, data-layer.md, permissions.md…) remains the authority for
-> that piece's rules — this doc links to them, it does not restate them.
+> data flow, the folder layout, and the migration state*; when a piece is built,
+> the owning behaviour spec (generation.md, data-layer.md, permissions.md…)
+> remains the authority for that piece's rules — this doc links to them, it does
+> not restate them.
 
 ## Why this exists
 
@@ -701,45 +704,68 @@ defined or chatty coupling returns.
 Highest payoff first; every step keeps `npx vitest run` + `npm run build` green
 and updates the owning spec:
 
-1. **Extract `rules/`** (move constraints + primitives; no behaviour change).
+1. **✅ DONE — Extract `rules/`** (move constraints + primitives; no behaviour change).
    Establishes the core's home and its "imports only Schema" boundary.
-2. **Unify the two rule registries under `rules/`.** `CONSTRAINTS` and `SCORERS`
+2. **✅ DONE — Unify the two rule registries under `rules/`.** `CONSTRAINTS` and `SCORERS`
    are *both already registries* (`scorers.js` holds `SCORERS`, consumed by
    per-candidate scoring **and** whole-roster `evaluateState`). This step *moves*
    `SCORERS` next to `CONSTRAINTS` and adds a shared `defineRule`/`defineScorer`
    factory + a conformance test — it does **not** build scoring from scratch.
    (Update [generation.md](generation.md).)
-3. **Extract `state/`** (adapter + rosterState + tracker together). Names the
+3. **▶ NEXT — Extract `state/`** (adapter + rosterState + tracker together). Names the
    working-memory concern; deletes the "domain model" ambiguity.
-4. **Split `evaluation/` from `generation/`** inside today's `rosterGenerator/`.
+4. **⬜ Split `evaluation/` from `generation/`** inside today's `rosterGenerator/`.
    Separates judge from agent.
-5. **Split `understudy.js` by kind**: vocabulary → `schema/`, policy → `rules/`,
+5. **⬜ Split `understudy.js` by kind**: vocabulary → `schema/`, policy → `rules/`,
    leaving seeding/promotion phases in `generation/`. Update [understudy.md](understudy.md).
-6. **Extract `session/`** as *one* layer: move `useDraftHistory.js` out of
+6. **⬜ Extract `session/`** as *one* layer: move `useDraftHistory.js` out of
    `data/`, and define the uniform command surface (query/generate/swap/commit/
    undo) the UI calls. Leaves `data/` as pure providers. **Defer** the internal
    `session/commands` vs. `session/store` split until authz-at-the-surface or the
    first write-integration lands (see "Resolved: the session split").
-7. **Formalize the `RosterProvider` CRUD contract** (`load`/`save`/`list`/
+7. **⬜ Formalize the `RosterProvider` CRUD contract** (`load`/`save`/`list`/
    `select`/`subscribe`) so local/Supabase are provably interchangeable, and keep
    the adapter's two-fn transform contract (`toState`/`toDocument`). One shared
    adapter — never per-backend. (Update [data-layer.md](data-layer.md).)
-8. **Tidy periphery**: extract `readmodel/` (stats/availability/distribution);
+8. **⬜ Tidy periphery**: extract `readmodel/` (stats/availability/distribution);
    `lib/` for generic helpers; `integrations/` split into read-model consumers vs.
    command-surface actors (telegram write path routes through the session command
    surface).
-9. **Vocabulary rename pass** (folds through every step above, not a separate
+9. **⬜ (rides along) Vocabulary rename pass** (folds through every step above, not a separate
    big-bang): as each file moves to its layer folder, rename its symbols to the
    layer's vocabulary (provider→CRUD, session→command/query, adapter→transform,
    rule→descriptor). Do it *per moved file* so each stays green; record notable
    renames in the naming-decisions section.
-10. **(Optional) Enforce the graph**: a `dependency-cruiser` rule set that fails
+10. **⬜ (Optional) Enforce the graph**: a `dependency-cruiser` rule set that fails
     CI on an arrow pointing the wrong way (e.g. `rules/` importing `evaluation/`,
     or the core importing `session/`/`data/`).
 
 Steps 1–2 alone deliver most of the clarity; 3–10 are follow-ons. Step 9 is not a
 standalone commit — renaming rides along with each file's move so the tree never
 goes red.
+
+## Migration progress log (living)
+
+> This section is the **running record** of the overhaul. Update it in the same
+> change as each step: mark the step above (✅/▶/⬜), add a row here with the
+> commit, the green baseline it left behind, and any *residual debt* the step
+> knowingly deferred. The debt column is the important one — it is how a later
+> step knows what it must clean up.
+
+| Step | Status | Commit | Tests after | Residual debt carried forward |
+| --- | --- | --- | --- | --- |
+| 1 — extract `rules/` | ✅ done | `b8191d9` | 392 pass | `rules/` still imports understudy vocabulary from `../utils/understudy` (`isUnderstudyRole`, `baseRoleOf`) — violates "imports only Schema"; cleared by **step 5**, enforced by **step 10**. |
+| 2 — unify registries | ✅ done | `6a27b64` | 400 pass (+8 conformance) | none new. `defineRule`/`defineScorer` are identity validators by design (no machinery). |
+| 3 — extract `state/` | ▶ next | — | — | — |
+| 4 — split evaluation/generation | ⬜ | — | — | — |
+| 5 — split `understudy.js` by kind | ⬜ | — | — | clears step 1's debt (understudy vocabulary → `schema/`). |
+| 6 — extract `session/` | ⬜ | — | — | internal `commands`/`store` split deferred (see Resolved). |
+| 7 — provider CRUD contract | ⬜ | — | — | — |
+| 8 — tidy periphery | ⬜ | — | — | — |
+| 9 — vocabulary rename | ⬜ rides along | — | — | not a standalone commit. |
+| 10 — enforce the graph | ⬜ optional | — | — | the CI gate that makes all above debt un-reintroducible. |
+
+**Baseline before the overhaul:** 392 tests, `npm run build` green (commit `5bb41c8`).
 
 ## Full scope coverage (nothing silently left out)
 

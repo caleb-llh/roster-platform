@@ -5,7 +5,7 @@
  * in scorers.js so they can be shared with the roster-quality evaluation.
  */
 
-import { SCORING_WEIGHTS, scoreCandidate } from './scorers'
+import { SCORING_WEIGHTS, scoreCandidate } from '../../rules/scorers'
 
 export { SCORING_WEIGHTS }
 

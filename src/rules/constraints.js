@@ -36,6 +36,7 @@
 import { isMemberAvailable } from './constraintPrimitives'
 import { CONSTRAINT_KEYS, isConstraintEnabled, getConstraintValue } from '../schema/rosterSchema'
 import { isUnderstudyRole, baseRoleOf, UNDERSTUDY_MIN_SESSIONS } from '../utils/understudy'
+import { defineRule } from './defineRule'
 
 export const CONSTRAINT_MODES = {
   WOULD_PLACE: 'would-place',
@@ -201,7 +202,7 @@ export const CONSTRAINTS = [
       return null
     },
   },
-]
+].map(defineRule)
 
 const CONSTRAINTS_BY_KEY = Object.fromEntries(CONSTRAINTS.map(c => [c.key, c]))
 

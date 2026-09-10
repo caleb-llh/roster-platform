@@ -20,8 +20,9 @@
  * `candidate` is { memberId, role }.
  */
 
-import { PREFERENCE_KEYS, isPreferenceEnabled } from '../../schema/rosterSchema'
-import { areConsecutiveWeekends } from '../../rules/constraintPrimitives'
+import { PREFERENCE_KEYS, isPreferenceEnabled } from '../schema/rosterSchema'
+import { areConsecutiveWeekends } from './constraintPrimitives'
+import { defineScorer } from './defineRule'
 
 /**
  * Single source of truth for scoring weights.
@@ -45,43 +46,43 @@ const always = () => true
  * summed) but is kept readable / grouped by priority.
  */
 export const SCORERS = [
-  {
+  defineScorer({
     key: 'fairness',
     // Historically fairness carried an extra 10x emphasis over its base weight.
     factor: 10,
     enabled: always,
     score: (ctx) => fairnessScore(ctx.tracker, ctx.candidate.memberId),
-  },
-  {
+  }),
+  defineScorer({
     key: 'spread',
     enabled: (ctx) => isPreferenceEnabled(ctx.rosterPreferences, PREFERENCE_KEYS.SPREAD_ASSIGNMENTS),
     score: (ctx) => spreadScore(ctx.tracker, ctx.candidate.memberId, ctx.event.date),
-  },
-  {
+  }),
+  defineScorer({
     key: 'dayPreference',
     enabled: always,
     score: (ctx) => dayPreferenceScore(ctx.memberPreferences, ctx.candidate.memberId, ctx.event.day_of_week),
-  },
-  {
+  }),
+  defineScorer({
     key: 'rolePreference',
     enabled: always,
     score: (ctx) => rolePreferenceScore(ctx.memberPreferences, ctx.candidate.memberId, ctx.candidate.role),
-  },
-  {
+  }),
+  defineScorer({
     key: 'dayBalance',
     enabled: (ctx) => isPreferenceEnabled(ctx.rosterPreferences, PREFERENCE_KEYS.BALANCED_DAY_DISTRIBUTION),
     score: (ctx) => dayBalanceScore(ctx.tracker, ctx.candidate.memberId, ctx.event.day_of_week),
-  },
-  {
+  }),
+  defineScorer({
     key: 'consecutiveWeekends',
     enabled: (ctx) => isPreferenceEnabled(ctx.rosterPreferences, PREFERENCE_KEYS.AVOID_CONSECUTIVE_WEEKS),
     score: (ctx) => consecutiveWeekendScore(ctx.tracker, ctx.candidate.memberId, ctx.event.date, ctx.event.day_of_week),
-  },
-  {
+  }),
+  defineScorer({
     key: 'roleDiversity',
     enabled: (ctx) => isPreferenceEnabled(ctx.rosterPreferences, PREFERENCE_KEYS.DIVERSIFY_ROLE_ASSIGNMENTS),
     score: (ctx) => roleDiversityScore(ctx.tracker, ctx.candidate.memberId, ctx.candidate.role),
-  },
+  }),
 ]
 
 /**
