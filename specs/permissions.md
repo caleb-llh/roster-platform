@@ -197,7 +197,7 @@ Notes on the encoding (decisions ratified in review):
   available, not double-booked). Self-assign is an *add-to-empty-slot* (and its
   inverse), not a swap, so it reuses the **eligibility** half of the swap
   logic — the per-member `rejection()` checks inside `explainSwap`
-  ([`swapPolicy.js`](../src/utils/swapPolicy.js)), i.e. the same hard
+  ([`swapPolicy.js`](../src/evaluation/swapPolicy.js)), i.e. the same hard
   constraints the generator's `EligibilityChecker` enforces — not the two-sided
   swap wrapper. It is scoped to `target.memberId === actor's claimed member`.
   `roster:edit` (any member's slots) stays governance-only. This is the
@@ -236,7 +236,7 @@ mistaken for the other (the load-bearing invariant above):
   cell and assert `can()` reflects it (proving overrides are data, not code).
   `roster:assign-self`'s **eligibility** cases live with the `explainSwap`
   `rejection()` tests in
-  [`swapPolicy.test.js`](../src/utils/swapPolicy.test.js) (it reuses
+  [`swapPolicy.test.js`](../src/evaluation/swapPolicy.test.js) (it reuses
   those checks — see the note above), not here.
   > These are **UI-shaping** tests. Passing `can()` tests do **not** prove a
   > client can't exceed its role — only the DB does. Treating them as security

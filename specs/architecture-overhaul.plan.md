@@ -715,9 +715,10 @@ and updates the owning spec:
 3. **✅ DONE — Extract `state/`** (adapter + rosterState + tracker together, plus
    document-validation renamed to `state/documentValidation.js`). Names the
    working-memory concern; deletes the "domain model" ambiguity.
-4. **▶ NEXT — Split `evaluation/` from `generation/`** inside today's `rosterGenerator/`.
-   Separates judge from agent.
-5. **⬜ Split `understudy.js` by kind**: vocabulary → `schema/`, policy → `rules/`,
+4. **✅ DONE — Split `evaluation/` from `generation/`** inside today's `rosterGenerator/`.
+   Separates judge from agent. (`assignmentValidator`, `swapPolicy`, and
+   `eligibilityChecker` now live in `evaluation/`; the generator imports the judge.)
+5. **▶ NEXT — Split `understudy.js` by kind**: vocabulary → `schema/`, policy → `rules/`,
    leaving seeding/promotion phases in `generation/`. Update [understudy.md](understudy.md).
 6. **⬜ Extract `session/`** as *one* layer: move `useDraftHistory.js` out of
    `data/`, and define the uniform command surface (query/generate/swap/commit/
@@ -757,8 +758,8 @@ goes red.
 | --- | --- | --- | --- | --- |
 | 1 — extract `rules/` | ✅ done | `b8191d9` | 392 pass | `rules/` still imports understudy vocabulary from `../utils/understudy` (`isUnderstudyRole`, `baseRoleOf`) — violates "imports only Schema"; cleared by **step 5**, enforced by **step 10**. |
 | 2 — unify registries | ✅ done | `6a27b64` | 400 pass (+8 conformance) | none new. `defineRule`/`defineScorer` are identity validators by design (no machinery). |
-| 3 — extract `state/` | ✅ done | _(uncommitted)_ | 400 pass | `state/documentValidation.js` and the adapter (`derivedState`/`tenantResolver`) still import understudy vocabulary from `../utils/understudy`; cleared by **step 5**. The AGENTS-mandated `rosterSchema.js` test-data constants are honoured. |
-| 4 — split evaluation/generation | ⬜ | — | — | — |
+| 3 — extract `state/` | ✅ done | `be74f5f` | 400 pass | `state/documentValidation.js` and the adapter (`derivedState`/`tenantResolver`) still import understudy vocabulary from `../utils/understudy`; cleared by **step 5**. The AGENTS-mandated `rosterSchema.js` test-data constants are honoured. |
+| 4 — split evaluation/generation | ✅ done | _(uncommitted)_ | 400 pass | `evaluation/` files still import understudy vocabulary/policy from `../utils/understudy` (`isRoleCapable`, `understudySlotRole`, etc.) — cleared by **step 5**. `evaluateState` (whole-roster judge) still lives inside `rosterGenerator/`; folds into `evaluation/` when the generator folder is renamed (step 5). |
 | 5 — split `understudy.js` by kind | ⬜ | — | — | clears step 1's debt (understudy vocabulary → `schema/`). |
 | 6 — extract `session/` | ⬜ | — | — | internal `commands`/`store` split deferred (see Resolved). |
 | 7 — provider CRUD contract | ⬜ | — | — | — |

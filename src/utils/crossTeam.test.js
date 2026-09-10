@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { EligibilityChecker } from './rosterGenerator/eligibilityChecker'
+import { EligibilityChecker } from '../evaluation/eligibilityChecker'
 import { AssignmentTracker } from '../state/assignmentTracker'
-import { validateEventAssignments } from './assignmentValidator'
-import { explainSwap } from './swapPolicy'
+import { validateEventAssignments } from '../evaluation/assignmentValidator'
+import { explainSwap } from '../evaluation/swapPolicy'
 import { CONSTRAINT_KEYS } from '../schema/rosterSchema'
 
 /**

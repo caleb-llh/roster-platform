@@ -6,7 +6,7 @@
  * @returns {Object} - Statistics including total slots, per-member stats, etc.
  */
 import { AssignmentTracker } from '../state/assignmentTracker'
-import { EligibilityChecker } from './rosterGenerator/eligibilityChecker'
+import { EligibilityChecker } from '../evaluation/eligibilityChecker'
 import { isMemberIncluded } from '../schema/rosterSchema'
 
 export const calculateRosterStats = (events, members, rosterPeriod, memberConstraints = {}, rosterConstraints = {}) => {

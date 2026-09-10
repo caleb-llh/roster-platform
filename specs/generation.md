@@ -36,9 +36,9 @@ invariant above). **Hard constraints now follow the same shape** via the
 that one list rather than re-owning the rules — three read the **full** rule set,
 and the assignment dropdown reads the **feasibility** subset:
 
-- **`EligibilityChecker.isEligible`** ([`eligibilityChecker.js`](../src/utils/rosterGenerator/eligibilityChecker.js)) — the generator's **predictive** question: *"**may** I place M here?"* (`would-place` mode, tracker-backed counts).
-- **`validateEventAssignments`** ([`assignmentValidator.js`](../src/utils/assignmentValidator.js)) — the **diagnostic** question: *"is this **already-placed** assignment violating a rule?"* (`is-placed` mode, scan-backed counts; keeps its own enumerating wording).
-- **`explainSwap`** ([`swapPolicy.js`](../src/utils/swapPolicy.js)) — the manual **feasibility subset**, predictive, both directions.
+- **`EligibilityChecker.isEligible`** ([`eligibilityChecker.js`](../src/evaluation/eligibilityChecker.js)) — the generator's **predictive** question: *"**may** I place M here?"* (`would-place` mode, tracker-backed counts).
+- **`validateEventAssignments`** ([`assignmentValidator.js`](../src/evaluation/assignmentValidator.js)) — the **diagnostic** question: *"is this **already-placed** assignment violating a rule?"* (`is-placed` mode, scan-backed counts; keeps its own enumerating wording).
+- **`explainSwap`** ([`swapPolicy.js`](../src/evaluation/swapPolicy.js)) — the manual **feasibility subset**, predictive, both directions.
 - **The assignment dropdown** ([`getAvailableMembersForEvent`](../src/rules/constraintPrimitives.js), rendered by [`EventsView.jsx`](../src/components/EventsView.jsx)) — a **UI feasibility consumer**: its per-candidate `available` flag comes from the `availability` descriptor (called directly, bypassing `enabled`, so unavailability always shows as a cue). Role capability is the UI `canFillSlotRole`/promotion rule (see [understudy.md](understudy.md), deliberately not a registry constraint), and once-per-slot filtering is positional UI logic; it does **not** apply load-cadence caps (a human picks freely, like a swap).
 
 They share low-level helpers ([`constraintPrimitives.js`](../src/rules/constraintPrimitives.js), `understudy.js`) **and**

@@ -130,12 +130,12 @@ It's the fastest way to learn the input format.
 1. **Schema** — add the key to `CONSTRAINT_KEYS` / `PREFERENCE_KEYS` (with
    metadata) in `rosterSchema.js`.
 2. **Default** — set its default in `src/config/rosterDefaults.js`.
-3. **Logic** — implement it in `eligibilityChecker.js` (a *hard* constraint) or
-   `scoringEngine.js` (a *soft* preference). If it's a soft goal, it must **also**
+3. **Logic** — implement it in `evaluation/eligibilityChecker.js` (a *hard* constraint) or
+   `rosterGenerator/scoringEngine.js` (a *soft* preference). If it's a soft goal, it must **also**
    be a term in the whole-roster objective `evaluateState` (`index.js`) or Phase 2
    local search will undo it — see
    [specs/generation.md](specs/generation.md).
-4. **Validation** — add a check in `assignmentValidator.js` if manual edits could
+4. **Validation** — add a check in `evaluation/assignmentValidator.js` if manual edits could
    violate it.
 5. **Tests** — cover it, using the schema constants.
 6. **Docs & sample** — update `public/sample.yaml` and, if the change makes,

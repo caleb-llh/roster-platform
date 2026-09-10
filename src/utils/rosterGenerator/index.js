@@ -39,7 +39,7 @@
  */
 
 import { AssignmentTracker } from '../../state/assignmentTracker'
-import { EligibilityChecker } from './eligibilityChecker'
+import { EligibilityChecker } from '../../evaluation/eligibilityChecker'
 import { ScoringEngine, SCORING_WEIGHTS } from './scoringEngine'
 import { RosterState } from '../../state/rosterState'
 import { optimizeRoster } from './localSearch'

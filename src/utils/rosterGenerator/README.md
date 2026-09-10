@@ -13,15 +13,26 @@ src/utils/rosterGenerator/
 ├── index.js                 # Main entry point (seed + plan + greedy init + local search)
 ├── understudySeeding.js     # Phase 0: promotion-aware understudy seeding
 ├── promotionPlanning.js     # Phase 0.5: backtracking promotion planner (maximise promotions)
-├── assignmentTracker.js     # Tracks assignment state (reversible: record/removeAssignment)
-├── rosterState.js           # Reversible slot/move layer (applyMove/revertMove, applySwap, isLocked)
-├── eligibilityChecker.js    # Validates hard constraints (+ understudy gate + canBePromotedTo)
 ├── scoringEngine.js         # Thin adapter that ranks candidates via ../../rules/scorers.js
 ├── localSearch.js           # Hill-climbing optimizer (swaps + fill-empty, skips locked)
 ├── rng.js                   # Seeded PRNG (deterministic randomization)
 ├── actionLog.js             # Verbose action logger (result.log / logEntries)
 └── rosterGenerator.test.js  # Comprehensive test suite
 ```
+
+> The judge lives in the evaluation layer, not here:
+> `EligibilityChecker` (`../../evaluation/eligibilityChecker.js`) — the generator's
+> predictive "may I place M here?" gate — moved to `src/evaluation/` alongside
+> `assignmentValidator.js` and `swapPolicy.js` (overhaul step 4). The generator
+> imports and instantiates it; it does not own it. See the
+> [generation spec](../../../specs/generation.md) and the two-validators note in
+> [data-layer.md](../../../specs/data-layer.md).
+
+> State lives in the state layer, not here: `AssignmentTracker`
+> (`../../state/assignmentTracker.js`) and `RosterState`
+> (`../../state/rosterState.js`) are the engine's working-memory shape and moved to
+> `src/state/` (overhaul step 3). The generator imports them; it does not own them.
+> See the [data-layer spec](../../../specs/data-layer.md).
 
 > Scoring lives in the rules layer, not here: the `SCORERS` registry and
 > `SCORING_WEIGHTS` moved to `../../rules/scorers.js` (overhaul step 2), sharing a
@@ -260,15 +271,15 @@ Tests cover:
 
 The modular design allows easy extensions:
 
-1. **New Constraints** - Add to `eligibilityChecker.js`
+1. **New Constraints** - Add to `../../evaluation/eligibilityChecker.js`
 2. **New Preferences** - Append one entry to the `SCORERS` list in `../../rules/scorers.js`
    (a `defineScorer({ key, enabled, score })` descriptor); it is automatically used by both
    per-candidate scoring and roster-quality evaluation
 3. **New Move Types** - Add to `localSearch.js` using the reversible primitives
-   in `rosterState.js` (e.g. 3-way rotations, chain moves)
+   in `../../state/rosterState.js` (e.g. 3-way rotations, chain moves)
 4. **Advanced Search** - Swap hill-climbing for simulated annealing by changing
    the acceptance rule in `optimizeRoster` (state is already reversible)
-5. **Custom Metrics** - Extend `assignmentTracker.js`
+5. **Custom Metrics** - Extend `../../state/assignmentTracker.js`
 
 ## Performance
 

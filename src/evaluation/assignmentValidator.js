@@ -21,7 +21,7 @@ import {
   externalMonthlyCount
 } from '../rules/constraintPrimitives'
 import { PREFERENCE_KEYS, isPreferenceEnabled, MEMBER_PREF_FIELDS, CONSTRAINT_KEYS, isConstraintEnabled } from '../schema/rosterSchema'
-import { countUnderstudySessionsBefore } from './understudy'
+import { countUnderstudySessionsBefore } from '../utils/understudy'
 import { getConstraintRule, CONSTRAINT_MODES } from '../rules/constraints'
 
 /**
