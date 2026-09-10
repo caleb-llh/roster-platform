@@ -41,7 +41,7 @@ and the assignment dropdown reads the **feasibility** subset:
 - **`explainSwap`** ([`swapPolicy.js`](../src/evaluation/swapPolicy.js)) — the manual **feasibility subset**, predictive, both directions.
 - **The assignment dropdown** ([`getAvailableMembersForEvent`](../src/rules/constraintPrimitives.js), rendered by [`EventsView.jsx`](../src/components/EventsView.jsx)) — a **UI feasibility consumer**: its per-candidate `available` flag comes from the `availability` descriptor (called directly, bypassing `enabled`, so unavailability always shows as a cue). Role capability is the UI `canFillSlotRole`/promotion rule (see [understudy.md](understudy.md), deliberately not a registry constraint), and once-per-slot filtering is positional UI logic; it does **not** apply load-cadence caps (a human picks freely, like a swap).
 
-They share low-level helpers ([`constraintPrimitives.js`](../src/rules/constraintPrimitives.js), `understudy.js`) **and**
+They share low-level helpers ([`constraintPrimitives.js`](../src/rules/constraintPrimitives.js), [`understudyPolicy.js`](../src/rules/understudyPolicy.js)) **and**
 now the rule set itself. One difference remains, and it is intentional: the
 generator uses `count >= cap` (predictive — "would this *reach* the cap") while
 the validator uses `count > cap` (diagnostic — "has this *exceeded* the cap").
@@ -53,13 +53,11 @@ it composes ([`constraintPrimitives.js`](../src/rules/constraintPrimitives.js))
 were moved out of `src/utils/` into a dedicated `rules/` layer (overhaul step 1;
 see [architecture-overhaul.plan.md](architecture-overhaul.plan.md)). This is a
 pure move — the descriptors, `ctx` contract, and `mode` semantics are unchanged.
-The target boundary is *"`rules/` imports only Schema"*, so consumers depend on
-`rules/` and never the reverse. **Residual coupling (not yet clean):** both files
-still import role-capability vocabulary from `../utils/understudy` (e.g.
-`isUnderstudyRole`, `baseRoleOf`). That is deliberate for now — understudy is
-split by kind (vocabulary → Schema, policy → Rules) only at overhaul step 5; until
-then the import direction points *out of* `rules/`, which the step-10 dependency
-graph will forbid.
+The target boundary is *"`rules/` imports only Schema"*, and as of overhaul
+step 5 that holds: understudy is split by kind — vocabulary
+([`schema/understudyRoles.js`](../src/schema/understudyRoles.js)) vs. policy
+([`rules/understudyPolicy.js`](../src/rules/understudyPolicy.js)) — so `rules/`
+now imports only Schema, and consumers depend on `rules/` and never the reverse.
 
 **Design Decision — both registries share a `rules/` home and a descriptor
 factory.** `SCORERS` was moved from `rosterGenerator/scorers.js` to

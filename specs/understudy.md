@@ -2,10 +2,22 @@
 
 The system supports **understudies**: members training to perform a role, who must shadow it before performing it for real. This is the most intricate part of the generator; see also [generation.md](generation.md) for the surrounding pipeline and [`../src/utils/rosterGenerator/README.md`](../src/utils/rosterGenerator/README.md) for the scoring internals.
 
-**Model** (`src/utils/understudy.js`):
+**Model — split by kind across two layers** (overhaul step 5; see
+[architecture-overhaul.plan.md](architecture-overhaul.plan.md)):
+- **Vocabulary** ([`src/schema/understudyRoles.js`](../src/schema/understudyRoles.js)) — the
+  *definitional* half: role naming and member-role shape, with zero dependencies.
+- **Policy** ([`src/rules/understudyPolicy.js`](../src/rules/understudyPolicy.js)) — the
+  *judgement* half: the promotion gate and its threshold, importing the vocabulary
+  from Schema (the correct Rules → Schema direction).
+
+The split follows the same *definitional-vs-policy* test as `isMemberIncluded`:
+"is this an understudy slot / what is its base role?" is a fact (Schema);
+"may this member fill it / are they promoted yet / how many sessions are
+required?" is policy (Rules).
+
 - A member has `{ roles, understudyFor }`. `understudyFor: ["multi-vm"]` means "training to perform `multi-vm`".
-- An understudy **slot** uses the suffix convention: `multi-vm-understudy` (`understudySlotRole(base)` / `baseRoleOf(slot)` / `isUnderstudyRole(slot)`).
-- Two distinct role-compatibility rules exist and must not be conflated:
+- An understudy **slot** uses the suffix convention: `multi-vm-understudy` (`understudySlotRole(base)` / `baseRoleOf(slot)` / `isUnderstudyRole(slot)` — all **vocabulary**, in Schema).
+- Two distinct role-compatibility rules exist and must not be conflated (both **policy**, in Rules):
   - **`canFillSlotRole`** (UI): who may fill a slot from scratch — for an understudy slot, trainees only; for a real role, full performers only.
   - **`isRoleCapable`** (generator): a trainee counts as capable of the base role for lookahead/promotion purposes.
 

@@ -30,7 +30,8 @@
  *    (see rosterState.isLocked). The flag is stripped before returning results.
  */
 
-import { understudySlotRole, UNDERSTUDY_MIN_SESSIONS } from '../understudy'
+import { understudySlotRole } from '../../schema/understudyRoles'
+import { UNDERSTUDY_MIN_SESSIONS } from '../../rules/understudyPolicy'
 import { NULL_LOGGER } from './actionLog'
 import { isMemberIncluded } from '../../schema/rosterSchema'
 

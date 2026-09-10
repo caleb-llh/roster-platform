@@ -31,7 +31,8 @@
  *    trainee who is unavailable at every subsequent real-role event.
  */
 
-import { understudySlotRole, UNDERSTUDY_MIN_SESSIONS } from '../understudy'
+import { understudySlotRole } from '../../schema/understudyRoles'
+import { UNDERSTUDY_MIN_SESSIONS } from '../../rules/understudyPolicy'
 import { NULL_LOGGER } from './actionLog'
 import { isMemberIncluded } from '../../schema/rosterSchema'
 

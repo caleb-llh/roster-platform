@@ -10,7 +10,8 @@ import {
   externalMonthlyCount
 } from '../rules/constraintPrimitives'
 import { CONSTRAINT_KEYS, isConstraintEnabled, isMemberIncluded } from '../schema/rosterSchema'
-import { understudySlotRole, isRoleCapable } from '../utils/understudy'
+import { understudySlotRole } from '../schema/understudyRoles'
+import { isRoleCapable } from '../rules/understudyPolicy'
 import { getConstraintRule, CONSTRAINT_MODES } from '../rules/constraints'
 
 export class EligibilityChecker {

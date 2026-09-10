@@ -47,7 +47,7 @@ import { createRng } from './rng'
 import { ActionLogger, NULL_LOGGER } from './actionLog'
 import { seedUnderstudySlots } from './understudySeeding'
 import { planPromotions, clearPromotionPins } from './promotionPlanning'
-import { isUnderstudyRole } from '../understudy'
+import { isUnderstudyRole } from '../../schema/understudyRoles'
 import { areConsecutiveWeekends } from '../../rules/constraintPrimitives'
 import { CONSTRAINT_KEYS, PREFERENCE_KEYS, isConstraintEnabled, isPreferenceEnabled, isMemberIncluded } from '../../schema/rosterSchema'
 

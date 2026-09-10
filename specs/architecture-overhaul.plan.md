@@ -1,6 +1,6 @@
 # Architecture overhaul (IN PROGRESS — living migration doc)
 
-> **Status: in progress (steps 1–2 landed).** This is a *target* architecture
+> **Status: in progress (steps 1–5 landed).** This is a *target* architecture
 > plus the **living record** of an incremental refactor toward it — see the
 > [Migration progress log](#migration-progress-log-living) for what has landed
 > and what debt is outstanding. It does **not** describe the full current on-disk
@@ -718,9 +718,10 @@ and updates the owning spec:
 4. **✅ DONE — Split `evaluation/` from `generation/`** inside today's `rosterGenerator/`.
    Separates judge from agent. (`assignmentValidator`, `swapPolicy`, and
    `eligibilityChecker` now live in `evaluation/`; the generator imports the judge.)
-5. **▶ NEXT — Split `understudy.js` by kind**: vocabulary → `schema/`, policy → `rules/`,
-   leaving seeding/promotion phases in `generation/`. Update [understudy.md](understudy.md).
-6. **⬜ Extract `session/`** as *one* layer: move `useDraftHistory.js` out of
+5. **✅ DONE — Split `understudy.js` by kind**: vocabulary → `schema/understudyRoles.js`,
+   policy → `rules/understudyPolicy.js`, leaving seeding/promotion phases in `generation/`.
+   Cleared steps 1/3/4's residual coupling. Updated [understudy.md](understudy.md).
+6. **▶ NEXT — Extract `session/`** as *one* layer: move `useDraftHistory.js` out of
    `data/`, and define the uniform command surface (query/generate/swap/commit/
    undo) the UI calls. Leaves `data/` as pure providers. **Defer** the internal
    `session/commands` vs. `session/store` split until authz-at-the-surface or the
@@ -756,12 +757,12 @@ goes red.
 
 | Step | Status | Commit | Tests after | Residual debt carried forward |
 | --- | --- | --- | --- | --- |
-| 1 — extract `rules/` | ✅ done | `b8191d9` | 392 pass | `rules/` still imports understudy vocabulary from `../utils/understudy` (`isUnderstudyRole`, `baseRoleOf`) — violates "imports only Schema"; cleared by **step 5**, enforced by **step 10**. |
-| 2 — unify registries | ✅ done | `6a27b64` | 400 pass (+8 conformance) | none new. `defineRule`/`defineScorer` are identity validators by design (no machinery). |
-| 3 — extract `state/` | ✅ done | `be74f5f` | 400 pass | `state/documentValidation.js` and the adapter (`derivedState`/`tenantResolver`) still import understudy vocabulary from `../utils/understudy`; cleared by **step 5**. The AGENTS-mandated `rosterSchema.js` test-data constants are honoured. |
-| 4 — split evaluation/generation | ✅ done | _(uncommitted)_ | 400 pass | `evaluation/` files still import understudy vocabulary/policy from `../utils/understudy` (`isRoleCapable`, `understudySlotRole`, etc.) — cleared by **step 5**. `evaluateState` (whole-roster judge) still lives inside `rosterGenerator/`; folds into `evaluation/` when the generator folder is renamed (step 5). |
-| 5 — split `understudy.js` by kind | ⬜ | — | — | clears step 1's debt (understudy vocabulary → `schema/`). |
-| 6 — extract `session/` | ⬜ | — | — | internal `commands`/`store` split deferred (see Resolved). |
+| 1 — extract `rules/` | ✅ done | `b8191d9` | 392 pass | ~~`rules/` imports understudy vocabulary from `../utils/understudy`~~ **cleared by step 5** (vocabulary → `schema/understudyRoles.js`). Enforced by **step 10**. |
+| 2 — unify registries | ✅ done | `b8151d4` | 400 pass (+8 conformance) | none new. `defineRule`/`defineScorer` are identity validators by design (no machinery). |
+| 3 — extract `state/` | ✅ done | `be74f5f` | 400 pass | ~~adapter + `documentValidation` import understudy vocabulary from `../utils/understudy`~~ **cleared by step 5** (now import `schema/understudyRoles.js`). The AGENTS-mandated `rosterSchema.js` test-data constants are honoured. |
+| 4 — split evaluation/generation | ✅ done | `b9c012a` | 400 pass | ~~`evaluation/` imports understudy from `../utils/understudy`~~ **cleared by step 5** (now `schema/understudyRoles.js` + `rules/understudyPolicy.js`). `evaluateState` (whole-roster judge) still lives inside `rosterGenerator/`; folds into `evaluation/` when the generator folder is renamed (deferred to the step-8/9 periphery tidy). |
+| 5 — split `understudy.js` by kind | ✅ done | _(uncommitted)_ | 400 pass (24 files) | **debt-clearing step.** `understudy.js` split: vocabulary → `schema/understudyRoles.js`, policy → `rules/understudyPolicy.js` (policy imports vocab — correct Rules→Schema direction). Old `utils/understudy.js`+test deleted; test split to match. No `utils/understudy` importers remain, so steps 1/3/4's coupling is gone. `UNDERSTUDY_SUFFIX` stays vocabulary-internal (no external importer). Seeding/promotion **phases** already live in `generation/` and were untouched. |
+| 6 — extract `session/` | ▶ next | — | — | internal `commands`/`store` split deferred (see Resolved). |
 | 7 — provider CRUD contract | ⬜ | — | — | — |
 | 8 — tidy periphery | ⬜ | — | — | — |
 | 9 — vocabulary rename | ⬜ rides along (started) | — | 400 pass | not a standalone commit. **Pulled forward:** the `state/` adapter + `documentValidation` now name their inbound param `document` (not `data`), so the Document→State boundary reads in the code. *Lesson:* a blind `data`→`document` also rewrote a user-facing error string (`'YAML data is empty or invalid'`); reverted — renames must not change display text. |

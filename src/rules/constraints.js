@@ -35,7 +35,8 @@
 
 import { isMemberAvailable } from './constraintPrimitives'
 import { CONSTRAINT_KEYS, isConstraintEnabled, getConstraintValue } from '../schema/rosterSchema'
-import { isUnderstudyRole, baseRoleOf, UNDERSTUDY_MIN_SESSIONS } from '../utils/understudy'
+import { isUnderstudyRole, baseRoleOf } from '../schema/understudyRoles'
+import { UNDERSTUDY_MIN_SESSIONS } from './understudyPolicy'
 import { defineRule } from './defineRule'
 
 export const CONSTRAINT_MODES = {
