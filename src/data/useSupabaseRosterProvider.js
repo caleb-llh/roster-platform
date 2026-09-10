@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import yaml from 'js-yaml'
-import { runAllValidators } from '../validators'
+import { runAllValidators } from '../state/documentValidation'
 import { supabase } from './supabaseClient'
 import { useDraftHistory } from './useDraftHistory'
 

@@ -13,8 +13,8 @@ import {
   validateMemberConstraints,
   validateDates,
   runAllValidators
-} from './validators'
-import { isTenantShape, tenantSelection, resolveTenant } from './utils/tenantResolver'
+} from './documentValidation'
+import { isTenantShape, tenantSelection, resolveTenant } from './tenantResolver'
 
 describe('validators', () => {
   describe('ValidationBuilder', () => {

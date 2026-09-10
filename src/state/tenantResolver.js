@@ -12,7 +12,7 @@
  */
 
 import { YAML_FIELDS } from '../schema/rosterSchema'
-import { parseDayKey } from './calendarUtils'
+import { parseDayKey } from '../utils/calendarUtils'
 
 /** True when `data` uses the nested tenant shape (has a top-level `teams` array). */
 export function isTenantShape(data) {

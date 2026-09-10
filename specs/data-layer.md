@@ -13,7 +13,7 @@ dual-mode provider contract that persists this data.
 ## Time granularity: events are datetime ranges (UI still groups by day)
 
 **Model (implemented): a half-open datetime interval per event.** An event's
-time span is resolved by [`eventInterval`](../src/utils/constraintPrimitives.js)
+time span is resolved by [`eventInterval`](../src/rules/constraintPrimitives.js)
 to `[start, end)` in epoch ms. The fields are **additive and lossless**: an event
 may carry explicit `start`/`end` datetime strings, but a bare `event.date`
 (`YYYY-MM-DD`) is the whole-day range `[date 00:00, date+1 00:00)`. Parsing is
@@ -26,7 +26,7 @@ a day can't slip a timezone. Member unavailability remains a set of **day keys**
 
 - **Clash = interval overlap, not date-equality.** Two events conflict iff their
   `[start, end)` ranges overlap, computed by `intervalsOverlap`/`eventsClash` in
-  [`constraintPrimitives.js`](../src/utils/constraintPrimitives.js). Overlap is
+  [`constraintPrimitives.js`](../src/rules/constraintPrimitives.js). Overlap is
   **half-open**: touching boundaries (`a.end === b.start`) do *not* clash, so
   back-to-back services are legal. This **subsumes** the old whole-day model —
   two bare-date events on the same day are two whole-day ranges, so they still
@@ -76,6 +76,34 @@ a day can't slip a timezone. Member unavailability remains a set of **day keys**
 [`public/sample.yaml`](../public/sample.yaml) is the **single source of truth for what a valid input document looks like**. It must always parse (`js-yaml`) and pass `runAllValidators` with zero errors, and it should exercise every supported field so that reading it teaches the full schema — including the object form of member `roles` (`- name: <role>`) and the `understudy: true` flag. When the schema changes, update `sample.yaml` in the same change (it is part of the feedback loop in [`../AGENTS.md`](../AGENTS.md)); a stale sample is a spec regression. Member `roles` accept both the object form and a bare string for backward compatibility (`normalizeMemberRoles` handles both), but the sample and new documents use the object form for consistency and to make the understudy flag expressible.
 
 **Nested tenant sibling.** [`public/sample_tenant.yaml`](../public/sample_tenant.yaml) is the canonical example of the **nested multi-tenant shape** (tenant + member registry + `teams[].team_members`/`rosters`). It is a *sibling*, not a replacement: the flat `sample.yaml` stays the default and both are valid inputs. The nested shape and its flat-back-compat rule are owned by [multi-tenant.md](multi-tenant.md#phase-1-contract-local-model); the resolver (`resolveTenant`) flattens a selected team+roster back into *this* flat schema, so validators/engine are shape-agnostic. A validator test resolves every team+roster of `sample_tenant.yaml` and asserts each is a valid flat document.
+
+## The adapter and document-validation live in `state/`
+
+The **adapter** — the pure `document → State` transform that turns a parsed
+document into the working shape the engine reads — lives in
+[`src/state/`](../src/state/) as two halves: normalization
+([`derivedState.js`](../src/state/derivedState.js), `getDerivedState`) and tenant
+resolution ([`tenantResolver.js`](../src/state/tenantResolver.js), `resolveTenant`
+et al.). `getDerivedState(resolveTenant(...))` is the full adapter. It is the
+core's **inbound port (anti-corruption boundary)**: it branches only on the
+document's *shape* (`isTenantShape`, flat vs. nested-tenant), never on the storage
+backend, so both providers (local, Supabase) hand it the same shapes and stay
+provably equivalent. There is exactly **one** shared adapter — never one per
+backend (per-backend adapters would re-implement flat/nested→State and drift, the
+`active`/`include` class of bug). Byte-serialization (file read/write vs. SQL
+rows) is provider-side; shape-mapping is adapter-side.
+
+**Two kinds of validation, deliberately distinct.** Do not conflate:
+
+| | Answers | Runs on | Home |
+| --- | --- | --- | --- |
+| **Document validation** | "is this document *well-formed*?" (shape/schema integrity) | a parsed document, on the way IN | [`state/documentValidation.js`](../src/state/documentValidation.js) (`runAllValidators`) — next to the adapter it guards |
+| **Roster evaluation** | "is this *placement* legal / good?" (rule verdicts) | a State snapshot | `evaluation/` (rule layer; step 4) |
+
+Document validation is the gate the adapter is about to feed; it produces the
+display-only `data.warnings` (see the provider contract) and is **not**
+rule-Evaluation. It was renamed from `validators.js` to `documentValidation.js`
+when it moved into `state/` (overhaul step 3) to make that distinction legible.
 
 ## Draft/commit is separate from undo/redo history
 

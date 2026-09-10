@@ -366,7 +366,7 @@ keeps `npx vitest run` + `npm run build` green.
 - **Phase 0 — types & seam (no behaviour change). ✅ Landed.** The resolved
   derived-state is now the single contract via `resolveDerivedState(data,
   { externalAssignments })` in
-  [`derivedState.js`](../src/utils/derivedState.js) — a single-team identity pass
+  [`derivedState.js`](../src/state/derivedState.js) — a single-team identity pass
   over `getDerivedState` plus the empty/no-op cross-team assignments snapshot.
   `generateRoster` threads `externalAssignments` (defaulting `{}`) into the
   `EligibilityChecker`, which stored it unused until Phase 2 (now consulted by
@@ -394,7 +394,7 @@ keeps `npx vitest run` + `npm run build` green.
   pending).
   - **Resolver + selection + nested sample: ✅ Landed.** `isTenantShape`,
     `tenantSelection` and `resolveTenant` in
-    [`tenantResolver.js`](../src/utils/tenantResolver.js) detect the nested shape and
+    [`tenantResolver.js`](../src/state/tenantResolver.js) detect the nested shape and
     flatten a selected team+roster into today's flat document (registry ⋈
     `team_members`, global `unavailable_dates` — and its free-text `note` —
     → per-team `member_constraints`),
@@ -411,7 +411,7 @@ keeps `npx vitest run` + `npm run build` green.
     loaded also persists the events into the active roster INSIDE the tenant doc,
     so switching team/roster and returning preserves the edit.
     `writeBackEvents(tenantDoc, {teamId, rosterId}, events)` in
-    [`tenantResolver.js`](../src/utils/tenantResolver.js) is the pure inverse of
+    [`tenantResolver.js`](../src/state/tenantResolver.js) is the pure inverse of
     `resolveTenant` for the events portion (returns a new doc; only the addressed
     roster's `events` change; identity for flat docs). The local provider's
     committed-events sink calls it via refs (the sink is captured by the draft
@@ -427,7 +427,7 @@ keeps `npx vitest run` + `npm run build` green.
     read-only **"Also on: …"** line shows the OTHER teams a member serves —
     rendered only for members with multi-team membership. Cross-team visibility
     is derived by `memberTeams(tenantDoc)` in
-    [`tenantResolver.js`](../src/utils/tenantResolver.js) (member id → team names),
+    [`tenantResolver.js`](../src/state/tenantResolver.js) (member id → team names),
     exposed via the provider (`memberTeams`, `activeTeamName`) and threaded
     App → MembersView → MemberCard. In flat/single-team mode the divider, team
     label and "Also on" line are all absent, so single-team cards are unchanged.
@@ -462,13 +462,13 @@ keeps `npx vitest run` + `npm run build` green.
     - **Constraint/preference merge chain: ✅ Landed.** `resolveTenant` merges
       `roster_constraints` / `roster_preferences` **tenant → team → roster**
       (later wins) via the `mergeLayers` helper in
-      [`tenantResolver.js`](../src/utils/tenantResolver.js), mirroring today's
+      [`tenantResolver.js`](../src/state/tenantResolver.js), mirroring today's
       `DEFAULT → document` merge one level deeper. It emits the merged object
       only when a layer supplied one, so flat single-team docs are unchanged.
   - **Data-sourcing + auto-enable + UI: ✅ Landed.** The read-only
     `externalAssignments` snapshot is derived from the tenant document by
     `deriveExternalAssignments(data, { teamId })` in
-    [`tenantResolver.js`](../src/utils/tenantResolver.js): it gathers every placed
+    [`tenantResolver.js`](../src/state/tenantResolver.js): it gathers every placed
     date on the rosters of **other** teams, keyed by member id. "External" is
     scoped to the active TEAM (not roster) — a team's own sibling rosters are
     excluded, because they are different periods of the same team and the local
@@ -483,7 +483,7 @@ keeps `npx vitest run` + `npm run build` green.
       within-team double-booking spanning both would be silently dropped
       (excluded as "sibling", and each roster is validated in isolation).
       `validateTenantRosters(data)` in
-      [`tenantResolver.js`](../src/utils/tenantResolver.js) enforces this: on import
+      [`tenantResolver.js`](../src/state/tenantResolver.js) enforces this: on import
       the local provider surfaces a **non-fatal warning** (through the same
       `data.warnings` channel the UI already shows) naming any two overlapping
       rosters on a team. Overlap is inclusive on calendar days (sharing a

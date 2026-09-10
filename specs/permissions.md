@@ -226,7 +226,7 @@ mistaken for the other (the load-bearing invariant above):
 
 - **`can(action, target)` — Vitest, pure.** `can()` is a pure resolver over the
   policy table, so it is tested exactly like the other pure utils
-  ([`derivedState.test.js`](../src/utils/derivedState.test.js) pattern): a new
+  ([`derivedState.test.js`](../src/state/derivedState.test.js) pattern): a new
   `permissions.test.js` drives the **action matrix** as a `describe.each` table —
   one row per (role, action, target, self?) → expected boolean. It must cover the
   non-obvious cells: **`self` is additive** (a `viewer`-roled member still gets

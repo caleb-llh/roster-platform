@@ -712,9 +712,10 @@ and updates the owning spec:
    `SCORERS` next to `CONSTRAINTS` and adds a shared `defineRule`/`defineScorer`
    factory + a conformance test — it does **not** build scoring from scratch.
    (Update [generation.md](generation.md).)
-3. **▶ NEXT — Extract `state/`** (adapter + rosterState + tracker together). Names the
+3. **✅ DONE — Extract `state/`** (adapter + rosterState + tracker together, plus
+   document-validation renamed to `state/documentValidation.js`). Names the
    working-memory concern; deletes the "domain model" ambiguity.
-4. **⬜ Split `evaluation/` from `generation/`** inside today's `rosterGenerator/`.
+4. **▶ NEXT — Split `evaluation/` from `generation/`** inside today's `rosterGenerator/`.
    Separates judge from agent.
 5. **⬜ Split `understudy.js` by kind**: vocabulary → `schema/`, policy → `rules/`,
    leaving seeding/promotion phases in `generation/`. Update [understudy.md](understudy.md).
@@ -756,7 +757,7 @@ goes red.
 | --- | --- | --- | --- | --- |
 | 1 — extract `rules/` | ✅ done | `b8191d9` | 392 pass | `rules/` still imports understudy vocabulary from `../utils/understudy` (`isUnderstudyRole`, `baseRoleOf`) — violates "imports only Schema"; cleared by **step 5**, enforced by **step 10**. |
 | 2 — unify registries | ✅ done | `6a27b64` | 400 pass (+8 conformance) | none new. `defineRule`/`defineScorer` are identity validators by design (no machinery). |
-| 3 — extract `state/` | ▶ next | — | — | — |
+| 3 — extract `state/` | ✅ done | _(uncommitted)_ | 400 pass | `state/documentValidation.js` and the adapter (`derivedState`/`tenantResolver`) still import understudy vocabulary from `../utils/understudy`; cleared by **step 5**. The AGENTS-mandated `rosterSchema.js` test-data constants are honoured. |
 | 4 — split evaluation/generation | ⬜ | — | — | — |
 | 5 — split `understudy.js` by kind | ⬜ | — | — | clears step 1's debt (understudy vocabulary → `schema/`). |
 | 6 — extract `session/` | ⬜ | — | — | internal `commands`/`store` split deferred (see Resolved). |

@@ -3,7 +3,7 @@ import { createRoleColorMap, formatDateRange, formatDate } from './utils/colorUt
 import { calculateRosterStats } from './utils/rosterStats'
 import { validateEventAssignments } from './utils/assignmentValidator'
 import { generateRoster } from './utils/rosterGenerator'
-import { getDerivedState } from './utils/derivedState'
+import { getDerivedState } from './state/derivedState'
 import { computeRosterDiff } from './utils/rosterDiff'
 import { computeAvailabilityByRole } from './utils/availabilityUtils'
 import { useRosterData } from './hooks/useRosterData'

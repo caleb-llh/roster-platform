@@ -38,10 +38,10 @@
  * Returns: { events, stats, fairnessMetrics, quality, log, logEntries }
  */
 
-import { AssignmentTracker } from './assignmentTracker'
+import { AssignmentTracker } from '../../state/assignmentTracker'
 import { EligibilityChecker } from './eligibilityChecker'
 import { ScoringEngine, SCORING_WEIGHTS } from './scoringEngine'
-import { RosterState } from './rosterState'
+import { RosterState } from '../../state/rosterState'
 import { optimizeRoster } from './localSearch'
 import { createRng } from './rng'
 import { ActionLogger, NULL_LOGGER } from './actionLog'

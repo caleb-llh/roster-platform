@@ -2,8 +2,8 @@
  * Validation Builder for extensible validation rules
  */
 
-import { normalizeMemberRoles, understudySlotRole, isUnderstudyRole, baseRoleOf } from './utils/understudy'
-import { isMemberIncluded } from './schema/rosterSchema'
+import { normalizeMemberRoles, understudySlotRole, isUnderstudyRole, baseRoleOf } from '../utils/understudy'
+import { isMemberIncluded } from '../schema/rosterSchema'
 
 export class ValidationBuilder {
   constructor(data) {

@@ -1,9 +1,9 @@
 import { useState, useRef } from 'react'
 import yaml from 'js-yaml'
-import { runAllValidators } from '../validators'
+import { runAllValidators } from '../state/documentValidation'
 import { LOCAL_PERMISSIONS } from './providerContract'
 import { useDraftHistory } from './useDraftHistory'
-import { isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEvents, deriveExternalAssignments, validateTenantRosters } from '../utils/tenantResolver'
+import { isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEvents, deriveExternalAssignments, validateTenantRosters } from '../state/tenantResolver'
 
 /**
  * Local (in-memory) implementation of the roster data provider contract.

@@ -111,7 +111,7 @@ but routing it through the placement-oriented registry would be a category error
 **Design Decision — the counting seam (tracker vs. scan).** Feasibility rules
 read intrinsic facts off `ctx` (`memberConstraints`, `members`). Load-cadence
 rules need *counts*, which each consumer computes differently: the generator from
-its stateful [`AssignmentTracker`](../src/utils/rosterGenerator/assignmentTracker.js)
+its stateful [`AssignmentTracker`](../src/state/assignmentTracker.js)
 (incremental, fast in the O(slots²) placement loop), the validator from a
 whole-roster scan of `allEvents` (no running tally on a finished roster). To keep
 the rule defined once, the descriptor calls a small **uniform counting interface**

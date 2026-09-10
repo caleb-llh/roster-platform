@@ -5,7 +5,7 @@
  * @param {Object} rosterPeriod - Roster period with start_date and end_date
  * @returns {Object} - Statistics including total slots, per-member stats, etc.
  */
-import { AssignmentTracker } from './rosterGenerator/assignmentTracker'
+import { AssignmentTracker } from '../state/assignmentTracker'
 import { EligibilityChecker } from './rosterGenerator/eligibilityChecker'
 import { isMemberIncluded } from '../schema/rosterSchema'
 
