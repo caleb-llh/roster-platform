@@ -764,7 +764,7 @@ goes red.
 | 6 — extract `session/` | ⬜ | — | — | internal `commands`/`store` split deferred (see Resolved). |
 | 7 — provider CRUD contract | ⬜ | — | — | — |
 | 8 — tidy periphery | ⬜ | — | — | — |
-| 9 — vocabulary rename | ⬜ rides along | — | — | not a standalone commit. |
+| 9 — vocabulary rename | ⬜ rides along (started) | — | 400 pass | not a standalone commit. **Pulled forward:** the `state/` adapter + `documentValidation` now name their inbound param `document` (not `data`), so the Document→State boundary reads in the code. *Lesson:* a blind `data`→`document` also rewrote a user-facing error string (`'YAML data is empty or invalid'`); reverted — renames must not change display text. |
 | 10 — enforce the graph | ⬜ optional | — | — | the CI gate that makes all above debt un-reintroducible. |
 
 **Baseline before the overhaul:** 392 tests, `npm run build` green (commit `5bb41c8`).

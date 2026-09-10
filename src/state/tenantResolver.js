@@ -8,15 +8,15 @@
  * Flat input passes through untouched, so single-team behaviour is unchanged.
  *
  * See specs/multi-tenant.md "Phase 1 contract". Its output is the shape
- * `getDerivedState` consumes; the two modules together form the data adapter.
+ * `getDerivedState` consumes; the two modules together form the document adapter.
  */
 
 import { YAML_FIELDS } from '../schema/rosterSchema'
 import { parseDayKey } from '../utils/calendarUtils'
 
-/** True when `data` uses the nested tenant shape (has a top-level `teams` array). */
-export function isTenantShape(data) {
-  return !!(data && Array.isArray(data.teams))
+/** True when `document` uses the nested tenant shape (has a top-level `teams` array). */
+export function isTenantShape(document) {
+  return !!(document && Array.isArray(document.teams))
 }
 
 /**
@@ -49,8 +49,8 @@ function rosterId(roster, index) {
  * selection layer. Flat documents resolve to one default team with one default
  * roster. Returns `{ teams: [{ id, name, rosters: [{ id, name }] }] }`.
  */
-export function tenantSelection(data) {
-  if (!isTenantShape(data)) {
+export function tenantSelection(document) {
+  if (!isTenantShape(document)) {
     return {
       teams: [
         { id: 'team-0', name: 'Team', rosters: [{ id: 'roster-0', name: 'Roster' }] },
@@ -58,7 +58,7 @@ export function tenantSelection(data) {
     }
   }
   return {
-    teams: (data.teams || []).map((team, ti) => ({
+    teams: (document.teams || []).map((team, ti) => ({
       id: teamId(team, ti),
       name: (team && team.name) || `Team ${ti + 1}`,
       rosters: ((team && team.rosters) || []).map((r, ri) => ({
@@ -75,10 +75,10 @@ export function tenantSelection(data) {
  * (cross-team visibility, multi-tenant Phase 1). Flat documents have no teams,
  * so this is `{}` and callers show nothing.
  */
-export function memberTeams(data) {
-  if (!isTenantShape(data)) return {}
+export function memberTeams(document) {
+  if (!isTenantShape(document)) return {}
   const map = {}
-  ;(data.teams || []).forEach((team, ti) => {
+  ;(document.teams || []).forEach((team, ti) => {
     const name = (team && team.name) || `Team ${ti + 1}`
     ;(team.team_members || []).forEach(tm => {
       if (!tm || !tm.member_id) return
@@ -101,9 +101,9 @@ export function memberTeams(data) {
  * documents (no `teams`) are returned unchanged — flat mode keeps its events in
  * the working doc as before.
  */
-export function writeBackEvents(data, { teamId: selTeamId, rosterId: selRosterId }, events) {
-  if (!isTenantShape(data)) return data
-  const next = JSON.parse(JSON.stringify(data))
+export function writeBackEvents(document, { teamId: selTeamId, rosterId: selRosterId }, events) {
+  if (!isTenantShape(document)) return document
+  const next = JSON.parse(JSON.stringify(document))
   const teams = next.teams || []
   const ti = teams.findIndex((t, i) => teamId(t, i) === selTeamId)
   const team = ti >= 0 ? teams[ti] : teams[0]
@@ -133,9 +133,9 @@ export function writeBackEvents(data, { teamId: selTeamId, rosterId: selRosterId
  * to same-day clash. Duplicate dates are kept intentionally — a member rostered
  * twice on another team the same week should count twice toward a weekly cap.
  */
-export function deriveExternalAssignments(data, { teamId: selTeamId } = {}) {
-  if (!isTenantShape(data)) return {}
-  const teams = data.teams || []
+export function deriveExternalAssignments(document, { teamId: selTeamId } = {}) {
+  if (!isTenantShape(document)) return {}
+  const teams = document.teams || []
   const activeIndex = teams.findIndex((t, i) => teamId(t, i) === selTeamId)
   const external = {}
   teams.forEach((team, ti) => {
@@ -172,10 +172,10 @@ export function deriveExternalAssignments(data, { teamId: selTeamId } = {}) {
  * missing period can't be checked). Overlap is inclusive on calendar days: two
  * rosters that merely share a boundary day are considered overlapping.
  */
-export function validateTenantRosters(data) {
-  if (!isTenantShape(data)) return []
+export function validateTenantRosters(document) {
+  if (!isTenantShape(document)) return []
   const warnings = []
-  ;(data.teams || []).forEach((team, ti) => {
+  ;(document.teams || []).forEach((team, ti) => {
     const teamName = (team && team.name) || `Team ${ti + 1}`
     const periods = ((team && team.rosters) || [])
       .map((r, ri) => {
@@ -220,10 +220,10 @@ export function validateTenantRosters(data) {
  * `teamId`/`rosterId` default to the first team/roster. Members not on the
  * selected team are excluded (a member absent from `team_members` is not on it).
  */
-export function resolveTenant(data, { teamId: selTeamId, rosterId: selRosterId } = {}) {
-  if (!isTenantShape(data)) return data
+export function resolveTenant(document, { teamId: selTeamId, rosterId: selRosterId } = {}) {
+  if (!isTenantShape(document)) return document
 
-  const teams = data.teams || []
+  const teams = document.teams || []
   const team = teams.find((t, i) => teamId(t, i) === selTeamId) || teams[0]
   if (!team) return { members: [], roles: [], events: [] }
 
@@ -232,7 +232,7 @@ export function resolveTenant(data, { teamId: selTeamId, rosterId: selRosterId }
 
   // Registry keyed by id for the join.
   const registry = new Map(
-    (data.members || []).filter(Boolean).map(m => [m.id, m])
+    (document.members || []).filter(Boolean).map(m => [m.id, m])
   )
 
   const teamMembers = team.team_members || []
@@ -306,13 +306,13 @@ export function resolveTenant(data, { teamId: selTeamId, rosterId: selRosterId }
       : null
   const mergedConstraints = mergeLayers(
     crossTeamDefaults,
-    data.roster_constraints,
+    document.roster_constraints,
     team.roster_constraints,
     roster.roster_constraints
   )
   if (mergedConstraints) flat.roster_constraints = mergedConstraints
   const mergedPreferences = mergeLayers(
-    data.roster_preferences,
+    document.roster_preferences,
     team.roster_preferences,
     roster.roster_preferences
   )

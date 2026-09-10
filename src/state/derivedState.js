@@ -1,5 +1,5 @@
 /**
- * Roster data adapter — normalization half. `getDerivedState` takes a FLAT
+ * Roster document adapter — normalization half. `getDerivedState` takes a FLAT
  * roster document and produces the shape the engine/validators/stats consume
  * (active members, role colours, resolved constraints/preferences).
  *
@@ -14,8 +14,8 @@ import { createRoleColorMap } from '../utils/colorUtils'
 import { DEFAULT_ROSTER_CONSTRAINTS, DEFAULT_ROSTER_PREFERENCES } from '../config/rosterDefaults'
 import { normalizeMemberRoles } from '../utils/understudy'
 
-export function getDerivedState(data) {
-  if (!data) {
+export function getDerivedState(document) {
+  if (!document) {
     return {
       members: [],
       events: [],
@@ -30,8 +30,8 @@ export function getDerivedState(data) {
     }
   }
 
-  const rawMembers = data[YAML_FIELDS.MEMBERS] || []
-  const events = data[YAML_FIELDS.EVENTS] || []
+  const rawMembers = document[YAML_FIELDS.MEMBERS] || []
+  const events = document[YAML_FIELDS.EVENTS] || []
 
   // Normalize each member's roles: understudy-flagged roles are pulled out of
   // `roles` (they can't fully perform them yet) into `understudyFor`. Keeps
@@ -44,10 +44,10 @@ export function getDerivedState(data) {
 
   // Handle both formats: roles: [{name: "x"}, ...] or declared_roles: ["x", ...]
   let roles = []
-  if (data[YAML_FIELDS.ROLES] && Array.isArray(data[YAML_FIELDS.ROLES])) {
-    roles = data[YAML_FIELDS.ROLES].map(r => typeof r === 'string' ? r : (r && r.name)).filter(Boolean)
-  } else if (data.declared_roles && Array.isArray(data.declared_roles)) {
-    roles = data.declared_roles.filter(Boolean)
+  if (document[YAML_FIELDS.ROLES] && Array.isArray(document[YAML_FIELDS.ROLES])) {
+    roles = document[YAML_FIELDS.ROLES].map(r => typeof r === 'string' ? r : (r && r.name)).filter(Boolean)
+  } else if (document.declared_roles && Array.isArray(document.declared_roles)) {
+    roles = document.declared_roles.filter(Boolean)
   }
   
   // Generate role color map (shared palette from colorUtils)
@@ -58,17 +58,17 @@ export function getDerivedState(data) {
   const activeMembers = members.filter(isMemberIncluded)
 
   // Extract member constraints from member_constraints (top-level array in YAML)
-  const memberConstraints = data[YAML_FIELDS.MEMBER_CONSTRAINTS] || []
+  const memberConstraints = document[YAML_FIELDS.MEMBER_CONSTRAINTS] || []
 
   // Extract member preferences from member_preferences (top-level array in YAML)
-  const memberPreferences = data[YAML_FIELDS.MEMBER_PREFERENCES] || []
+  const memberPreferences = document[YAML_FIELDS.MEMBER_PREFERENCES] || []
 
   // Extract roster-level constraints and preferences. Source-code defaults are
   // the base; any keys present in the document override them (so an explicit
   // `false` or a different MAX_ASSIGNMENTS_PER_MONTH still wins).
-  const rosterConstraints = { ...DEFAULT_ROSTER_CONSTRAINTS, ...(data[YAML_FIELDS.ROSTER_CONSTRAINTS] || {}) }
-  const rosterPreferences = { ...DEFAULT_ROSTER_PREFERENCES, ...(data[YAML_FIELDS.ROSTER_PREFERENCES] || {}) }
-  const rosterPeriod = data[YAML_FIELDS.ROSTER_PERIOD] || null
+  const rosterConstraints = { ...DEFAULT_ROSTER_CONSTRAINTS, ...(document[YAML_FIELDS.ROSTER_CONSTRAINTS] || {}) }
+  const rosterPreferences = { ...DEFAULT_ROSTER_PREFERENCES, ...(document[YAML_FIELDS.ROSTER_PREFERENCES] || {}) }
+  const rosterPeriod = document[YAML_FIELDS.ROSTER_PERIOD] || null
 
   return {
     members,
@@ -97,7 +97,7 @@ export function getDerivedState(data) {
  * for callers/tests that want the whole contract in one call; both routes yield
  * the same shape.
  *
- * For a single team it is an identity pass over `getDerivedState(data)` plus the
+ * For a single team it is an identity pass over `getDerivedState(document)` plus the
  * optional read-only cross-team **assignments**, which default to empty/no-op so
  * single-team behaviour is byte-for-byte identical.
  *
@@ -106,15 +106,15 @@ export function getDerivedState(data) {
  * `AssignmentTracker` already applies to local assignments, so it is never
  * passed or stored as a separate, drift-prone input. See specs/multi-tenant.md.
  *
- * @param {object|null} data - the roster document (flat, or already-resolved)
+ * @param {object|null} document - the roster document (flat, or already-resolved)
  * @param {object} [external] - { externalAssignments } read-only snapshot of the
  *   member's assignments in OTHER teams (`{ memberId: [dateOrDatetime, ...] }`);
  *   empty by default.
  * @returns derived state + `externalAssignments`.
  */
-export function resolveDerivedState(data, external = {}) {
+export function resolveDerivedState(document, external = {}) {
   return {
-    ...getDerivedState(data),
+    ...getDerivedState(document),
     externalAssignments: external.externalAssignments || {},
   }
 }

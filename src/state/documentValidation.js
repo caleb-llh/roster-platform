@@ -6,14 +6,14 @@ import { normalizeMemberRoles, understudySlotRole, isUnderstudyRole, baseRoleOf 
 import { isMemberIncluded } from '../schema/rosterSchema'
 
 export class ValidationBuilder {
-  constructor(data) {
-    this.data = data
+  constructor(document) {
+    this.document = document
     this.errors = []
     this.warnings = []
   }
 
   validate(validatorFn) {
-    const result = validatorFn(this.data)
+    const result = validatorFn(this.document)
     if (result.errors) {
       this.errors.push(...result.errors)
     }
@@ -33,33 +33,33 @@ export class ValidationBuilder {
   }
 }
 
-export const validateYamlStructure = (data) => {
+export const validateYamlStructure = (document) => {
   const errors = []
   const warnings = []
 
-  if (!data) {
+  if (!document) {
     errors.push('YAML data is empty or invalid')
     return { errors, warnings }
   }
 
-  if (!data.members || !Array.isArray(data.members)) {
+  if (!document.members || !Array.isArray(document.members)) {
     errors.push('Missing or invalid "members" array in YAML')
   }
 
-  if (data.events !== undefined && !Array.isArray(data.events)) {
+  if (document.events !== undefined && !Array.isArray(document.events)) {
     errors.push('"events" must be an array if defined')
   }
 
   return { errors, warnings }
 }
 
-export const validateMembers = (data) => {
+export const validateMembers = (document) => {
   const errors = []
   const warnings = []
 
-  if (!data?.members) return { errors, warnings }
+  if (!document?.members) return { errors, warnings }
 
-  data.members.forEach((member, index) => {
+  document.members.forEach((member, index) => {
     const memberRef = `Member #${index + 1}${member.name ? ` (${member.name})` : ''}`
 
     if (!member.name) {
@@ -78,8 +78,8 @@ export const validateMembers = (data) => {
       warnings.push(`${memberRef}: "include" field not set, defaulting to true`)
     }
 
-    const duplicates = data.members.filter(m => m.name === member.name)
-    if (duplicates.length > 1 && index === data.members.findIndex(m => m.name === member.name)) {
+    const duplicates = document.members.filter(m => m.name === member.name)
+    if (duplicates.length > 1 && index === document.members.findIndex(m => m.name === member.name)) {
       warnings.push(`${memberRef}: Duplicate name detected`)
     }
   })
@@ -87,13 +87,13 @@ export const validateMembers = (data) => {
   return { errors, warnings }
 }
 
-export const validateTelegramHandles = (data) => {
+export const validateTelegramHandles = (document) => {
   const errors = []
   const warnings = []
 
-  if (!data?.members) return { errors, warnings }
+  if (!document?.members) return { errors, warnings }
 
-  data.members.forEach((member, index) => {
+  document.members.forEach((member, index) => {
     if (member.telegram) {
       const memberRef = `${member.name || `Member #${index + 1}`}`
       
@@ -114,15 +114,15 @@ export const validateTelegramHandles = (data) => {
   return { errors, warnings }
 }
 
-export const validateRoles = (data) => {
+export const validateRoles = (document) => {
   const errors = []
   const warnings = []
 
-  if (!data?.members) return { errors, warnings }
+  if (!document?.members) return { errors, warnings }
 
   let baseRoles
-  if (data.roles && Array.isArray(data.roles)) {
-    baseRoles = data.roles.map(r => r.name || r).filter(Boolean).filter(r => !isUnderstudyRole(r))
+  if (document.roles && Array.isArray(document.roles)) {
+    baseRoles = document.roles.map(r => r.name || r).filter(Boolean).filter(r => !isUnderstudyRole(r))
     if (baseRoles.length === 0) {
       errors.push('Roles section is empty or invalid')
       return { errors, warnings }
@@ -135,7 +135,7 @@ export const validateRoles = (data) => {
   // The valid set auto-includes the understudy variant of every base role.
   const validRoles = new Set([...baseRoles, ...baseRoles.map(understudySlotRole)])
 
-  data.members.forEach((member, index) => {
+  document.members.forEach((member, index) => {
     const memberRef = `${member.name || `Member #${index + 1}`}`
 
     if (member.roles) {
@@ -170,16 +170,16 @@ export const validateRoles = (data) => {
  * - a member trains for role X but no X-understudy slot exists in any event
  *   (they could never satisfy the gate to unlock X).
  */
-export const validateUnderstudy = (data) => {
+export const validateUnderstudy = (document) => {
   const errors = []
   const warnings = []
 
-  if (!data?.members) return { errors, warnings }
+  if (!document?.members) return { errors, warnings }
 
   // Collect all understudy slot roles that appear in events.
   const understudySlotsInEvents = new Set()
-  if (Array.isArray(data.events)) {
-    data.events.forEach(event => {
+  if (Array.isArray(document.events)) {
+    document.events.forEach(event => {
       if (Array.isArray(event.roster)) {
         event.roster.forEach(slot => {
           if (slot?.role && isUnderstudyRole(slot.role)) {
@@ -190,7 +190,7 @@ export const validateUnderstudy = (data) => {
     })
   }
 
-  data.members.forEach((member, index) => {
+  document.members.forEach((member, index) => {
     const memberRef = `${member.name || `Member #${index + 1}`}`
     const { understudyFor } = normalizeMemberRoles(member.roles)
     understudyFor.forEach(role => {
@@ -206,17 +206,17 @@ export const validateUnderstudy = (data) => {
   return { errors, warnings }
 }
 
-export const validateEventMemberMapping = (data) => {
+export const validateEventMemberMapping = (document) => {
   const errors = []
   const warnings = []
 
-  if (!data?.events || !Array.isArray(data.events) || data.events.length === 0) {
+  if (!document?.events || !Array.isArray(document.events) || document.events.length === 0) {
     return { errors, warnings }
   }
 
-  const memberNames = new Set(data.members?.map(m => m.name) || [])
+  const memberNames = new Set(document.members?.map(m => m.name) || [])
 
-  data.events.forEach((event, index) => {
+  document.events.forEach((event, index) => {
     const eventRef = `Event #${index + 1}${event.name ? ` (${event.name})` : ''}`
 
     if (!event.name) {
@@ -231,17 +231,17 @@ export const validateEventMemberMapping = (data) => {
   return { errors, warnings }
 }
 
-export const validateDates = (data) => {
+export const validateDates = (document) => {
   const errors = []
   const warnings = []
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/
 
-  if (data?.events) {
-    data.events.forEach((event, index) => {
+  if (document?.events) {
+    document.events.forEach((event, index) => {
       if (event.date && !dateRegex.test(event.date)) {
         errors.push(`Event #${index + 1}: Invalid date format "${event.date}" (expected YYYY-MM-DD)`)
       }
-      // Optional datetime range (see specs/data-layer.md, "Time granularity").
+      // Optional datetime range (see specs/document-layer.md, "Time granularity").
       // When present it must parse; a start after its end is nonsensical.
       const startMs = event.start ? new Date(event.start).getTime() : null
       const endMs = event.end ? new Date(event.end).getTime() : null
@@ -257,11 +257,11 @@ export const validateDates = (data) => {
     })
   }
 
-  if (data?.roster) {
-    if (data.roster.start_date && !dateRegex.test(data.roster.start_date)) {
+  if (document?.roster) {
+    if (document.roster.start_date && !dateRegex.test(document.roster.start_date)) {
       errors.push(`Roster period: Invalid start_date format (expected YYYY-MM-DD)`)
     }
-    if (data.roster.end_date && !dateRegex.test(data.roster.end_date)) {
+    if (document.roster.end_date && !dateRegex.test(document.roster.end_date)) {
       errors.push(`Roster period: Invalid end_date format (expected YYYY-MM-DD)`)
     }
   }
@@ -269,46 +269,46 @@ export const validateDates = (data) => {
   return { errors, warnings }
 }
 
-export const validateRosterPeriod = (data) => {
+export const validateRosterPeriod = (document) => {
   const errors = []
   const warnings = []
 
-  if (data?.roster) {
-    if (!data.roster.start_date) {
+  if (document?.roster) {
+    if (!document.roster.start_date) {
       warnings.push('Roster period: Missing start_date')
     }
-    if (!data.roster.end_date) {
+    if (!document.roster.end_date) {
       warnings.push('Roster period: Missing end_date')
     }
 
-    if (data.roster.start_date && data.roster.end_date) {
-      if (data.roster.start_date > data.roster.end_date) {
+    if (document.roster.start_date && document.roster.end_date) {
+      if (document.roster.start_date > document.roster.end_date) {
         errors.push('Roster period: start_date must be before end_date')
       }
 
       // Check if events are outside roster period
-      if (data.events && Array.isArray(data.events)) {
-        data.events.forEach((event) => {
-          if (event.date && (event.date < data.roster.start_date || event.date > data.roster.end_date)) {
+      if (document.events && Array.isArray(document.events)) {
+        document.events.forEach((event) => {
+          if (event.date && (event.date < document.roster.start_date || event.date > document.roster.end_date)) {
             warnings.push(`Event "${event.name || event.date}" is outside roster period`)
           }
         })
       }
 
       // Check if member constraint dates are outside roster period
-      if (data.member_constraints && Array.isArray(data.member_constraints)) {
-        data.member_constraints.forEach((constraint) => {
+      if (document.member_constraints && Array.isArray(document.member_constraints)) {
+        document.member_constraints.forEach((constraint) => {
           if (constraint.unavailable_dates && Array.isArray(constraint.unavailable_dates)) {
-            const memberName = data.members?.find(m => (m.id || m.name) === constraint.member_id)?.name || constraint.member_id
+            const memberName = document.members?.find(m => (m.id || m.name) === constraint.member_id)?.name || constraint.member_id
             
             constraint.unavailable_dates.forEach((dateItem) => {
               // Handle both string dates and date range objects
               if (typeof dateItem === 'string') {
-                if (dateItem < data.roster.start_date || dateItem > data.roster.end_date) {
+                if (dateItem < document.roster.start_date || dateItem > document.roster.end_date) {
                   warnings.push(`${memberName}: Unavailable date ${dateItem} is outside roster period`)
                 }
               } else if (dateItem && typeof dateItem === 'object' && dateItem.start && dateItem.end) {
-                if (dateItem.end < data.roster.start_date || dateItem.start > data.roster.end_date) {
+                if (dateItem.end < document.roster.start_date || dateItem.start > document.roster.end_date) {
                   warnings.push(`${memberName}: Date range ${dateItem.start} to ${dateItem.end} is completely outside roster period`)
                 }
               }
@@ -322,18 +322,18 @@ export const validateRosterPeriod = (data) => {
   return { errors, warnings }
 }
 
-export const validateMemberConstraints = (data) => {
+export const validateMemberConstraints = (document) => {
   const errors = []
   const warnings = []
 
-  if (!data?.members) return { errors, warnings }
+  if (!document?.members) return { errors, warnings }
 
   // Check for members without constraints
-  const includedMembers = data.members.filter(isMemberIncluded)
+  const includedMembers = document.members.filter(isMemberIncluded)
   const constraintMap = new Map()
   
-  if (data.member_constraints && Array.isArray(data.member_constraints)) {
-    data.member_constraints.forEach((constraint) => {
+  if (document.member_constraints && Array.isArray(document.member_constraints)) {
+    document.member_constraints.forEach((constraint) => {
       if (constraint.member_id) {
         constraintMap.set(constraint.member_id, constraint)
       }
@@ -351,14 +351,14 @@ export const validateMemberConstraints = (data) => {
   })
 
   // Check for invalid member references
-  const validMemberIds = new Set(data.members.map(m => m.id || m.name))
+  const validMemberIds = new Set(document.members.map(m => m.id || m.name))
   
-  if (data.member_constraints) {
-    data.member_constraints.forEach((constraint, index) => {
+  if (document.member_constraints) {
+    document.member_constraints.forEach((constraint, index) => {
       if (!constraint.member_id) {
         errors.push(`Member constraint #${index + 1}: Missing member_id`)
       } else if (!validMemberIds.has(constraint.member_id)) {
-        const memberName = data.members.find(m => m.id === constraint.member_id)?.name || constraint.member_id
+        const memberName = document.members.find(m => m.id === constraint.member_id)?.name || constraint.member_id
         warnings.push(`Member constraint for "${memberName}": Member not found`)
       }
     })
@@ -367,8 +367,8 @@ export const validateMemberConstraints = (data) => {
   return { errors, warnings }
 }
 
-export const runAllValidators = (data) => {
-  return new ValidationBuilder(data)
+export const runAllValidators = (document) => {
+  return new ValidationBuilder(document)
     .validate(validateYamlStructure)
     .validate(validateDates)
     .validate(validateMembers)
