@@ -23,7 +23,7 @@
  * Phase 2 — Local search (optimization):
  *   - Hill-climb by applying the best improving move (member↔member swap or
  *     filling an empty slot) until no improving move exists, against the
- *     whole-roster objective in `evaluateState` (fairness, spread, day/role
+ *     whole-roster objective in `scoreRoster` (fairness, spread, day/role
  *     preferences, consecutive-weekend avoidance, empty slots). Every soft goal
  *     that biases Phase 1 must also appear here, or local search can undo it.
  *   - By DEFAULT (`optimizeExisting: false`) slots already filled when the run
@@ -266,14 +266,14 @@ function runGeneration(
   // Hill-climb until no improving move exists (with a safety iteration cap).
   if (localSearch) {
     logger.debug('Phase 2: local search')
-    const before = evaluateState(state, memberPreferences, rosterPreferences)
+    const before = scoreRoster(state, memberPreferences, rosterPreferences)
     const { iterations } = optimizeRoster(
       state,
       eligibilityChecker,
-      (s) => evaluateState(s, memberPreferences, rosterPreferences),
+      (s) => scoreRoster(s, memberPreferences, rosterPreferences),
       { logger }
     )
-    const after = evaluateState(state, memberPreferences, rosterPreferences)
+    const after = scoreRoster(state, memberPreferences, rosterPreferences)
     recomputeStats(sortedEvents, stats)
     logger.info(
       `Phase 2 done: ${iterations} iteration(s), ` +
@@ -333,10 +333,10 @@ function recomputeStats(events, stats) {
 
 /**
  * Compute the final reported roster quality score (higher is better).
- * Delegates to evaluateState against the finished result.
+ * Delegates to scoreRoster against the finished result.
  */
 function calculateRosterQuality(result, memberPreferences, rosterPreferences) {
-  return evaluateState(
+  return scoreRoster(
     { events: result.events, tracker: { getFairnessScore: () => result.fairnessMetrics.assignmentStdDev, getSpreadScore: () => result.fairnessMetrics.spreadStdDev } },
     memberPreferences,
     rosterPreferences
@@ -349,7 +349,7 @@ function calculateRosterQuality(result, memberPreferences, rosterPreferences) {
  * report (calculateRosterQuality) and the local-search loop so both optimize
  * the same objective.
  */
-function evaluateState(state, memberPreferences, rosterPreferences) {
+function scoreRoster(state, memberPreferences, rosterPreferences) {
   const { events, tracker } = state
 
   // Count preference violations and unfilled slots.

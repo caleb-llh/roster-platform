@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { toState, resolveState } from './derivedState'
-import { isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEvents, deriveExternalAssignments, validateTenantRosters } from './tenantResolver'
+import { isTenantShape, tenantSelection, resolveTenant, memberTeams, withRosterEvents, deriveExternalAssignments, validateTenantRosters } from './tenantResolver'
 import { CONSTRAINT_KEYS, PREFERENCE_KEYS } from '../schema/rosterSchema'
 import { DEFAULT_ROSTER_CONSTRAINTS, DEFAULT_ROSTER_PREFERENCES } from '../config/rosterDefaults'
 
@@ -846,11 +846,11 @@ describe('derivedState', () => {
       expect(memberTeams(null)).toEqual({})
     })
 
-    describe('writeBackEvents (Phase 1 write-back)', () => {
+    describe('withRosterEvents (Phase 1 write-back)', () => {
       const edited = [{ date: '2026-02-07', roster: [{ role: 'lead', member_id: 'm-alice' }] }]
 
       it('writes events back into the addressed roster without mutating the input', () => {
-        const next = writeBackEvents(tenant, { teamId: 'team-0', rosterId: 'roster-0' }, edited)
+        const next = withRosterEvents(tenant, { teamId: 'team-0', rosterId: 'roster-0' }, edited)
         // Input untouched (still an empty member_id).
         expect(tenant.teams[0].rosters[0].events[0].roster[0].member_id).toBe('')
         // New doc has the edit.
@@ -861,7 +861,7 @@ describe('derivedState', () => {
       })
 
       it('only touches the addressed roster; siblings + other teams are intact', () => {
-        const next = writeBackEvents(tenant, { teamId: 'team-0', rosterId: 'roster-0' }, edited)
+        const next = withRosterEvents(tenant, { teamId: 'team-0', rosterId: 'roster-0' }, edited)
         // Sibling roster within the same team is unchanged.
         expect(next.teams[0].rosters[1].events).toEqual(tenant.teams[0].rosters[1].events)
         // Other team is unchanged.
@@ -872,7 +872,7 @@ describe('derivedState', () => {
       })
 
       it('round-trips: edit team-0/roster-0, switch away, come back preserves it', () => {
-        const next = writeBackEvents(tenant, { teamId: 'team-0', rosterId: 'roster-1' }, edited)
+        const next = withRosterEvents(tenant, { teamId: 'team-0', rosterId: 'roster-1' }, edited)
         // roster-1 now has the edit; roster-0 still original.
         const r1 = toState(resolveTenant(next, { teamId: 'team-0', rosterId: 'roster-1' }))
         expect(r1.events).toEqual(edited)
@@ -882,7 +882,7 @@ describe('derivedState', () => {
 
       it('is identity for flat documents', () => {
         const flat = { members: [{ id: 'a', name: 'A' }], events: [{ date: '2026-01-01' }] }
-        expect(writeBackEvents(flat, { teamId: 'team-0', rosterId: 'roster-0' }, edited)).toBe(flat)
+        expect(withRosterEvents(flat, { teamId: 'team-0', rosterId: 'roster-0' }, edited)).toBe(flat)
       })
     })
   })

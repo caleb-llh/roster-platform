@@ -148,6 +148,6 @@ binding rules in [generation.md](generation.md) and [understudy.md](understudy.m
 1. **Phase 0 — understudy seeding**: schedule trainee shadowing early, base-role-centric with promotion lookahead.
 2. **Phase 0.5 — promotion planning**: backtrack to reserve later real-role slots for as many unlocked trainees as possible (pinned so local search won't undo them).
 3. **Phase 1 — greedy construction**: fill slots (understudy slots before real roles) using weighted scorers.
-4. **Phase 2 — local search**: hill-climb the whole-roster objective `evaluateState` (fairness, spread, day/role preferences, consecutive-weekend avoidance, empty slots), never moving locked/pinned/pre-existing slots.
+4. **Phase 2 — local search**: hill-climb the whole-roster objective `scoreRoster` (fairness, spread, day/role preferences, consecutive-weekend avoidance, empty slots), never moving locked/pinned/pre-existing slots.
 
-Every soft goal that biases Phase 1 must also be a term in `evaluateState`, or Phase 2 can undo it (see [generation.md](generation.md)).
+Every soft goal that biases Phase 1 must also be a term in `scoreRoster`, or Phase 2 can undo it (see [generation.md](generation.md)).

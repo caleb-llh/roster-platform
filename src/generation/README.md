@@ -77,7 +77,7 @@ A single seeded pass (reproducible / deterministic):
    `RosterState.isLocked` protects them — so generation is *additive* (only fills
    empty slots; it will not reshuffle prior, still-uncommitted assignments).
    Pass `optimizeExisting: true` to re-open the whole roster to optimization. The
-   objective is the whole-roster `evaluateState`: fairness, spread, day/role
+   objective is the whole-roster `scoreRoster`: fairness, spread, day/role
    preference violations, **consecutive-weekend avoidance** (gated by
    `AVOID_CONSECUTIVE_WEEKS`), and empty slots — every soft goal that biases
    Phase 1's greedy scoring must also appear here or local search can undo it.
@@ -107,7 +107,7 @@ Reversible move layer pairing the events (source of truth) with the tracker
 Hill-climbing optimizer over `RosterState`. Enumerates candidate swaps and
 fill-empty moves, validates each via the `EligibilityChecker`, and applies the
 best positive-delta move each iteration. Objective supplied by the caller
-(`evaluateState`, which reuses `SCORING_WEIGHTS`). Stops at a local optimum.
+(`scoreRoster`, which reuses `SCORING_WEIGHTS`). Stops at a local optimum.
 
 ### EligibilityChecker
 Validates hard constraints (must satisfy):

@@ -4,7 +4,8 @@
  * `members` registry (identity + global `unavailable_dates`). This module
  * flattens such a document (given a `{ teamId, rosterId }` selection) into the
  * SAME flat shape `toState` (see derivedState.js) already consumes, plus
- * the cross-team helpers (`deriveExternalAssignments`, `validateTenantRosters`).
+ * the cross-team helpers (`deriveExternalAssignments`, `validateTenantRosters`)
+ * and the reverse events transform (`withRosterEvents`).
  * Flat input passes through untouched, so single-team behaviour is unchanged.
  *
  * See specs/multi-tenant.md "Phase 1 contract". Its output is the shape
@@ -89,19 +90,27 @@ export function memberTeams(document) {
 }
 
 /**
- * Write committed `events` back into a nested tenant document's selected roster,
- * returning a NEW document (the input is not mutated). This is the inverse of
- * `resolveTenant` for the events portion: `resolveTenant` reads a roster's
- * events out to the flat working doc; on commit this puts the edited events
- * back so switching team/roster and returning preserves the edit
+ * Reverse events transform: return a NEW tenant document with the selected
+ * roster's `events` replaced by `events` (the input is not mutated). This is the
+ * inverse of `resolveTenant` for the events portion: `resolveTenant` reads a
+ * roster's events out to the flat working doc; on commit this writes the edited
+ * events back so switching team/roster and returning preserves the edit
  * (multi-tenant Phase 1 write-back).
+ *
+ * Named as a transform (`withRosterEvents`, not `writeBackEvents`): it is a pure
+ * `(document, selection, events) -> document` function with no I/O — the
+ * persistence "write" is the provider's `saveEvents`; this just produces the
+ * next document value. It is the only reverse transform the app has; there is
+ * deliberately no full `toDocument(State) -> document` (see specs/multi-tenant.md
+ * and the overhaul plan — nothing reconstructs a whole document from State, the
+ * raw document stays the source of truth).
  *
  * Only the addressed roster's `events` change; everything else (registry,
  * team_members, other rosters, roster period/overrides) is untouched. Flat
  * documents (no `teams`) are returned unchanged — flat mode keeps its events in
  * the working doc as before.
  */
-export function writeBackEvents(document, { teamId: selTeamId, rosterId: selRosterId }, events) {
+export function withRosterEvents(document, { teamId: selTeamId, rosterId: selRosterId }, events) {
   if (!isTenantShape(document)) return document
   const next = JSON.parse(JSON.stringify(document))
   const teams = next.teams || []

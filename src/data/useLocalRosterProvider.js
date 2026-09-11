@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import yaml from 'js-yaml'
 import { runAllValidators } from '../state/documentValidation'
 import { LOCAL_PERMISSIONS } from './providerContract'
-import { isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEvents, deriveExternalAssignments, validateTenantRosters } from '../state/tenantResolver'
+import { isTenantShape, tenantSelection, resolveTenant, memberTeams, withRosterEvents, deriveExternalAssignments, validateTenantRosters } from '../state/tenantResolver'
 
 /**
  * Local (in-memory) implementation of the roster data provider contract.
@@ -74,7 +74,7 @@ export function useLocalRosterProvider() {
     // doc, so switching team/roster and returning preserves the edit.
     if (tenantDocRef.current) {
       setTenantDoc(prevDoc =>
-        writeBackEvents(
+        withRosterEvents(
           prevDoc,
           { teamId: activeTeamIdRef.current, rosterId: activeRosterIdRef.current },
           events

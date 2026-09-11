@@ -410,7 +410,7 @@ keeps `npx vitest run` + `npm run build` green.
   - **Write-back: ✅ Landed.** Committing an edit while a nested tenant doc is
     loaded also persists the events into the active roster INSIDE the tenant doc,
     so switching team/roster and returning preserves the edit.
-    `writeBackEvents(tenantDoc, {teamId, rosterId}, events)` in
+    `withRosterEvents(tenantDoc, {teamId, rosterId}, events)` in
     [`tenantResolver.js`](../src/state/tenantResolver.js) is the pure inverse of
     `resolveTenant` for the events portion (returns a new doc; only the addressed
     roster's `events` change; identity for flat docs). The local provider's

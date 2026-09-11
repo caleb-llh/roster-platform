@@ -132,7 +132,7 @@ It's the fastest way to learn the input format.
 2. **Default** — set its default in `src/config/rosterDefaults.js`.
 3. **Logic** — implement it in `evaluation/eligibilityChecker.js` (a *hard* constraint) or
    `generation/scoringEngine.js` (a *soft* preference). If it's a soft goal, it must **also**
-   be a term in the whole-roster objective `evaluateState` (`index.js`) or Phase 2
+   be a term in the whole-roster objective `scoreRoster` (`index.js`) or Phase 2
    local search will undo it — see
    [specs/generation.md](specs/generation.md).
 4. **Validation** — add a check in `evaluation/assignmentValidator.js` if manual edits could

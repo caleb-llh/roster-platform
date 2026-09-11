@@ -1,7 +1,7 @@
 # Generation algorithm (binding spec)
 
 Binding rules for the roster generator. The **scoring weights and internal
-mechanics** (seeding lookahead, the local-search move set, `evaluateState`
+mechanics** (seeding lookahead, the local-search move set, `scoreRoster`
 terms) live in [`../src/generation/README.md`](../src/generation/README.md);
 the understudy/promotion phases have their own spec in
 [understudy.md](understudy.md). A high-level pipeline overview is in
@@ -20,7 +20,7 @@ By default `generateRoster` is **additive**: it fills the empty slots and never 
 
 ## Consecutive-weekend avoidance is a Phase-2 objective term, not just a Phase-1 bias
 
-`AVOID_CONSECUTIVE_WEEKS` is enforced in **two** places that must stay in sync: the per-candidate `consecutiveWeekends` scorer (weight `200`) that biases Phase-1 greedy construction, **and** the whole-roster objective `evaluateState` (`index.js`), which counts consecutive-weekend pairs across the roster (`countConsecutiveWeekendViolations`, weighted by `SCORING_WEIGHTS.consecutiveWeekends`, gated by the same preference). Rationale: Phase-2 local search only optimises what `evaluateState` measures. If a soft goal exists only as a Phase-1 scorer, a later swap can freely re-introduce the thing it was meant to avoid — exactly the trap that made the availability scorer useless (below). **Invariant: every soft goal that biases greedy scoring must also appear as a term in `evaluateState`, or local search can undo it.**
+`AVOID_CONSECUTIVE_WEEKS` is enforced in **two** places that must stay in sync: the per-candidate `consecutiveWeekends` scorer (weight `200`) that biases Phase-1 greedy construction, **and** the whole-roster objective `scoreRoster` (`index.js`), which counts consecutive-weekend pairs across the roster (`countConsecutiveWeekendViolations`, weighted by `SCORING_WEIGHTS.consecutiveWeekends`, gated by the same preference). Rationale: Phase-2 local search only optimises what `scoreRoster` measures. If a soft goal exists only as a Phase-1 scorer, a later swap can freely re-introduce the thing it was meant to avoid — exactly the trap that made the availability scorer useless (below). **Invariant: every soft goal that biases greedy scoring must also appear as a term in `scoreRoster`, or local search can undo it.**
 
 ## Availability is a constraint, not an objective (removed scorer)
 
@@ -30,7 +30,7 @@ The `availability` scorer (which prioritized members with fewer available dates)
 
 The soft rules already have a single authority: the [`SCORERS`](../src/rules/scorers.js)
 registry, consumed by **both** per-candidate scoring and the whole-roster
-`evaluateState` objective, so they can't drift (see the consecutive-weekend
+`scoreRoster` objective, so they can't drift (see the consecutive-weekend
 invariant above). **Hard constraints now follow the same shape** via the
 [`CONSTRAINTS`](../src/rules/constraints.js) registry. Several call sites *consume*
 that one list rather than re-owning the rules — three read the **full** rule set,
