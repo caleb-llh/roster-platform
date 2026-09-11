@@ -77,4 +77,4 @@ every decision is captured in an "Algorithm log" you can inspect.
 | **Developers — getting started** | [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, dev/build/deploy commands, testing, and how the AI-assisted workflow works. |
 | **The binding specification** *(why the system behaves as it does)* | [`specs/`](specs/) — the authoritative design decisions, one file per domain: [architecture](specs/architecture.md), [data layer](specs/data-layer.md), [generation](specs/generation.md), [understudy](specs/understudy.md), [design system](specs/design-system.md), [events UI](specs/events-ui.md). |
 | **How any change must feed back into the spec** | [`AGENTS.md`](AGENTS.md) — the mandatory code → tests → spec → verify loop. |
-| **Generator internals & scoring weights** | [`src/utils/rosterGenerator/README.md`](src/utils/rosterGenerator/README.md). |
+| **Generator internals & scoring weights** | [`src/generation/README.md`](src/generation/README.md). |

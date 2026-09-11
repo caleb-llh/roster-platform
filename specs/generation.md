@@ -2,7 +2,7 @@
 
 Binding rules for the roster generator. The **scoring weights and internal
 mechanics** (seeding lookahead, the local-search move set, `evaluateState`
-terms) live in [`../src/utils/rosterGenerator/README.md`](../src/utils/rosterGenerator/README.md);
+terms) live in [`../src/generation/README.md`](../src/generation/README.md);
 the understudy/promotion phases have their own spec in
 [understudy.md](understudy.md). A high-level pipeline overview is in
 [architecture.md](architecture.md#generation-pipeline-overview).

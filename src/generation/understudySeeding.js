@@ -31,10 +31,10 @@
  *    trainee who is unavailable at every subsequent real-role event.
  */
 
-import { understudySlotRole } from '../../schema/understudyRoles'
-import { UNDERSTUDY_MIN_SESSIONS } from '../../rules/understudyPolicy'
+import { understudySlotRole } from '../schema/understudyRoles'
+import { UNDERSTUDY_MIN_SESSIONS } from '../rules/understudyPolicy'
 import { NULL_LOGGER } from './actionLog'
-import { isMemberIncluded } from '../../schema/rosterSchema'
+import { isMemberIncluded } from '../schema/rosterSchema'
 
 /**
  * Inject understudy shadowing slots into feasible events.

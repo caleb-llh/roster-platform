@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { generateRoster } from './index'
 import { seedUnderstudySlots } from './understudySeeding'
-import { AssignmentTracker } from '../../state/assignmentTracker'
-import { EligibilityChecker } from '../../evaluation/eligibilityChecker'
-import { CONSTRAINT_KEYS } from '../../schema/rosterSchema'
+import { AssignmentTracker } from '../state/assignmentTracker'
+import { EligibilityChecker } from '../evaluation/eligibilityChecker'
+import { CONSTRAINT_KEYS } from '../schema/rosterSchema'
 
 /**
  * Tests for the Phase 0 understudy-seeding pre-pass: when a trainee has no

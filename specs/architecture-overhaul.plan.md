@@ -737,10 +737,11 @@ and updates the owning spec:
    adapter's `toState`/`toDocument` transform rename rides along with step 9; the
    structural simplification (lifting the draft group off the provider surface) is
    the step-6 Session inversion, still deferred. (Recorded in [architecture.md](architecture.md), which owns the provider contract.)
-8. **▶ NEXT — Tidy periphery**: extract `readmodel/` (stats/availability/distribution);
-   `lib/` for generic helpers; `integrations/` split into read-model consumers vs.
-   command-surface actors (telegram write path routes through the session command
-   surface).
+8. **◑ IN PROGRESS — Tidy periphery** (sub-committed): **8a ✅** promoted
+   `rosterGenerator/` → top-level `src/generation/` (a module, not a util). **▶ next:**
+   extract `readmodel/` (stats/availability/distribution); `lib/` for generic helpers;
+   `integrations/` split into read-model consumers vs. command-surface actors (telegram
+   write path routes through the session command surface).
 9. **⬜ (rides along) Vocabulary rename pass** (folds through every step above, not a separate
    big-bang): as each file moves to its layer folder, rename its symbols to the
    layer's vocabulary (provider→CRUD, session→command/query, adapter→transform,
@@ -767,11 +768,11 @@ goes red.
 | 1 — extract `rules/` | ✅ done | `b8191d9` | 392 pass | ~~`rules/` imports understudy vocabulary from `../utils/understudy`~~ **cleared by step 5** (vocabulary → `schema/understudyRoles.js`). Enforced by **step 10**. |
 | 2 — unify registries | ✅ done | `b8151d4` | 400 pass (+8 conformance) | none new. `defineRule`/`defineScorer` are identity validators by design (no machinery). |
 | 3 — extract `state/` | ✅ done | `be74f5f` | 400 pass | ~~adapter + `documentValidation` import understudy vocabulary from `../utils/understudy`~~ **cleared by step 5** (now import `schema/understudyRoles.js`). The AGENTS-mandated `rosterSchema.js` test-data constants are honoured. |
-| 4 — split evaluation/generation | ✅ done | `b9c012a` | 400 pass | ~~`evaluation/` imports understudy from `../utils/understudy`~~ **cleared by step 5** (now `schema/understudyRoles.js` + `rules/understudyPolicy.js`). `evaluateState` (whole-roster judge) still lives inside `rosterGenerator/`; folds into `evaluation/` when the generator folder is renamed (deferred to the step-8/9 periphery tidy). |
+| 4 — split evaluation/generation | ✅ done | `b9c012a` | 400 pass | ~~`evaluation/` imports understudy from `../utils/understudy`~~ **cleared by step 5** (now `schema/understudyRoles.js` + `rules/understudyPolicy.js`). `evaluateState` (whole-roster judge) still lives inside `generation/index.js`. **Step 8a decision:** it stayed put during the `rosterGenerator/`→`generation/` rename — it is a *private* local-search objective (not an exported judge), tightly coupled to the generator's scoring internals, so hoisting it into `evaluation/` would mean exporting + untangling it, i.e. scope creep beyond a folder move. Deferred: fold it into `evaluation/` only if/when it needs to be reused outside the generator. |
 | 5 — split `understudy.js` by kind | ✅ done | `d59f896` | 400 pass (24 files) | **debt-clearing step.** `understudy.js` split: vocabulary → `schema/understudyRoles.js`, policy → `rules/understudyPolicy.js` (policy imports vocab — correct Rules→Schema direction). Old `utils/understudy.js`+test deleted; test split to match. No `utils/understudy` importers remain, so steps 1/3/4's coupling is gone. `UNDERSTUDY_SUFFIX` stays vocabulary-internal (no external importer). Seeding/promotion **phases** already live in `generation/` and were untouched. |
 | 6 — extract `session/` | ✅ done | `5626b91` | 400 pass (24 files) | **file-move scope only.** `useDraftHistory.js`(+test) moved `data/`→`session/` (git mv), the 2 provider imports rewired. This *names* the Session concern and cleans `data/`'s folder. **Deferred debt:** the draft/undo/commit logic is still called *inside* both providers (`useLocalRosterProvider`/`useSupabaseRosterProvider` wrap `useDraftHistory` and merge the draft into their returned surface), not by the UI — so Session is not yet *above* Provider as the model prescribes. Hoisting Session above the providers (providers become pure CRUD; Session calls down) folds into **step 7** (provider CRUD contract), which is the natural place to invert it. Internal `commands`/`store` split still deferred (see Resolved). |
 | 7 — provider CRUD contract | ✅ done (proof scope) | `073861e` | 403 pass (25 files, +3 conformance) | **contract-proof scope only** (chosen over restructuring the shape). Exported `ROSTER_PROVIDER_KEYS` in `providerContract.js` as the single source of truth for the surface; `providerContract.test.jsx` renders *both real providers* (Supabase inert with no env) and asserts each returns exactly those keys — interchangeability is now machine-checked. Updated [architecture.md](architecture.md). **Deferred debt (carried from step 6):** the `draft/session` key group still lives on the provider surface; the real structural *simplification* is lifting it out (providers → pure CRUD, Session above), not nesting the flat bag now — nesting would churn every call site and collide with that lift. The `toState`/`toDocument` adapter-rename half of this step also still pending (rides along with step 9). |
-| 8 — tidy periphery | ⬜ | — | — | — |
+| 8 — tidy periphery | ◑ in progress (8a done) | 8a `127ec27` | 403 pass (25 files) | **Sub-committed** (4 move-groups, ~28 importers — too big for one commit). **8a done:** `rosterGenerator/` → top-level `src/generation/` (git mv), all internal `../../`→`../` imports + the 2 external importers (App.jsx, RosterStatsPanel) rewired, README + all doc/spec path refs updated. `evaluateState` stayed private in the generator (see step-4 row). **Remaining:** 8b stats → `readmodel/` (`rosterStats`/`availabilityUtils`/`distributionUtils`/`statsTheme`); 8c generic → `lib/` (`calendarUtils`/`colorUtils`/`dataExport`/`bulkClear` — verify `bulkClear` isn't domain); 8d `telegram.js` → `integrations/` (read/write split). |
 | 9 — vocabulary rename | ⬜ rides along (started) | — | 400 pass | not a standalone commit. **Pulled forward:** the `state/` adapter + `documentValidation` now name their inbound param `document` (not `data`), so the Document→State boundary reads in the code. *Lesson:* a blind `data`→`document` also rewrote a user-facing error string (`'YAML data is empty or invalid'`); reverted — renames must not change display text. |
 | 10 — enforce the graph | ⬜ optional | — | — | the CI gate that makes all above debt un-reintroducible. |
 
@@ -796,7 +797,7 @@ above are cross-referenced; newly-accounted items are called out.
 | `utils/assignmentValidator.js`, `swapPolicy.js` | → `evaluation/` (step 4) | |
 | `utils/availabilityUtils.js`, `rosterStats.js`, `distributionUtils.jsx` | → `readmodel/` (periphery) | live aggregate views of State; share counting primitives with `rules/` but do **not** route through the placement registry. |
 | `utils/calendarUtils.js`, `colorUtils.js`, `dataExport.js`, `bulkClear.js` | → `lib/` (step 8) | generic; `bulkClear` is a session-command helper — verify it isn't domain before moving. |
-| `rosterGenerator/` | → `generation/` + `evaluation/` split (steps 4–5) | |
+| `rosterGenerator/` | **→ `src/generation/` (step 8a ✅ done)** + `evaluation/` split (steps 4–5) | |
 | `data/` | Storage/Providers (+ `useDraftHistory.js` → `session/`) | steps 6–7. |
 | `hooks/useRosterData.js` | → `session/`; `useAuth.js` stays `hooks/` | |
 | `telegram.js` (root) | → `integrations/` (read vs. write split) (step 8) | |

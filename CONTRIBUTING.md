@@ -87,8 +87,8 @@ directory. The short version:
   key names.
 - `src/utils/` — framework-agnostic business logic (validators, diffing, stats,
   constraints, exports, colours, understudy). Heavily unit-tested.
-- `src/utils/rosterGenerator/` — the generation engine, with its own
-  [`README.md`](src/utils/rosterGenerator/README.md) for scoring weights.
+- `src/generation/` — the generation engine, with its own
+  [`README.md`](src/generation/README.md) for scoring weights.
 
 ## Schema-first: use the constants
 
@@ -131,7 +131,7 @@ It's the fastest way to learn the input format.
    metadata) in `rosterSchema.js`.
 2. **Default** — set its default in `src/config/rosterDefaults.js`.
 3. **Logic** — implement it in `evaluation/eligibilityChecker.js` (a *hard* constraint) or
-   `rosterGenerator/scoringEngine.js` (a *soft* preference). If it's a soft goal, it must **also**
+   `generation/scoringEngine.js` (a *soft* preference). If it's a soft goal, it must **also**
    be a term in the whole-roster objective `evaluateState` (`index.js`) or Phase 2
    local search will undo it — see
    [specs/generation.md](specs/generation.md).

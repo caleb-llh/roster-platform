@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { generateRoster } from './index'
-import { CONSTRAINT_KEYS } from '../../schema/rosterSchema'
+import { CONSTRAINT_KEYS } from '../schema/rosterSchema'
 
 /**
  * End-to-end tests for the understudy-before-role gate.

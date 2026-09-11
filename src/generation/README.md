@@ -9,11 +9,11 @@ local search**, with a pluggable weighted-scoring registry and reversible move
 primitives:
 
 ```
-src/utils/rosterGenerator/
+src/generation/
 ├── index.js                 # Main entry point (seed + plan + greedy init + local search)
 ├── understudySeeding.js     # Phase 0: promotion-aware understudy seeding
 ├── promotionPlanning.js     # Phase 0.5: backtracking promotion planner (maximise promotions)
-├── scoringEngine.js         # Thin adapter that ranks candidates via ../../rules/scorers.js
+├── scoringEngine.js         # Thin adapter that ranks candidates via ../rules/scorers.js
 ├── localSearch.js           # Hill-climbing optimizer (swaps + fill-empty, skips locked)
 ├── rng.js                   # Seeded PRNG (deterministic randomization)
 ├── actionLog.js             # Verbose action logger (result.log / logEntries)
@@ -21,29 +21,30 @@ src/utils/rosterGenerator/
 ```
 
 > The judge lives in the evaluation layer, not here:
-> `EligibilityChecker` (`../../evaluation/eligibilityChecker.js`) — the generator's
+> `EligibilityChecker` (`../evaluation/eligibilityChecker.js`) — the generator's
 > predictive "may I place M here?" gate — moved to `src/evaluation/` alongside
 > `assignmentValidator.js` and `swapPolicy.js` (overhaul step 4). The generator
 > imports and instantiates it; it does not own it. See the
-> [generation spec](../../../specs/generation.md) and the two-validators note in
-> [data-layer.md](../../../specs/data-layer.md).
+> [generation spec](../../specs/generation.md) and the two-validators note in
+> [data-layer.md](../../specs/data-layer.md).
 
 > State lives in the state layer, not here: `AssignmentTracker`
-> (`../../state/assignmentTracker.js`) and `RosterState`
-> (`../../state/rosterState.js`) are the engine's working-memory shape and moved to
+> (`../state/assignmentTracker.js`) and `RosterState`
+> (`../state/rosterState.js`) are the engine's working-memory shape and moved to
 > `src/state/` (overhaul step 3). The generator imports them; it does not own them.
-> See the [data-layer spec](../../../specs/data-layer.md).
+> See the [data-layer spec](../../specs/data-layer.md).
 
 > Scoring lives in the rules layer, not here: the `SCORERS` registry and
-> `SCORING_WEIGHTS` moved to `../../rules/scorers.js` (overhaul step 2), sharing a
+> `SCORING_WEIGHTS` moved to `../rules/scorers.js` (overhaul step 2), sharing a
 > home and a `defineRule`/`defineScorer` factory with `CONSTRAINTS`. `scoringEngine.js`
-> is a thin adapter that consumes them. See the [generation spec](../../../specs/generation.md).
+> is a thin adapter that consumes them. See the [generation spec](../../specs/generation.md).
 
-> Understudy semantics (`../understudy.js`) — the `X-understudy` slot suffix,
-> `UNDERSTUDY_MIN_SESSIONS`, `canFillSlotRole` vs `isRoleCapable` — and the full
+> Understudy semantics (`../schema/understudyRoles.js` for the `X-understudy` slot
+> suffix; `../rules/understudyPolicy.js` for `UNDERSTUDY_MIN_SESSIONS`,
+> `canFillSlotRole` vs `isRoleCapable`) — and the full
 > rationale for the cap/promotion/seeding decisions live in the
-> [understudy spec](../../../specs/understudy.md) (and
-> [generation spec](../../../specs/generation.md)), which are the **binding spec**.
+> [understudy spec](../../specs/understudy.md) (and
+> [generation spec](../../specs/generation.md)), which are the **binding spec**.
 
 ## Algorithm Flow
 
@@ -135,7 +136,7 @@ used by Phase 0 seeding to rank promotable trainees.
 > `ENFORCE_CROSS_TEAM_CLASH` are enabled it is folded through the `ctx` counting
 > methods (`weeklyCount`/`monthlyCount`/`overlappingEvents`) so the constraint
 > descriptors are untouched. See the
-> [multi-tenant spec](../../../specs/multi-tenant.md).
+> [multi-tenant spec](../../specs/multi-tenant.md).
 
 ### ScoringEngine
 Scores based on soft preferences (optimize for). Weights live in a single
@@ -162,14 +163,14 @@ the roster-quality evaluation so the two never drift apart:
 > **Availability is not a scorer either.** It was removed — availability is a
 > *hard constraint* (`ENFORCE_MEMBER_AVAILABILITY`), not a workload objective,
 > and it never survived local search. Do not re-introduce either as a scorer.
-> See the [generation spec](../../../specs/generation.md).
+> See the [generation spec](../../specs/generation.md).
 
 ## Usage
 
 ### Generate Roster
 
 ```javascript
-import { generateRoster } from './utils/rosterGenerator'
+import { generateRoster } from './generation'
 
 const result = generateRoster(
   events,              // Events with roster assignments

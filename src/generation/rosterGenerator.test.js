@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { generateRoster } from './index'
-import { CONSTRAINT_KEYS, PREFERENCE_KEYS } from '../../schema/rosterSchema'
+import { CONSTRAINT_KEYS, PREFERENCE_KEYS } from '../schema/rosterSchema'
 
 describe('Roster Generator', () => {
   const createTestMembers = () => [

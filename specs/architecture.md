@@ -123,13 +123,13 @@ Server-side (Supabase dashboard, `config.toml` only, never shipped): `SUPABASE_A
 | `src/hooks/` | `useAuth` (Google OAuth/session) and `useRosterData` (the dual-mode dispatcher). |
 | `src/schema/` | `rosterSchema.js` — schema constants (also used as test-data constants). |
 | `src/utils/` | Framework-agnostic business logic: validators, diffing, stats, constraints, exports, colours, understudy — heavily unit-tested. |
-| `src/utils/rosterGenerator/` | The generation engine (seeding, promotion planning, eligibility, scoring, local search, RNG) + its own `README.md`. See [generation.md](generation.md) and [understudy.md](understudy.md). |
+| `src/generation/` | The generation engine (seeding, promotion planning, scoring, local search, RNG) + its own `README.md`. Imports the judge from `src/evaluation/`. See [generation.md](generation.md) and [understudy.md](understudy.md). |
 | `supabase/` | `migrations/*.sql` (schema, RLS, RPCs, invites) and `config.toml` (local stack + Google provider). |
 
 ## Generation pipeline overview
 
 Generation is a deterministic, seeded pipeline (details and scoring weights in
-[`../src/utils/rosterGenerator/README.md`](../src/utils/rosterGenerator/README.md);
+[`../src/generation/README.md`](../src/generation/README.md);
 binding rules in [generation.md](generation.md) and [understudy.md](understudy.md)):
 
 1. **Phase 0 — understudy seeding**: schedule trainee shadowing early, base-role-centric with promotion lookahead.

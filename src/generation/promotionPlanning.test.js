@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { generateRoster } from './index'
-import { CONSTRAINT_KEYS } from '../../schema/rosterSchema'
+import { CONSTRAINT_KEYS } from '../schema/rosterSchema'
 
 /**
  * Tests for the Phase 0.5 promotion-planning (backtracking) pass.

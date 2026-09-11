@@ -30,10 +30,10 @@
  *    (see rosterState.isLocked). The flag is stripped before returning results.
  */
 
-import { understudySlotRole } from '../../schema/understudyRoles'
-import { UNDERSTUDY_MIN_SESSIONS } from '../../rules/understudyPolicy'
+import { understudySlotRole } from '../schema/understudyRoles'
+import { UNDERSTUDY_MIN_SESSIONS } from '../rules/understudyPolicy'
 import { NULL_LOGGER } from './actionLog'
-import { isMemberIncluded } from '../../schema/rosterSchema'
+import { isMemberIncluded } from '../schema/rosterSchema'
 
 /**
  * @param {Array} events    cloned, chronologically-sorted events (mutated)

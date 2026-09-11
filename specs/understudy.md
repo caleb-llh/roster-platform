@@ -1,6 +1,6 @@
 # Understudy & promotion feature (binding spec)
 
-The system supports **understudies**: members training to perform a role, who must shadow it before performing it for real. This is the most intricate part of the generator; see also [generation.md](generation.md) for the surrounding pipeline and [`../src/utils/rosterGenerator/README.md`](../src/utils/rosterGenerator/README.md) for the scoring internals.
+The system supports **understudies**: members training to perform a role, who must shadow it before performing it for real. This is the most intricate part of the generator; see also [generation.md](generation.md) for the surrounding pipeline and [`../src/generation/README.md`](../src/generation/README.md) for the scoring internals.
 
 **Model — split by kind across two layers** (overhaul step 5; see
 [architecture-overhaul.plan.md](architecture-overhaul.plan.md)):

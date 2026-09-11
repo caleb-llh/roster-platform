@@ -38,18 +38,18 @@
  * Returns: { events, stats, fairnessMetrics, quality, log, logEntries }
  */
 
-import { AssignmentTracker } from '../../state/assignmentTracker'
-import { EligibilityChecker } from '../../evaluation/eligibilityChecker'
+import { AssignmentTracker } from '../state/assignmentTracker'
+import { EligibilityChecker } from '../evaluation/eligibilityChecker'
 import { ScoringEngine, SCORING_WEIGHTS } from './scoringEngine'
-import { RosterState } from '../../state/rosterState'
+import { RosterState } from '../state/rosterState'
 import { optimizeRoster } from './localSearch'
 import { createRng } from './rng'
 import { ActionLogger, NULL_LOGGER } from './actionLog'
 import { seedUnderstudySlots } from './understudySeeding'
 import { planPromotions, clearPromotionPins } from './promotionPlanning'
-import { isUnderstudyRole } from '../../schema/understudyRoles'
-import { areConsecutiveWeekends } from '../../rules/constraintPrimitives'
-import { CONSTRAINT_KEYS, PREFERENCE_KEYS, isConstraintEnabled, isPreferenceEnabled, isMemberIncluded } from '../../schema/rosterSchema'
+import { isUnderstudyRole } from '../schema/understudyRoles'
+import { areConsecutiveWeekends } from '../rules/constraintPrimitives'
+import { CONSTRAINT_KEYS, PREFERENCE_KEYS, isConstraintEnabled, isPreferenceEnabled, isMemberIncluded } from '../schema/rosterSchema'
 
 /**
  * Main entry point.
