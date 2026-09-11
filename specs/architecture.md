@@ -139,6 +139,40 @@ Server-side (Supabase dashboard, `config.toml` only, never shipped): `SUPABASE_A
 | `src/generation/` | The generation engine (seeding, promotion planning, scoring, local search, RNG) + its own `README.md`. Imports the judge from `src/evaluation/`. See [generation.md](generation.md) and [understudy.md](understudy.md). |
 | `supabase/` | `migrations/*.sql` (schema, RLS, RPCs, invites) and `config.toml` (local stack + Google provider). |
 
+## Dependency direction (enforced invariant)
+
+The layers above form an **acyclic graph**, and the arrows only point one way.
+This is not a style preference — it is what keeps the timeless core independent
+of "time" (Session) and persistence (Data), and keeps `rules/` the domain heart
+rather than a dependency sink. The allowed cross-layer arrows are:
+
+| Layer | May import from |
+| --- | --- |
+| `schema/` | nothing (the leaf) |
+| `rules/` | `schema` only — the domain heart, **not** a sink; arrows point *into* it |
+| `evaluation/` | `rules`, `schema` |
+| `state/` | `schema`, `config`, `design`, `lib`, `rules` (the tracker reuses a rules counting primitive) |
+| `generation/` | `state`, `evaluation`, `rules`, `schema` |
+| `readmodel/` | `state`, `evaluation`, `rules`, `schema`, `design` (chart views use tokens) |
+| `session/` | `state`, `evaluation`, `utils` |
+| `data/` | `state` (providers use the adapter) |
+| `hooks/` | `data`, `session` |
+| `components/` | `readmodel`, `generation`, `rules`, `schema`, `design`, `lib`, `utils` |
+| `lib/`, `design/`, `integrations/`, `utils/` | nothing (domain-free / leaf) |
+| `config/` | `schema` |
+
+Key invariants: **the core (`schema`/`rules`/`evaluation`/`state`/`generation`)
+never imports `session/` or `data/`**; `rules/` never imports `evaluation/`
+(or anything but `schema`); read-model views never route through the placement
+registry. `App.jsx`/`main.jsx` are the composition root and may import anything.
+
+This is **enforced by a guard test**
+([`src/__guards__/dependencyDirection.lint.test.js`](../src/__guards__/dependencyDirection.lint.test.js)):
+a dependency-free Vitest lint (the same pattern as the design-system guard) that
+scans every source file's cross-layer imports and fails CI on any arrow not in
+the allow-list above. Adding a new cross-layer arrow is therefore a deliberate
+act: whitelist it in the guard **and** justify it here.
+
 ## Generation pipeline overview
 
 Generation is a deterministic, seeded pipeline (details and scoring weights in
