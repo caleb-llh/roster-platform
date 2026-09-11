@@ -108,7 +108,7 @@ specified when built.
      used before datetime ranges landed.
    - **Per-team overrides.** Team-level `roster_constraints` /
      `roster_preferences` override tenant defaults, exactly as roster-level
-     overrides tenant/source defaults today (`getDerivedState` already merges
+     overrides tenant/source defaults today (`toState` already merges
      `DEFAULT → document`; we add a `tenant → team → roster` merge chain).
 
 5. **The document keeps its atomic draft/commit contract.** Per
@@ -199,10 +199,10 @@ preserved, assignments survive the hoist.
 
 The generator, eligibility checker, validators, stats, diff and the whole
 `utils/` layer currently consume a **derived state** from one document
-(`getDerivedState` → `{ members, events, roles, memberConstraints, … }`). We
+(`toState` → `{ members, events, roles, memberConstraints, … }`). We
 keep that contract. The change is *where the pieces come from*:
 
-- `getDerivedState` (local/YAML) learns to read the new nested shape and
+- `toState` (local/YAML) learns to read the new nested shape and
   **resolve a single team's members** by joining `members` + `team_members`
   into today's normalized member objects (`{ id, name, roles, understudyFor,
   include }`), with `memberConstraints` pulled from the global member calendar.
@@ -248,7 +248,7 @@ that **every existing generator / `derivedState` / stats / validator test passes
 unchanged** after the entity model lands — that proves the resolved shape is
 truly identical to today's. So the seam's tests are: (1) keep the current suite
 green with `externalAssignments` defaulting to no-op; (2) add
-`getDerivedState` cases asserting a `members` + `team_members` join resolves to
+`toState` cases asserting a `members` + `team_members` join resolves to
 the same `{ id, name, roles, understudyFor, include }` shape, that one member on
 two teams resolves to different per-team `roles`, and that global
 `member_constraints` flow in regardless of team. (Authorization is tested
@@ -364,16 +364,16 @@ Design is complete now; delivery is sequenced so each phase is shippable and
 keeps `npx vitest run` + `npm run build` green.
 
 - **Phase 0 — types & seam (no behaviour change). ✅ Landed.** The resolved
-  derived-state is now the single contract via `resolveDerivedState(data,
+  derived-state is now the single contract via `resolveState(data,
   { externalAssignments })` in
   [`derivedState.js`](../src/state/derivedState.js) — a single-team identity pass
-  over `getDerivedState` plus the empty/no-op cross-team assignments snapshot.
+  over `toState` plus the empty/no-op cross-team assignments snapshot.
   `generateRoster` threads `externalAssignments` (defaulting `{}`) into the
   `EligibilityChecker`, which stored it unused until Phase 2 (now consulted by
   the cross-team cap/clash fold). `externalLoad` is
   deliberately *not* an input — load derives from the assignments snapshot. Tests
-  lock in the no-op: the full suite stays green, `resolveDerivedState` is proven
-  identical to `getDerivedState`, and an empty `externalAssignments` produces
+  lock in the no-op: the full suite stays green, `resolveState` is proven
+  identical to `toState`, and an empty `externalAssignments` produces
   byte-for-byte identical generator output.
 - **Datetime-range model + local clash (done — prerequisite for Phase 2 clash).**
   Events resolve to half-open `[start, end)` intervals so same-day non-overlapping
@@ -384,7 +384,7 @@ keeps `npx vitest run` + `npm run build` green.
   owns the registry). The rule is written once against intervals, so Phase 2's
   cross-team clash is the *same* rule extended to fold in `externalAssignments`,
   not a new one.
-- **Phase 1 — local model. ✅ Landed.** New nested YAML shape + `getDerivedState`
+- **Phase 1 — local model. ✅ Landed.** New nested YAML shape + `toState`
   resolver + nested `sample_tenant.yaml`; MembersView split (registry vs. team
   membership); global unavailability; team selector above roster selector;
   events write-back into the tenant doc. The concrete Phase 1 contract — nested
@@ -398,7 +398,7 @@ keeps `npx vitest run` + `npm run build` green.
     flatten a selected team+roster into today's flat document (registry ⋈
     `team_members`, global `unavailable_dates` — and its free-text `note` —
     → per-team `member_constraints`),
-    which `getDerivedState` consumes unchanged. Flat input is returned untouched
+    which `toState` consumes unchanged. Flat input is returned untouched
     (`resolveTenant` is identity when there is no `teams` key) — all 352 prior
     tests still pass. The provider contract gained `teams` / `activeTeamId` /
     `selectTeam` above `rosters` / `activeRosterId` / `selectRoster`; the local
@@ -676,7 +676,7 @@ selection**, mirroring that shape one level up:
 
 Invariant: **the engine still receives one resolved single-team derived state**
 — `activeTeamId` + `activeRosterId` together pick exactly one roster document,
-which `getDerivedState` resolves (joining the registry with that team's
+which `toState` resolves (joining the registry with that team's
 `team_members`) into today's normalized shape. The selection layer is UI/provider
 state; it does not change the engine contract (Design Decision 5 and the
 compatibility seam). In the flat/default case there is exactly one synthetic team

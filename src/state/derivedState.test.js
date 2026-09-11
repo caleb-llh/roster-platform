@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { getDerivedState, resolveDerivedState } from './derivedState'
+import { toState, resolveState } from './derivedState'
 import { isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEvents, deriveExternalAssignments, validateTenantRosters } from './tenantResolver'
 import { CONSTRAINT_KEYS, PREFERENCE_KEYS } from '../schema/rosterSchema'
 import { DEFAULT_ROSTER_CONSTRAINTS, DEFAULT_ROSTER_PREFERENCES } from '../config/rosterDefaults'
 
 describe('derivedState', () => {
-  describe('getDerivedState', () => {
+  describe('toState', () => {
     it('should return default state for null data', () => {
-      const state = getDerivedState(null)
+      const state = toState(null)
       
       expect(state.members).toEqual([])
       expect(state.events).toEqual([])
@@ -22,7 +22,7 @@ describe('derivedState', () => {
     })
 
     it('should return default state for undefined data', () => {
-      const state = getDerivedState(undefined)
+      const state = toState(undefined)
       
       expect(state.members).toEqual([])
       expect(state.events).toEqual([])
@@ -36,7 +36,7 @@ describe('derivedState', () => {
         ]
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.members).toHaveLength(2)
       expect(state.members[0].id).toBe('alice')
     })
@@ -49,7 +49,7 @@ describe('derivedState', () => {
         ]
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.events).toHaveLength(2)
       expect(state.events[0].date).toBe('2026-02-01')
     })
@@ -63,7 +63,7 @@ describe('derivedState', () => {
         ]
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.roles).toEqual(['vm', 'cam-1', 'cam-2'])
     })
 
@@ -72,7 +72,7 @@ describe('derivedState', () => {
         declared_roles: ['vm', 'cam-1', 'cam-2']
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.roles).toEqual(['vm', 'cam-1', 'cam-2'])
     })
 
@@ -81,7 +81,7 @@ describe('derivedState', () => {
         roles: ['vm', 'cam-1', 'cam-2']
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.roles).toEqual(['vm', 'cam-1', 'cam-2'])
     })
 
@@ -90,7 +90,7 @@ describe('derivedState', () => {
         roles: ['vm', null, 'cam-1', undefined, '', 'cam-2']
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.roles).toEqual(['vm', 'cam-1', 'cam-2'])
     })
 
@@ -99,7 +99,7 @@ describe('derivedState', () => {
         roles: ['vm', 'cam-1', 'cam-2']
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.roleColorMap).toHaveProperty('vm')
       expect(state.roleColorMap).toHaveProperty('cam-1')
       expect(state.roleColorMap).toHaveProperty('cam-2')
@@ -110,7 +110,7 @@ describe('derivedState', () => {
         roles: ['vm', 'cam-1', 'cam-2']
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.roleColorMap.vm).not.toBe(state.roleColorMap['cam-1'])
       expect(state.roleColorMap['cam-1']).not.toBe(state.roleColorMap['cam-2'])
     })
@@ -120,7 +120,7 @@ describe('derivedState', () => {
         roles: Array.from({ length: 20 }, (_, i) => `role-${i}`)
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(Object.keys(state.roleColorMap)).toHaveLength(20)
       
       // All roles should have color assigned (text-colour only — role tags
@@ -140,7 +140,7 @@ describe('derivedState', () => {
         ]
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.activeMembers).toHaveLength(2)
       expect(state.activeMembers.map(m => m.id)).toEqual(['alice', 'charlie'])
     })
@@ -153,7 +153,7 @@ describe('derivedState', () => {
         ]
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.activeMembers).toHaveLength(2)
     })
 
@@ -164,7 +164,7 @@ describe('derivedState', () => {
         ]
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.memberConstraints).toHaveLength(1)
       expect(state.memberConstraints[0].member_id).toBe('alice')
     })
@@ -176,7 +176,7 @@ describe('derivedState', () => {
         ]
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.memberPreferences).toHaveLength(1)
       expect(state.memberPreferences[0].days).toEqual(['Sunday'])
     })
@@ -189,7 +189,7 @@ describe('derivedState', () => {
         }
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.rosterConstraints.ONLY_ONCE_PER_EVENT).toBe(true)
       expect(state.rosterConstraints.ONLY_ONCE_PER_WEEK).toBe(true)
     })
@@ -203,7 +203,7 @@ describe('derivedState', () => {
         }
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.rosterPreferences[PREFERENCE_KEYS.AVOID_CONSECUTIVE_WEEKS]).toBe(true)
       expect(state.rosterPreferences[PREFERENCE_KEYS.SPREAD_ASSIGNMENTS]).toBe(true)
       expect(state.rosterPreferences[PREFERENCE_KEYS.DIVERSIFY_ROLE_ASSIGNMENTS]).toBe(true)
@@ -217,7 +217,7 @@ describe('derivedState', () => {
         }
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.rosterPeriod.start_date).toBe('2026-02-01')
       expect(state.rosterPeriod.end_date).toBe('2026-04-30')
     })
@@ -250,7 +250,7 @@ describe('derivedState', () => {
         }
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       
       expect(state.members).toHaveLength(2)
       expect(state.activeMembers).toHaveLength(1)
@@ -264,7 +264,7 @@ describe('derivedState', () => {
     })
 
     it('should handle empty data object', () => {
-      const state = getDerivedState({})
+      const state = toState({})
       
       expect(state.members).toEqual([])
       expect(state.events).toEqual([])
@@ -277,7 +277,7 @@ describe('derivedState', () => {
         members: [{ id: 'alice', name: 'Alice' }]
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       
       expect(state.members).toHaveLength(1)
       expect(state.events).toEqual([])
@@ -295,7 +295,7 @@ describe('derivedState', () => {
         events: [{ date: '2026-02-01' }]
       }
       
-      const state = getDerivedState(originalData)
+      const state = toState(originalData)
       
       // Should not mutate original
       expect(originalData.members).toHaveLength(1)
@@ -320,7 +320,7 @@ describe('derivedState', () => {
         ]
       }
 
-      const state = getDerivedState(data)
+      const state = toState(data)
       const activeIds = state.activeMembers.map(m => m.id)
 
       expect(activeIds).toEqual(['charlie', 'dave', 'erin'])
@@ -333,7 +333,7 @@ describe('derivedState', () => {
         roles: ['vm', 'cam-1']
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       
       // Color classes should be a valid Tailwind text-colour (role tags are
       // coloured font on a neutral surface, not a coloured pill).
@@ -348,7 +348,7 @@ describe('derivedState', () => {
         roles: ['multi-vm', 'cam-1', 'backup/alternate']
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.roles).toEqual(['multi-vm', 'cam-1', 'backup/alternate'])
       expect(state.roleColorMap['multi-vm']).toBeTruthy()
       expect(state.roleColorMap['backup/alternate']).toBeTruthy()
@@ -364,7 +364,7 @@ describe('derivedState', () => {
         ]
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.roles).toEqual(['vm', 'cam-1', 'cam-2', 'cam-3'])
     })
 
@@ -381,7 +381,7 @@ describe('derivedState', () => {
         ]
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.members[0].name).toBe('Alice O\'Brien')
       expect(state.activeMembers).toHaveLength(1)
     })
@@ -399,7 +399,7 @@ describe('derivedState', () => {
         }))
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       expect(state.members).toHaveLength(1000)
       expect(state.activeMembers).toHaveLength(500) // Half are active
       expect(state.roles).toHaveLength(50)
@@ -413,7 +413,7 @@ describe('derivedState', () => {
         roles: [null, 'vm', undefined, 'cam-1', '']
       }
       
-      const state = getDerivedState(data)
+      const state = toState(data)
       
       // Should filter out nulls and handle gracefully
       expect(state.roles).toEqual(['vm', 'cam-1'])
@@ -424,10 +424,10 @@ describe('derivedState', () => {
     })
   })
 
-  // resolveDerivedState is the convenience aggregator naming the resolved
+  // resolveState is the convenience aggregator naming the resolved
   // derived-state contract; for a single team it must be identical to
-  // getDerivedState plus empty/no-op cross-team inputs.
-  describe('resolveDerivedState (seam)', () => {
+  // toState plus empty/no-op cross-team inputs.
+  describe('resolveState (seam)', () => {
     const data = {
       roster: { start_date: '2026-02-01', end_date: '2026-04-30' },
       members: [
@@ -442,10 +442,10 @@ describe('derivedState', () => {
       roster_preferences: { [PREFERENCE_KEYS.AVOID_CONSECUTIVE_WEEKS]: true },
     }
 
-    it('is identity over getDerivedState for the shared keys (single team)', () => {
-      const base = getDerivedState(data)
-      const resolved = resolveDerivedState(data)
-      // Every key getDerivedState produces is byte-for-byte identical.
+    it('is identity over toState for the shared keys (single team)', () => {
+      const base = toState(data)
+      const resolved = resolveState(data)
+      // Every key toState produces is byte-for-byte identical.
       for (const key of Object.keys(base)) {
         expect(resolved[key]).toEqual(base[key])
       }
@@ -455,7 +455,7 @@ describe('derivedState', () => {
     })
 
     it('adds an empty no-op externalAssignments by default', () => {
-      const resolved = resolveDerivedState(data)
+      const resolved = resolveState(data)
       expect(resolved.externalAssignments).toEqual({})
       // Load is derived, never a separate stored input.
       expect(resolved.externalLoad).toBeUndefined()
@@ -463,12 +463,12 @@ describe('derivedState', () => {
 
     it('passes through the provided externalAssignments verbatim', () => {
       const externalAssignments = { alice: ['2026-02-07', '2026-02-14'] }
-      const resolved = resolveDerivedState(data, { externalAssignments })
+      const resolved = resolveState(data, { externalAssignments })
       expect(resolved.externalAssignments).toBe(externalAssignments)
     })
 
-    it('handles null data like getDerivedState + empty inputs', () => {
-      const resolved = resolveDerivedState(null)
+    it('handles null data like toState + empty inputs', () => {
+      const resolved = resolveState(null)
       expect(resolved.members).toEqual([])
       expect(resolved.events).toEqual([])
       expect(resolved.externalAssignments).toEqual({})
@@ -477,7 +477,7 @@ describe('derivedState', () => {
 
   // Multi-tenant Phase 1: nested tenant shape resolves to today's FLAT document
   // (see specs/multi-tenant.md "Phase 1 contract"). The acceptance test is that
-  // flat input is untouched and the resolved flat doc feeds getDerivedState to
+  // flat input is untouched and the resolved flat doc feeds toState to
   // the SAME normalized shape.
   describe('nested tenant resolver (Phase 1)', () => {
     const tenant = {
@@ -548,7 +548,7 @@ describe('derivedState', () => {
 
     it('joins registry + team_members into the flat member shape', () => {
       const flat = resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' })
-      const state = getDerivedState(flat)
+      const state = toState(flat)
       expect(state.members.map(m => m.id)).toEqual(['m-alice', 'm-bob'])
       // Per-team roles; understudy normalization applies downstream.
       expect(state.members.find(m => m.id === 'm-alice').roles).toEqual(['lead', 'support'])
@@ -561,8 +561,8 @@ describe('derivedState', () => {
     })
 
     it('resolves the SAME member to different per-team roles', () => {
-      const worship = getDerivedState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
-      const hospitality = getDerivedState(resolveTenant(tenant, { teamId: 'team-1', rosterId: 'roster-0' }))
+      const worship = toState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
+      const hospitality = toState(resolveTenant(tenant, { teamId: 'team-1', rosterId: 'roster-0' }))
       expect(worship.members.find(m => m.id === 'm-alice').roles).toEqual(['lead', 'support'])
       expect(hospitality.members.find(m => m.id === 'm-alice').roles).toEqual(['host'])
       // Bob is not on Hospitality.
@@ -570,7 +570,7 @@ describe('derivedState', () => {
     })
 
     it('surfaces global unavailability as member_constraints for the team', () => {
-      const state = getDerivedState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
+      const state = toState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
       const alice = state.memberConstraints.find(c => c.member_id === 'm-alice')
       expect(alice.unavailable_dates).toEqual(['2026-02-14', { start: '2026-03-05', end: '2026-03-10' }])
       // The registry member's free-text note travels with the constraint.
@@ -578,23 +578,23 @@ describe('derivedState', () => {
       // Bob has none → no constraint row.
       expect(state.memberConstraints.find(c => c.member_id === 'm-bob')).toBeUndefined()
       // Global unavailability follows the member across teams.
-      const hosp = getDerivedState(resolveTenant(tenant, { teamId: 'team-1', rosterId: 'roster-0' }))
+      const hosp = toState(resolveTenant(tenant, { teamId: 'team-1', rosterId: 'roster-0' }))
       expect(hosp.memberConstraints.find(c => c.member_id === 'm-alice').unavailable_dates).toHaveLength(2)
     })
 
     it('selects a specific roster within a team', () => {
-      const r1 = getDerivedState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-1' }))
+      const r1 = toState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-1' }))
       expect(r1.rosterPeriod.start_date).toBe('2026-04-01')
       expect(r1.events[0].date).toBe('2026-04-04')
     })
 
     it('applies a roster member_override for include over the team default', () => {
       // Team default: Bob is include:true. roster-0 has no override → active.
-      const r0 = getDerivedState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
+      const r0 = toState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
       expect(r0.members.find(m => m.id === 'm-bob').include).toBe(true)
       // roster-1 overrides Bob to include:false → still on the team, but inactive
       // (eligibility/generator treat include:false as opted out).
-      const r1 = getDerivedState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-1' }))
+      const r1 = toState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-1' }))
       expect(r1.members.find(m => m.id === 'm-bob').include).toBe(false)
       // Alice has no override → unaffected in both rosters.
       expect(r0.members.find(m => m.id === 'm-alice').include).toBe(true)
@@ -602,7 +602,7 @@ describe('derivedState', () => {
     })
 
     it('defaults to the first team + roster when selection omitted', () => {
-      const state = getDerivedState(resolveTenant(tenant, {}))
+      const state = toState(resolveTenant(tenant, {}))
       expect(state.rosterPeriod.start_date).toBe('2026-02-01')
       expect(state.members.map(m => m.id)).toEqual(['m-alice', 'm-bob'])
     })
@@ -635,7 +635,7 @@ describe('derivedState', () => {
       }
 
       it('merges tenant → team → roster with later layers winning', () => {
-        const state = getDerivedState(resolveTenant(layered, { teamId: 'team-0', rosterId: 'roster-0' }))
+        const state = toState(resolveTenant(layered, { teamId: 'team-0', rosterId: 'roster-0' }))
         const c = state.rosterConstraints
         // Roster wins over team (4) and tenant (5).
         expect(c.MAX_ASSIGNMENTS_PER_MONTH).toBe(3)
@@ -646,7 +646,7 @@ describe('derivedState', () => {
       })
 
       it('falls back to team then tenant when a roster omits the key', () => {
-        const state = getDerivedState(resolveTenant(layered, { teamId: 'team-0', rosterId: 'roster-1' }))
+        const state = toState(resolveTenant(layered, { teamId: 'team-0', rosterId: 'roster-1' }))
         const c = state.rosterConstraints
         // Team wins over tenant when the roster has no layer.
         expect(c.MAX_ASSIGNMENTS_PER_MONTH).toBe(4)
@@ -658,7 +658,7 @@ describe('derivedState', () => {
         const flat = { members: [{ id: 'a', name: 'A' }], events: [] }
         // No layer supplied → resolveTenant is a no-op on flat input, and a doc
         // with only defaults still yields the source-code defaults.
-        const state = getDerivedState(resolveTenant(flat, {}))
+        const state = toState(resolveTenant(flat, {}))
         expect(state.rosterConstraints).toEqual({ ...DEFAULT_ROSTER_CONSTRAINTS })
       })
     })
@@ -670,7 +670,7 @@ describe('derivedState', () => {
       it('auto-enables cross-team keys for a multi-team tenant', () => {
         // `tenant` has two teams (Worship + Hospitality) and no explicit
         // cross-team constraints, so both keys default ON.
-        const state = getDerivedState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
+        const state = toState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
         expect(state.rosterConstraints.ENFORCE_CROSS_TEAM_CAPS).toBe(true)
         expect(state.rosterConstraints.ENFORCE_CROSS_TEAM_CLASH).toBe(true)
       })
@@ -692,7 +692,7 @@ describe('derivedState', () => {
             },
           ],
         }
-        const state = getDerivedState(resolveTenant(single, { teamId: 'team-0', rosterId: 'roster-0' }))
+        const state = toState(resolveTenant(single, { teamId: 'team-0', rosterId: 'roster-0' }))
         // Absent key = off (there is no default for the cross-team keys — they
         // are OFF by absence), so it reads falsy rather than an explicit false.
         expect(state.rosterConstraints.ENFORCE_CROSS_TEAM_CLASH).toBeFalsy()
@@ -708,7 +708,7 @@ describe('derivedState', () => {
               : t
           ),
         }
-        const state = getDerivedState(resolveTenant(opted, { teamId: 'team-0', rosterId: 'roster-0' }))
+        const state = toState(resolveTenant(opted, { teamId: 'team-0', rosterId: 'roster-0' }))
         // Team layer explicitly turned the auto-default back off.
         expect(state.rosterConstraints.ENFORCE_CROSS_TEAM_CLASH).toBe(false)
         // The other auto-default is untouched.
@@ -856,7 +856,7 @@ describe('derivedState', () => {
         // New doc has the edit.
         expect(next.teams[0].rosters[0].events).toEqual(edited)
         // Resolving the new doc surfaces the edited events.
-        expect(getDerivedState(resolveTenant(next, { teamId: 'team-0', rosterId: 'roster-0' })).events)
+        expect(toState(resolveTenant(next, { teamId: 'team-0', rosterId: 'roster-0' })).events)
           .toEqual(edited)
       })
 
@@ -874,9 +874,9 @@ describe('derivedState', () => {
       it('round-trips: edit team-0/roster-0, switch away, come back preserves it', () => {
         const next = writeBackEvents(tenant, { teamId: 'team-0', rosterId: 'roster-1' }, edited)
         // roster-1 now has the edit; roster-0 still original.
-        const r1 = getDerivedState(resolveTenant(next, { teamId: 'team-0', rosterId: 'roster-1' }))
+        const r1 = toState(resolveTenant(next, { teamId: 'team-0', rosterId: 'roster-1' }))
         expect(r1.events).toEqual(edited)
-        const r0 = getDerivedState(resolveTenant(next, { teamId: 'team-0', rosterId: 'roster-0' }))
+        const r0 = toState(resolveTenant(next, { teamId: 'team-0', rosterId: 'roster-0' }))
         expect(r0.events).toEqual(tenant.teams[0].rosters[0].events)
       })
 

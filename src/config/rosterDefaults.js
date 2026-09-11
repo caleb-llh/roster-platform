@@ -7,7 +7,7 @@
  * error and lets production build rosters without carrying this config.
  *
  * Precedence: a roster document may still OVERRIDE any of these by providing
- * `roster_constraints` / `roster_preferences` keys (see getDerivedState, which
+ * `roster_constraints` / `roster_preferences` keys (see toState, which
  * merges the document over these defaults). Absent config falls back to the
  * intended defaults below rather than to "everything disabled".
  *

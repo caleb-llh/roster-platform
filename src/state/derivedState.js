@@ -1,11 +1,11 @@
 /**
- * Roster document adapter — normalization half. `getDerivedState` takes a FLAT
+ * Roster document adapter — normalization half. `toState` takes a FLAT
  * roster document and produces the shape the engine/validators/stats consume
  * (active members, role colours, resolved constraints/preferences).
  *
  * The nested-tenant resolution half lives in tenantResolver.js: it flattens a
  * multi-team tenant document into the SAME flat shape this module consumes, so
- * `getDerivedState(resolveTenant(...))` is the full adapter. Flat input needs no
+ * `toState(resolveTenant(...))` is the full adapter. Flat input needs no
  * resolver, so single-team behaviour is unchanged.
  */
 
@@ -14,7 +14,7 @@ import { createRoleColorMap } from '../design/colorUtils'
 import { DEFAULT_ROSTER_CONSTRAINTS, DEFAULT_ROSTER_PREFERENCES } from '../config/rosterDefaults'
 import { normalizeMemberRoles } from '../schema/understudyRoles'
 
-export function getDerivedState(document) {
+export function toState(document) {
   if (!document) {
     return {
       members: [],
@@ -91,13 +91,13 @@ export function getDerivedState(document) {
  * SAME shape by joining `members` + `team_members` without the engine changing.
  *
  * NOTE ON WIRING: the live provider path assembles these two pieces separately —
- * `getDerivedState(resolveTenant(...))` for the flat state and
+ * `toState(resolveTenant(...))` for the flat state and
  * `deriveExternalAssignments(...)` for the snapshot — because they update on
  * different triggers (selection vs. cross-team edits). This helper bundles them
  * for callers/tests that want the whole contract in one call; both routes yield
  * the same shape.
  *
- * For a single team it is an identity pass over `getDerivedState(document)` plus the
+ * For a single team it is an identity pass over `toState(document)` plus the
  * optional read-only cross-team **assignments**, which default to empty/no-op so
  * single-team behaviour is byte-for-byte identical.
  *
@@ -112,9 +112,9 @@ export function getDerivedState(document) {
  *   empty by default.
  * @returns derived state + `externalAssignments`.
  */
-export function resolveDerivedState(document, external = {}) {
+export function resolveState(document, external = {}) {
   return {
-    ...getDerivedState(document),
+    ...toState(document),
     externalAssignments: external.externalAssignments || {},
   }
 }

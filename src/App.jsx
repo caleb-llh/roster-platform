@@ -3,7 +3,7 @@ import { createRoleColorMap, formatDateRange, formatDate } from './design/colorU
 import { calculateRosterStats } from './readmodel/rosterStats'
 import { validateEventAssignments } from './evaluation/assignmentValidator'
 import { generateRoster } from './generation'
-import { getDerivedState } from './state/derivedState'
+import { toState } from './state/derivedState'
 import { computeRosterDiff } from './utils/rosterDiff'
 import { computeAvailabilityByRole } from './readmodel/availabilityUtils'
 import { useRosterData } from './hooks/useRosterData'
@@ -98,10 +98,10 @@ function App({ auth }) {
     rosterConstraints,
     rosterPreferences,
     rosterPeriod
-  } = getDerivedState(effectiveData)
+  } = toState(effectiveData)
 
   // Committed (last-saved) events, for diffing against the draft.
-  const committedEvents = getDerivedState(data).events
+  const committedEvents = toState(data).events
   const rosterDiff = computeRosterDiff(committedEvents, events)
   // Name-only label for the change-review list (diff stores member_id).
   const getMemberName = (memberId) => memberId ? (members.find(m => m.id === memberId)?.name || memberId) : null

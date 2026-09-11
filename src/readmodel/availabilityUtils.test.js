@@ -3,7 +3,7 @@ import { computeAvailabilityByRole, availabilityCellColor } from './availability
 
 describe('computeAvailabilityByRole', () => {
   // Members are given in NORMALIZED shape (plain `roles` string arrays, plus
-  // optional `understudyFor`), matching getDerivedState's output.
+  // optional `understudyFor`), matching toState's output.
   const members = [
     { id: 'a', roles: ['vm'] },
     { id: 'b', roles: ['vm', 'multi-vm'] },

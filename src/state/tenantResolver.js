@@ -3,12 +3,12 @@
  * `teams: [{ name, roles, team_members, rosters }]` with a tenant-level
  * `members` registry (identity + global `unavailable_dates`). This module
  * flattens such a document (given a `{ teamId, rosterId }` selection) into the
- * SAME flat shape `getDerivedState` (see derivedState.js) already consumes, plus
+ * SAME flat shape `toState` (see derivedState.js) already consumes, plus
  * the cross-team helpers (`deriveExternalAssignments`, `validateTenantRosters`).
  * Flat input passes through untouched, so single-team behaviour is unchanged.
  *
  * See specs/multi-tenant.md "Phase 1 contract". Its output is the shape
- * `getDerivedState` consumes; the two modules together form the document adapter.
+ * `toState` consumes; the two modules together form the document adapter.
  */
 
 import { YAML_FIELDS } from '../schema/rosterSchema'
@@ -319,7 +319,7 @@ export function resolveTenant(document, { teamId: selTeamId, rosterId: selRoster
   if (mergedPreferences) flat.roster_preferences = mergedPreferences
   if (roster.member_preferences) flat.member_preferences = roster.member_preferences
 
-  // getDerivedState reads member unavailability from the YAML field
+  // toState reads member unavailability from the YAML field
   // `member_constraints` (Design Decision 4: global unavailability, resolved
   // per team).
   flat[YAML_FIELDS.MEMBER_CONSTRAINTS] = memberConstraints

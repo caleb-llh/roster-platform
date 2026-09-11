@@ -63,11 +63,11 @@ a day can't slip a timezone. Member unavailability remains a set of **day keys**
   ([`rosterSchema.js`](../src/schema/rosterSchema.js)): a member is schedulable
   unless they opt out with `include: false` (absent = included). The schema,
   `sample.yaml`, generator, validator, stats and the tenant resolver
-  (`member_overrides`) all key off this one field, so `getDerivedState`'s
+  (`member_overrides`) all key off this one field, so `toState`'s
   `activeMembers` cannot disagree with generation/stats. A legacy `active: false`
   is still honoured **only as an alias** so very old documents don't silently
   start scheduling opted-out members — there is no separate `active` concept.
-  (This fixes a real bug: `getDerivedState` previously filtered on `m.active`,
+  (This fixes a real bug: `toState` previously filtered on `m.active`,
   which is *absent* on tenant-resolved members, so `member_overrides` sabbaticals
   were silently ignored in the schedulable count.)
 
@@ -82,9 +82,9 @@ a day can't slip a timezone. Member unavailability remains a set of **day keys**
 The **adapter** — the pure `document → State` transform that turns a parsed
 document into the working shape the engine reads — lives in
 [`src/state/`](../src/state/) as two halves: normalization
-([`derivedState.js`](../src/state/derivedState.js), `getDerivedState`) and tenant
+([`derivedState.js`](../src/state/derivedState.js), `toState`) and tenant
 resolution ([`tenantResolver.js`](../src/state/tenantResolver.js), `resolveTenant`
-et al.). `getDerivedState(resolveTenant(...))` is the full adapter. It is the
+et al.). `toState(resolveTenant(...))` is the full adapter. It is the
 core's **inbound port (anti-corruption boundary)**: it branches only on the
 document's *shape* (`isTenantShape`, flat vs. nested-tenant), never on the storage
 backend, so both providers (local, Supabase) hand it the same shapes and stay
