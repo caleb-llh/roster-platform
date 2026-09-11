@@ -1,6 +1,6 @@
 # Architecture overhaul (IN PROGRESS — living migration doc)
 
-> **Status: in progress (steps 1–6 landed).** This is a *target* architecture
+> **Status: in progress (steps 1–7 landed).** This is a *target* architecture
 > plus the **living record** of an incremental refactor toward it — see the
 > [Migration progress log](#migration-progress-log-living) for what has landed
 > and what debt is outstanding. It does **not** describe the full current on-disk
@@ -730,11 +730,14 @@ and updates the owning spec:
    into step 7. **Defer** the internal `session/commands` vs. `session/store` split
    until authz-at-the-surface or the first write-integration lands (see "Resolved:
    the session split").
-7. **▶ NEXT — Formalize the `RosterProvider` CRUD contract** (`load`/`save`/`list`/
-   `select`/`subscribe`) so local/Supabase are provably interchangeable, and keep
-   the adapter's two-fn transform contract (`toState`/`toDocument`). One shared
-   adapter — never per-backend. (Update [data-layer.md](data-layer.md).)
-8. **⬜ Tidy periphery**: extract `readmodel/` (stats/availability/distribution);
+7. **✅ DONE (proof scope) — Formalize the `RosterProvider` CRUD contract**: exported
+   `ROSTER_PROVIDER_KEYS` as the contract's single source of truth and added a
+   conformance test that renders *both real providers* and asserts each returns
+   exactly those keys, so local/Supabase are *provably* interchangeable. The
+   adapter's `toState`/`toDocument` transform rename rides along with step 9; the
+   structural simplification (lifting the draft group off the provider surface) is
+   the step-6 Session inversion, still deferred. (Recorded in [architecture.md](architecture.md), which owns the provider contract.)
+8. **▶ NEXT — Tidy periphery**: extract `readmodel/` (stats/availability/distribution);
    `lib/` for generic helpers; `integrations/` split into read-model consumers vs.
    command-surface actors (telegram write path routes through the session command
    surface).
@@ -767,7 +770,7 @@ goes red.
 | 4 — split evaluation/generation | ✅ done | `b9c012a` | 400 pass | ~~`evaluation/` imports understudy from `../utils/understudy`~~ **cleared by step 5** (now `schema/understudyRoles.js` + `rules/understudyPolicy.js`). `evaluateState` (whole-roster judge) still lives inside `rosterGenerator/`; folds into `evaluation/` when the generator folder is renamed (deferred to the step-8/9 periphery tidy). |
 | 5 — split `understudy.js` by kind | ✅ done | `d59f896` | 400 pass (24 files) | **debt-clearing step.** `understudy.js` split: vocabulary → `schema/understudyRoles.js`, policy → `rules/understudyPolicy.js` (policy imports vocab — correct Rules→Schema direction). Old `utils/understudy.js`+test deleted; test split to match. No `utils/understudy` importers remain, so steps 1/3/4's coupling is gone. `UNDERSTUDY_SUFFIX` stays vocabulary-internal (no external importer). Seeding/promotion **phases** already live in `generation/` and were untouched. |
 | 6 — extract `session/` | ✅ done | `5626b91` | 400 pass (24 files) | **file-move scope only.** `useDraftHistory.js`(+test) moved `data/`→`session/` (git mv), the 2 provider imports rewired. This *names* the Session concern and cleans `data/`'s folder. **Deferred debt:** the draft/undo/commit logic is still called *inside* both providers (`useLocalRosterProvider`/`useSupabaseRosterProvider` wrap `useDraftHistory` and merge the draft into their returned surface), not by the UI — so Session is not yet *above* Provider as the model prescribes. Hoisting Session above the providers (providers become pure CRUD; Session calls down) folds into **step 7** (provider CRUD contract), which is the natural place to invert it. Internal `commands`/`store` split still deferred (see Resolved). |
-| 7 — provider CRUD contract | ⬜ | — | — | — |
+| 7 — provider CRUD contract | ✅ done (proof scope) | `073861e` | 403 pass (25 files, +3 conformance) | **contract-proof scope only** (chosen over restructuring the shape). Exported `ROSTER_PROVIDER_KEYS` in `providerContract.js` as the single source of truth for the surface; `providerContract.test.jsx` renders *both real providers* (Supabase inert with no env) and asserts each returns exactly those keys — interchangeability is now machine-checked. Updated [architecture.md](architecture.md). **Deferred debt (carried from step 6):** the `draft/session` key group still lives on the provider surface; the real structural *simplification* is lifting it out (providers → pure CRUD, Session above), not nesting the flat bag now — nesting would churn every call site and collide with that lift. The `toState`/`toDocument` adapter-rename half of this step also still pending (rides along with step 9). |
 | 8 — tidy periphery | ⬜ | — | — | — |
 | 9 — vocabulary rename | ⬜ rides along (started) | — | 400 pass | not a standalone commit. **Pulled forward:** the `state/` adapter + `documentValidation` now name their inbound param `document` (not `data`), so the Document→State boundary reads in the code. *Lesson:* a blind `data`→`document` also rewrote a user-facing error string (`'YAML data is empty or invalid'`); reverted — renames must not change display text. |
 | 10 — enforce the graph | ⬜ optional | — | — | the CI gate that makes all above debt un-reintroducible. |

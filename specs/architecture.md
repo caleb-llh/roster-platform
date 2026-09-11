@@ -44,12 +44,14 @@ return local ?? production
 Both providers implement the same surface:
 
 - **State:** `data`, `originalData`, `error`, `loading`, `hasGenerated`, `actionLog`.
-- **Draft/history:** `draftEvents`, `effectiveEvents` (= `draftEvents ?? data.events`), `hasUncommitted`, `canUndo`, `canRedo`. The draft/undo/redo logic is shared as pure transitions in [`useDraftHistory.js`](../src/data/useDraftHistory.js) so both modes behave identically (see [data-layer.md](data-layer.md)).
+- **Draft/history:** `draftEvents`, `effectiveEvents` (= `draftEvents ?? data.events`), `hasUncommitted`, `canUndo`, `canRedo`. The draft/undo/redo logic is shared as pure transitions in [`useDraftHistory.js`](../src/session/useDraftHistory.js) so both modes behave identically (see [data-layer.md](data-layer.md)). *(This is a **Session** concern; it currently still lives inside the providers — the target is to lift it above them. See [architecture-overhaul.plan.md](architecture-overhaul.plan.md).)*
 - **Permissions/roles:** `permissions` (`{ canEditRoster, canImport, canUndo }`), `role` (`'owner' | 'editor' | 'viewer' | null`), `rosters`, `activeRosterId`.
 - **Mutations (all async, returning `{ ok, errors[] }`):** `importData`, `clearData`, `updateEvents`, `replaceData`, `logAction`, `undo`, `redo`, `commitDraft`, `discardDraft`, `setError`.
 - **Roster/admin:** `selectRoster`, `createRoster`, `listMembers`, `setMemberRole`, `removeMember`, `inviteMember`, `listInvites`, `revokeInvite`.
 
 The **local provider** ([`useLocalRosterProvider.js`](../src/data/useLocalRosterProvider.js)) resolves immediately, never denies permission (`LOCAL_PERMISSIONS` = all true), and stubs the admin methods as inert. The **Supabase provider** ([`useSupabaseRosterProvider.js`](../src/data/useSupabaseRosterProvider.js)) derives `permissions` from the authenticated role — but **the database (RLS) is the real authority**; client-side permissions only shape the UI.
+
+**The contract's shape is machine-checked, not just documented.** The exact key set is exported once as `ROSTER_PROVIDER_KEYS` in [`providerContract.js`](../src/data/providerContract.js), and [`providerContract.test.jsx`](../src/data/providerContract.test.jsx) renders *both real providers* and asserts each returns exactly those keys — so the two backends cannot silently drift out of interchangeability. (The Supabase provider is inert under test: with no `VITE_SUPABASE_*` env its client is `null`, so every effect early-returns and it yields the same shape with zero I/O.)
 
 ## Data model (Supabase, production only)
 
@@ -116,7 +118,8 @@ Server-side (Supabase dashboard, `config.toml` only, never shipped): `SUPABASE_A
 | Path | Holds |
 | --- | --- |
 | `src/components/` | React UI (views, panels, modals, shared primitives incl. `HoverCard`, `DesignSystem`). |
-| `src/data/` | Dual-mode data layer: mode detection, provider contract, Supabase client, the two providers, and `useDraftHistory` (draft/undo/redo pure transitions). |
+| `src/data/` | Dual-mode data layer: mode detection, provider contract (+ `ROSTER_PROVIDER_KEYS` conformance), Supabase client, and the two providers. |
+| `src/session/` | Session layer: `useDraftHistory` (draft/commit + undo/redo pure transitions). Still invoked *inside* the providers today — see [architecture-overhaul.plan.md](architecture-overhaul.plan.md). |
 | `src/hooks/` | `useAuth` (Google OAuth/session) and `useRosterData` (the dual-mode dispatcher). |
 | `src/schema/` | `rosterSchema.js` — schema constants (also used as test-data constants). |
 | `src/utils/` | Framework-agnostic business logic: validators, diffing, stats, constraints, exports, colours, understudy — heavily unit-tested. |

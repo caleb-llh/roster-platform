@@ -103,3 +103,37 @@ export const LOCAL_PERMISSIONS = Object.freeze({
   canImport: true,
   canUndo: true,
 })
+
+/**
+ * The exact set of keys every provider's returned object must expose — the
+ * machine-checkable form of the `RosterProvider` typedef above. It is the single
+ * source of truth for the contract's *shape*: the conformance test
+ * (`providerContract.test.js`) renders both the local and Supabase providers and
+ * asserts each returns exactly these keys, so the two backends cannot drift out
+ * of interchangeability without a test failing.
+ *
+ * Grouped by concern (the groups are documentation only — the surface is still a
+ * flat object today). NOTE: the `draft/session` group is draft/commit/undo state
+ * that architecturally belongs to the Session layer, not the Provider; it appears
+ * here because the providers still wrap `useDraftHistory` internally. Lifting that
+ * group out (providers → pure CRUD, Session above) is the deferred inversion from
+ * overhaul step 6 and is the real structural simplification of this shape — see
+ * specs/architecture-overhaul.plan.md.
+ *
+ * @type {readonly string[]}
+ */
+export const ROSTER_PROVIDER_KEYS = Object.freeze([
+  // document
+  'data', 'originalData', 'error', 'loading', 'hasGenerated', 'actionLog',
+  // draft/session (belongs to Session; still provider-embedded — see note above)
+  'draftEvents', 'effectiveEvents', 'hasUncommitted', 'canUndo', 'canRedo',
+  'undo', 'redo', 'commitDraft', 'discardDraft',
+  // tenant/selection
+  'teams', 'activeTeamId', 'activeTeamName', 'memberTeams', 'externalAssignments',
+  'selectTeam', 'rosters', 'activeRosterId', 'selectRoster',
+  // admin/membership
+  'role', 'permissions', 'createRoster', 'listMembers', 'setMemberRole',
+  'removeMember', 'inviteMember', 'listInvites', 'revokeInvite',
+  // document actions
+  'importData', 'clearData', 'updateEvents', 'replaceData', 'logAction', 'setError',
+])
