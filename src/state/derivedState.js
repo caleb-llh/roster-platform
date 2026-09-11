@@ -10,7 +10,7 @@
  */
 
 import { YAML_FIELDS, isMemberIncluded } from '../schema/rosterSchema'
-import { createRoleColorMap } from '../utils/colorUtils'
+import { createRoleColorMap } from '../design/colorUtils'
 import { DEFAULT_ROSTER_CONSTRAINTS, DEFAULT_ROSTER_PREFERENCES } from '../config/rosterDefaults'
 import { normalizeMemberRoles } from '../schema/understudyRoles'
 

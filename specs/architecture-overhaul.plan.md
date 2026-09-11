@@ -540,13 +540,16 @@ src/
                  #   FUTURE split (triggered): session/commands (stateless surface,
                  #     authz+rule pre-check) + session/store (draft + history)
   hooks/         # useAuth and other React glue
-  components/    # presentation + design-system foundation
+  components/    # presentation UI (views, panels, modals, shared primitives)
+  design/        # presentation vocabulary: designSystem.js (glass tokens),
+                 #   colorUtils.js (functional role/day palette + date formatting)
+                 #   from utils/statsTheme.js (renamed), utils/colorUtils.js
   integrations/  # read: cron/calendar-export/bot-query (read-model consumers)
                  # write: bot commands (actors on the session command surface)
                  #   from telegram.js (root, today)
 
   # ── cross-cutting ────────────────────────────────────────────
-  lib/           # generic helpers: calendarUtils, colorUtils, dataExport
+  lib/           # generic helpers: calendarUtils, dataExport
                  # (authorization has no single folder by design — it lives in
                  #  supabase/ RLS + provider permission flags; see permissions.md)
 
@@ -740,9 +743,11 @@ and updates the owning spec:
 8. **◑ IN PROGRESS — Tidy periphery** (sub-committed): **8a ✅** promoted
    `rosterGenerator/` → top-level `src/generation/` (a module, not a util). **8b ✅**
    moved the read-model views (`rosterStats`, `availabilityUtils`, `distributionUtils`)
-   → `src/readmodel/`. **▶ next:** `lib/` for generic helpers; resolve the misnamed
-   `statsTheme` (it's the design-system token module, not a stat — rename to
-   `designSystem`); `integrations/` split into read-model consumers vs. command-surface
+   → `src/readmodel/`. **8c-i ✅** moved generic helpers (`calendarUtils`, `dataExport`)
+   → `src/lib/`. **8c-ii ✅** resolved the misnamed `statsTheme` — it's the
+   design-system token module, not a stat — renaming it to `designSystem` and moving it
+   (with `colorUtils`, its lint guard, and both tests) to a new `src/design/` folder.
+   **▶ next (8d):** `integrations/` split into read-model consumers vs. command-surface
    actors (telegram write path routes through the session command surface).
 9. **⬜ (rides along) Vocabulary rename pass** (folds through every step above, not a separate
    big-bang): as each file moves to its layer folder, rename its symbols to the
@@ -774,7 +779,7 @@ goes red.
 | 5 — split `understudy.js` by kind | ✅ done | `d59f896` | 400 pass (24 files) | **debt-clearing step.** `understudy.js` split: vocabulary → `schema/understudyRoles.js`, policy → `rules/understudyPolicy.js` (policy imports vocab — correct Rules→Schema direction). Old `utils/understudy.js`+test deleted; test split to match. No `utils/understudy` importers remain, so steps 1/3/4's coupling is gone. `UNDERSTUDY_SUFFIX` stays vocabulary-internal (no external importer). Seeding/promotion **phases** already live in `generation/` and were untouched. |
 | 6 — extract `session/` | ✅ done | `5626b91` | 400 pass (24 files) | **file-move scope only.** `useDraftHistory.js`(+test) moved `data/`→`session/` (git mv), the 2 provider imports rewired. This *names* the Session concern and cleans `data/`'s folder. **Deferred debt:** the draft/undo/commit logic is still called *inside* both providers (`useLocalRosterProvider`/`useSupabaseRosterProvider` wrap `useDraftHistory` and merge the draft into their returned surface), not by the UI — so Session is not yet *above* Provider as the model prescribes. Hoisting Session above the providers (providers become pure CRUD; Session calls down) folds into **step 7** (provider CRUD contract), which is the natural place to invert it. Internal `commands`/`store` split still deferred (see Resolved). |
 | 7 — provider CRUD contract | ✅ done (proof scope) | `073861e` | 403 pass (25 files, +3 conformance) | **contract-proof scope only** (chosen over restructuring the shape). Exported `ROSTER_PROVIDER_KEYS` in `providerContract.js` as the single source of truth for the surface; `providerContract.test.jsx` renders *both real providers* (Supabase inert with no env) and asserts each returns exactly those keys — interchangeability is now machine-checked. Updated [architecture.md](architecture.md). **Deferred debt (carried from step 6):** the `draft/session` key group still lives on the provider surface; the real structural *simplification* is lifting it out (providers → pure CRUD, Session above), not nesting the flat bag now — nesting would churn every call site and collide with that lift. The `toState`/`toDocument` adapter-rename half of this step also still pending (rides along with step 9). |
-| 8 — tidy periphery | ◑ in progress (8a, 8b, 8c-i done) | 8a `127ec27`; 8b `a779dc6`; 8c-i `cf44783` | 403 pass (25 files) | **Sub-committed** (too big for one commit). **8a:** `rosterGenerator/` → `src/generation/`. **8b:** read-model views → `src/readmodel/`. **8c-i:** the *genuinely generic* helpers `calendarUtils` + `dataExport` (leaf, no relative imports) → `src/lib/`; 4 importers rewired. **8c decisions:** `bulkClear` **stays** in `utils/` — it's *domain* (roster/slot shape, produces one draft edit + undo step), a session-command helper bound for `session/` when the command surface lands, not a `lib/` generic. `statsTheme.js` is the **misnamed design-system** token module → rename to `designSystem.js` and rehome to a new `src/design/`; `colorUtils` (role-colour palette = colour policy) joins it there. **▶ next:** 8c-ii `src/design/` (`statsTheme`→`designSystem` rename + `colorUtils`, ~12 importers, updates [design-system.md](design-system.md)); 8d `telegram.js` → `integrations/`. |
+| 8 — tidy periphery | ◑ in progress (8a, 8b, 8c-i, 8c-ii done) | 8a `127ec27`; 8b `a779dc6`; 8c-i `cf44783`; 8c-ii `2bf321d` | 403 pass (25 files) | **Sub-committed** (too big for one commit). **8a:** `rosterGenerator/` → `src/generation/`. **8b:** read-model views → `src/readmodel/`. **8c-i:** the *genuinely generic* helpers `calendarUtils` + `dataExport` (leaf, no relative imports) → `src/lib/`; 4 importers rewired. **8c-ii:** `statsTheme.js` is the **misnamed design-system** token module → renamed to `designSystem.js` and rehomed with `colorUtils` (role-colour palette = colour policy) + the lint guard + both tests into a new `src/design/` folder; ~20 importers rewired (14 `statsTheme`, 6 `colorUtils`), lint-guard internal path/allowlist refs fixed, [design-system.md](design-system.md) + [architecture.md](architecture.md) + this plan updated. **8c decision:** `bulkClear` **stays** in `utils/` — it's *domain* (roster/slot shape, produces one draft edit + undo step), a session-command helper bound for `session/` when the command surface lands, not a `lib/` generic. **▶ next:** 8d `telegram.js` → `integrations/`. |
 | 9 — vocabulary rename | ⬜ rides along (started) | — | 400 pass | not a standalone commit. **Pulled forward:** the `state/` adapter + `documentValidation` now name their inbound param `document` (not `data`), so the Document→State boundary reads in the code. *Lesson:* a blind `data`→`document` also rewrote a user-facing error string (`'YAML data is empty or invalid'`); reverted — renames must not change display text. |
 | 10 — enforce the graph | ⬜ optional | — | — | the CI gate that makes all above debt un-reintroducible. |
 
@@ -798,7 +803,8 @@ above are cross-referenced; newly-accounted items are called out.
 | **`validators.js`** | → `state/documentValidation.js` | **newly accounted** — document validation ≠ Evaluation (see the two-validators table). |
 | `utils/assignmentValidator.js`, `swapPolicy.js` | → `evaluation/` (step 4) | |
 | `utils/availabilityUtils.js`, `rosterStats.js`, `distributionUtils.jsx` | **→ `src/readmodel/` (step 8b ✅ done)** | live aggregate views of State; share counting primitives with `rules/` but do **not** route through the placement registry. |
-| `utils/calendarUtils.js`, `colorUtils.js`, `dataExport.js`, `bulkClear.js` | `calendarUtils`,`dataExport` **→ `src/lib/` (8c-i ✅)**; `colorUtils` **→ `src/design/` (8c-ii)**; `bulkClear` **stays** (domain → `session/` later) | `bulkClear` IS domain (roster/slot shape, one draft edit + undo) — a session-command helper, not generic. `colorUtils`'s role-colour palette is design-system (colour policy). |
+| `utils/calendarUtils.js`, `colorUtils.js`, `dataExport.js`, `bulkClear.js` | `calendarUtils`,`dataExport` **→ `src/lib/` (8c-i ✅)**; `colorUtils` **→ `src/design/` (8c-ii ✅)**; `bulkClear` **stays** (domain → `session/` later) | `bulkClear` IS domain (roster/slot shape, one draft edit + undo) — a session-command helper, not generic. `colorUtils`'s role-colour palette is design-system (colour policy). |
+| `utils/statsTheme.js` (+ `designSystem.lint.test.js`) | **→ `src/design/designSystem.js` (8c-ii ✅, renamed)** | misnamed — it's the app-wide design-system token module, not a stat. Renamed on the move; owns the glass/typography/z-index tokens (see [design-system.md](design-system.md)). |
 | `rosterGenerator/` | **→ `src/generation/` (step 8a ✅ done)** + `evaluation/` split (steps 4–5) | |
 | `data/` | Storage/Providers (+ `useDraftHistory.js` → `session/`) | steps 6–7. |
 | `hooks/useRosterData.js` | → `session/`; `useAuth.js` stays `hooks/` | |

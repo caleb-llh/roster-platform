@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { glassMenu, glassPopup, hoverRow, btnDanger, monoChip, zInCard } from '../utils/statsTheme'
+import { glassMenu, glassPopup, hoverRow, btnDanger, monoChip, zInCard } from '../design/designSystem'
 import { HoverCard } from './SharedComponents'
 
 /**

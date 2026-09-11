@@ -2,7 +2,7 @@
 // Role tags are rendered as COLOURED FONT on the plain glass surface (no
 // coloured pill box), so each entry is a text-colour only. Hue still
 // distinguishes roles at a glance while the card/surface stays monochrome,
-// matching the roster-stats look. See src/utils/statsTheme.js colour policy.
+// matching the roster-stats look. See src/design/designSystem.js colour policy.
 export const COLOR_PALETTE = [
   'text-purple-600',    // Muted purple
   'text-violet-600',    // Muted violet
@@ -21,7 +21,7 @@ export const COLOR_PALETTE = [
 // error/warning status. The weekday is instead conveyed by lightly colouring
 // the day-of-week LABEL with a single muted hue per weekday, so colour is a
 // quiet typographic accent. Must contain a `hover:` class (see test) — hover
-// deepens the label slightly. See statsTheme.js colour policy.
+// deepens the label slightly. See designSystem.js colour policy.
 export const DAY_CARD_COLORS = [
   'text-purple-500 hover:text-purple-600',    // Sunday
   'text-violet-500 hover:text-violet-600',    // Monday

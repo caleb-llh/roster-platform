@@ -9,7 +9,7 @@
  * The gate lives outside <App/> so the whole app is only mounted once the user
  * is known, keeping the data provider's assumptions simple.
  */
-import { glassModal, headingModal, btnNeutral } from '../utils/statsTheme'
+import { glassModal, headingModal, btnNeutral } from '../design/designSystem'
 
 export default function AuthGate({ auth, children }) {
   const { mode, loading, session, signInWithGoogle } = auth

@@ -2,7 +2,7 @@
 // UI (not app-wide primitives), so they live in their own module rather than
 // the shared grab-bag. Reusable primitives/hooks stay in SharedComponents.jsx.
 import { useState } from 'react'
-import { monoChip, glassPanel, tierSection } from '../utils/statsTheme'
+import { monoChip, glassPanel, tierSection } from '../design/designSystem'
 import { expandUnavailableDays, monthsFromDays, monthGridCells, MONTH_LABEL, WEEKDAY_INITIALS } from '../lib/calendarUtils'
 
 /**

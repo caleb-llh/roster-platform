@@ -1,7 +1,7 @@
 // Shared components for the application
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { semanticError, glassMenu, tierSection, glassCard, glassFab, tierLabel, zPopover } from '../utils/statsTheme'
+import { semanticError, glassMenu, tierSection, glassCard, glassFab, tierLabel, zPopover } from '../design/designSystem'
 
 /**
  * Close the popup when a mousedown lands outside `ref`. Shared by the various

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { IssueSummary } from './SharedComponents'
 import { MemberCard } from './MemberCard'
-import { headingPage, hoverRow } from '../utils/statsTheme'
+import { headingPage, hoverRow } from '../design/designSystem'
 import { isMemberIncluded } from '../schema/rosterSchema'
 
 export default function MembersView({ members, roles, roleColorMap, warnings, searchQuery, memberConstraints, memberPreferences, activeTeamName, memberTeams = {} }) {

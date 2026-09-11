@@ -5,7 +5,7 @@ import {
   normalizeMetricRange,
   fullTrackConcernGradient,
 } from '../readmodel/distributionUtils.jsx'
-import { tierTitle, tierSection, tierUnit, helperText, glassCard, glassPopup, glassArrow } from '../utils/statsTheme'
+import { tierTitle, tierSection, tierUnit, helperText, glassCard, glassPopup, glassArrow } from '../design/designSystem'
 
 /**
  * Light, translucent "glass" tooltip shown above its parent on hover. The

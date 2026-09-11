@@ -1,4 +1,4 @@
-import { modalBackdrop, glassModal, headingModal, glassCard, btnNeutral, zModal } from '../utils/statsTheme'
+import { modalBackdrop, glassModal, headingModal, glassCard, btnNeutral, zModal } from '../design/designSystem'
 
 export default function AlgorithmDescriptionModal({ description, onClose }) {
   // Parse the description to extract sections

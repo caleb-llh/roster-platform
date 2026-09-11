@@ -1,4 +1,4 @@
-import { formatDate } from '../utils/colorUtils'
+import { formatDate } from '../design/colorUtils'
 
 // Per-status presentation for a change row. Mirrors the inline diff dot colours
 // (amber=changed, emerald=added, rose=removed) so the review list and the

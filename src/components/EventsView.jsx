@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { getAvailableMembersForEvent } from '../rules/constraintPrimitives'
-import { getCardColorForDay, formatDate } from '../utils/colorUtils'
+import { getCardColorForDay, formatDate } from '../design/colorUtils'
 import { exportToYAML, downloadYAML } from '../lib/dataExport'
 import RosterSlotPill from './RosterSlotPill'
 import { IssueSummary } from './SharedComponents'
 import { understudySlotRole, isUnderstudyRole, baseRoleOf } from '../schema/understudyRoles'
 import { slotKey } from '../utils/bulkClear'
 import { parseDayKey } from '../lib/calendarUtils'
-import { headingPage, glassMenu, glassCard, hoverRow, tierSection, semanticError, semanticWarning, glassPanel, zInCard, zSticky, zPopover } from '../utils/statsTheme'
+import { headingPage, glassMenu, glassCard, hoverRow, tierSection, semanticError, semanticWarning, glassPanel, zInCard, zSticky, zPopover } from '../design/designSystem'
 
 /**
  * Status accent for an event card: a coloured top-right CORNER wedge, replacing

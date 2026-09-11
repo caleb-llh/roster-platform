@@ -122,7 +122,8 @@ Server-side (Supabase dashboard, `config.toml` only, never shipped): `SUPABASE_A
 | `src/session/` | Session layer: `useDraftHistory` (draft/commit + undo/redo pure transitions). Still invoked *inside* the providers today — see [architecture-overhaul.plan.md](architecture-overhaul.plan.md). |
 | `src/hooks/` | `useAuth` (Google OAuth/session) and `useRosterData` (the dual-mode dispatcher). |
 | `src/schema/` | `rosterSchema.js` — schema constants (also used as test-data constants). |
-| `src/utils/` | Framework-agnostic helpers not yet homed to a layer: diffing, constraints, `bulkClear` (a session-command helper, → `session/` later), the `statsTheme` design tokens + `colorUtils` (→ `design/`). Being dissolved by the overhaul (see [architecture-overhaul.plan.md](architecture-overhaul.plan.md)). |
+| `src/utils/` | Framework-agnostic helpers not yet homed to a layer: diffing, constraints, `bulkClear` (a session-command helper, → `session/` later). Being dissolved by the overhaul (see [architecture-overhaul.plan.md](architecture-overhaul.plan.md)). |
+| `src/design/` | Presentation vocabulary: `designSystem.js` (the Tailwind glass token module — see [design-system.md](design-system.md)) and `colorUtils` (functional role/day colour palette + date formatting). |
 | `src/lib/` | Genuinely generic, domain-free helpers: `calendarUtils` (date math), `dataExport` (YAML export/download). |
 | `src/readmodel/` | Live aggregate *views* of State — `rosterStats`, `availabilityUtils` (bench depth), `distributionUtils` (charts). Read-only; share counting primitives with `rules/` but do **not** route through the placement registry. |
 | `src/generation/` | The generation engine (seeding, promotion planning, scoring, local search, RNG) + its own `README.md`. Imports the judge from `src/evaluation/`. See [generation.md](generation.md) and [understudy.md](understudy.md). |

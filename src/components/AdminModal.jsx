@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { modalBackdrop, glassModal, tierSection, semanticError, btnPrimary, monoChip, zModal } from '../utils/statsTheme'
+import { modalBackdrop, glassModal, tierSection, semanticError, btnPrimary, monoChip, zModal } from '../design/designSystem'
 import { ModalHeader } from './SharedComponents'
 
 /**

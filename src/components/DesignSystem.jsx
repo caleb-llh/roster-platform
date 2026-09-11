@@ -2,7 +2,7 @@
  * Living design-system reference page.
  *
  * A lightweight, standalone visual catalogue of every design token in
- * `statsTheme.js` and every shared primitive in `SharedComponents.jsx`. It is
+ * `designSystem.js` and every shared primitive in `SharedComponents.jsx`. It is
  * the reference new work should look at so the app stays consistent (see
  * specs/design-system.md, the binding spec).
  *
@@ -10,8 +10,8 @@
  * and stays out of the authenticated data flow. This file is allowlisted by the
  * design-system guardrail test because it renders raw token strings verbatim.
  */
-import * as theme from '../utils/statsTheme'
-import { COLOR_PALETTE, DAY_CARD_COLORS } from '../utils/colorUtils'
+import * as theme from '../design/designSystem'
+import { COLOR_PALETTE, DAY_CARD_COLORS } from '../design/colorUtils'
 import {
   StatTile,
   GlassFab,
@@ -80,7 +80,7 @@ export default function DesignSystem() {
         <header className={`${glassPanel} p-4 sm:p-6`}>
           <h1 className={headingPage}>Design system</h1>
           <p className={`${helperText} mt-1`}>
-            Every token in <code>statsTheme.js</code> and every shared primitive.
+            Every token in <code>designSystem.js</code> and every shared primitive.
             The reference for keeping new UI consistent. Reached via
             <code> #design</code>.
           </p>

@@ -3,7 +3,7 @@
  *
  * The repo has no ESLint, so this test *is* the guardrail: it scans the JSX/JS
  * sources for class strings that must instead flow through a named token in
- * `statsTheme.js` (see specs/design-system.md, the binding spec). It is
+ * `designSystem.js` (see specs/design-system.md, the binding spec). It is
  * intentionally HIGH-SIGNAL, not exhaustive — it flags the
  * unambiguous mistakes (copy-pasting a glass token's literal string, or using a
  * banned decorative hue) rather than every raw utility, so it never fights the
@@ -11,7 +11,7 @@
  * day-pill scroller, etc.).
  *
  * Two allowlisted files may contain raw strings:
- *   - `statsTheme.js` — it *defines* the tokens.
+ *   - `designSystem.js` — it *defines* the tokens.
  *   - the design-system reference page — it *renders* every token verbatim.
  */
 import { describe, it, expect } from 'vitest'
@@ -26,14 +26,14 @@ import {
   glassModal,
   glassFab,
   draftBar,
-} from './statsTheme'
+} from './designSystem'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const srcDir = join(here, '..')
 
 /** Files that are allowed to contain raw token strings. */
 const ALLOWLIST = new Set([
-  join('utils', 'statsTheme.js'), // defines the tokens
+  join('design', 'designSystem.js'), // defines the tokens
   join('components', 'DesignSystem.jsx'), // renders every token verbatim
 ])
 
@@ -64,7 +64,7 @@ const sourceFiles = collectSourceFiles(srcDir).filter((abs) => {
 
 /**
  * Banned literal token strings: if any of these exact glass strings appears in
- * a file, it was copy-pasted instead of imported from `statsTheme.js`.
+ * a file, it was copy-pasted instead of imported from `designSystem.js`.
  */
 const BANNED_LITERALS = [
   { value: glassPanel, token: 'glassPanel' },
@@ -87,13 +87,13 @@ const BANNED_PATTERNS = [
 ]
 
 describe('design-system guardrail', () => {
-  it('never inlines a glass token string (import from statsTheme instead)', () => {
+  it('never inlines a glass token string (import from designSystem instead)', () => {
     const offenders = []
     for (const abs of sourceFiles) {
       const text = readFileSync(abs, 'utf8')
       for (const { value, token } of BANNED_LITERALS) {
         if (text.includes(value)) {
-          offenders.push(`${relative(srcDir, abs)}: inlines "${token}" — import { ${token} } from statsTheme`)
+          offenders.push(`${relative(srcDir, abs)}: inlines "${token}" — import { ${token} } from designSystem`)
         }
       }
     }

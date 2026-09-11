@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react'
-import { createRoleColorMap, formatDateRange, formatDate } from './utils/colorUtils'
+import { createRoleColorMap, formatDateRange, formatDate } from './design/colorUtils'
 import { calculateRosterStats } from './readmodel/rosterStats'
 import { validateEventAssignments } from './evaluation/assignmentValidator'
 import { generateRoster } from './generation'
@@ -18,7 +18,7 @@ import AlgorithmDescriptionModal from './components/AlgorithmDescriptionModal'
 import ChangeReviewPanel from './components/ChangeReviewPanel'
 import YamlDrawer from './components/YamlDrawer'
 import AdminModal from './components/AdminModal'
-import { headingPage, headingModal, glassModal, glassCard, modalBackdrop, btnDanger, btnPrimary, tabActive, tabInactive, monoChip, semanticError, glassPanel, draftBar, tierSection, zSticky, zPopover, zToast, zModal } from './utils/statsTheme'
+import { headingPage, headingModal, glassModal, glassCard, modalBackdrop, btnDanger, btnPrimary, tabActive, tabInactive, monoChip, semanticError, glassPanel, draftBar, tierSection, zSticky, zPopover, zToast, zModal } from './design/designSystem'
 
 function App({ auth }) {
   // UI State

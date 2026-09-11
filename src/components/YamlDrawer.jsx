@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import yaml from 'js-yaml'
 import CodeMirror from '@uiw/react-codemirror'
 import { yaml as yamlLang } from '@codemirror/lang-yaml'
-import { modalBackdrop, hoverRow, zModal } from '../utils/statsTheme'
+import { modalBackdrop, hoverRow, zModal } from '../design/designSystem'
 import { ModalHeader } from './SharedComponents'
 
 /**
