@@ -94,8 +94,8 @@
  *
  * The following keys are added by the SESSION layer (`useSession`), which wraps
  * a provider. They are NOT part of the pure-CRUD provider surface:
- * @property {(events: any[]) => Promise<MutationResult>} updateEvents  Edit → draft.
- * @property {(parsedData: any) => Promise<MutationResult>} replaceData  YAML editor edit.
+ * @property {(events: any[]) => Promise<MutationResult>} stageEvents  Command: stage an events edit into the draft.
+ * @property {(parsedData: any) => Promise<MutationResult>} stageDocument  Command: stage a YAML-editor whole-document edit.
  * @property {() => boolean} undo             Undo one edit within the draft.
  * @property {() => boolean} redo             Redo one undone edit.
  * @property {() => Promise<MutationResult>} commitDraft   Persist the draft (the "binding").
@@ -151,7 +151,7 @@ export const SESSION_KEYS = Object.freeze([
   'draftEvents', 'effectiveEvents', 'hasUncommitted', 'canUndo', 'canRedo',
   'undo', 'redo', 'commitDraft', 'discardDraft',
   // edit commands (orchestrate the draft on top of provider CRUD)
-  'updateEvents', 'replaceData',
+  'stageEvents', 'stageDocument',
 ])
 
 /**

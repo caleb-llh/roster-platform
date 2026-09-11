@@ -12,7 +12,7 @@ import { useDraftHistory } from './useDraftHistory'
  *  - It owns `useDraftHistory`, keyed off the provider's committed events.
  *  - It exposes the draft/history keys (`draftEvents`, `effectiveEvents`,
  *    `hasUncommitted`, `canUndo`, `canRedo`, `undo`, `redo`, `commitDraft`,
- *    `discardDraft`) and the edit commands (`updateEvents`, `replaceData`).
+ *    `discardDraft`) and the edit commands (`stageEvents`, `stageDocument`).
  *  - It resets the draft whenever a fresh committed document arrives (import,
  *    clear, roster/team switch, or a background load). That is detected by the
  *    provider's `originalData` reference changing — the providers set a new
@@ -46,10 +46,11 @@ export function useSession(provider) {
     }
   }, [provider.originalData, draft])
 
-  // Manual/generation edit → uncommitted draft (no persistence). Committed
-  // state is written only by commitDraft(). Gated on edit permission so a
-  // viewer's edit fails the same way it did when the provider owned this.
-  const updateEvents = async (newEvents) => {
+  // Command: stage a manual/generation events edit into the uncommitted draft
+  // (no persistence — that happens only on commitDraft). Gated on edit
+  // permission so a viewer's edit is rejected the same way it was when the
+  // provider owned this. Named as a command (it can be rejected), not CRUD.
+  const stageEvents = async (newEvents) => {
     if (!provider.permissions.canEditRoster) {
       return { ok: false, errors: ['You do not have permission to edit.'] }
     }
@@ -57,10 +58,11 @@ export function useSession(provider) {
     return { ok: true, errors: [] }
   }
 
-  // YAML editor: non-event fields apply to the working document immediately via
-  // the provider; the events portion goes into the draft (undoable, committed
-  // on save). The current draft events (if any) are preserved on the document.
-  const replaceData = async (parsedData) => {
+  // Command: stage a whole-document edit from the YAML editor. Non-event fields
+  // apply to the working document immediately via the provider; the events
+  // portion goes into the draft (undoable, committed on save). The current
+  // draft events (if any) are preserved on the document.
+  const stageDocument = async (parsedData) => {
     const keepEvents = draft.draftEvents !== null ? draft.draftEvents : provider.data?.events
     const result = await provider.replaceDocument(parsedData, keepEvents)
     if (!result.ok) return { ok: result.ok, errors: result.errors }
@@ -81,7 +83,7 @@ export function useSession(provider) {
     commitDraft: draft.commit,
     discardDraft: draft.discard,
     // Edit commands (orchestrate the draft on top of provider CRUD).
-    updateEvents,
-    replaceData,
+    stageEvents,
+    stageDocument,
   }
 }

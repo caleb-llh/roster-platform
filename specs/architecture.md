@@ -53,7 +53,7 @@ The surface is **composed in two layers**:
   - **Roster/admin:** `selectRoster`, `selectTeam`, `createRoster`, `listMembers`, `setMemberRole`, `removeMember`, `inviteMember`, `listInvites`, `revokeInvite`.
 - **Session (the "time" layer, above the provider)** — `SESSION_KEYS`, added by [`useSession`](../src/session/useSession.js):
   - **Draft/history:** `draftEvents`, `effectiveEvents` (= `draftEvents ?? data.events`), `hasUncommitted`, `canUndo`, `canRedo`, `undo`, `redo`, `commitDraft`, `discardDraft`. Owned by [`useDraftHistory.js`](../src/session/useDraftHistory.js) (pure transitions) so both modes behave identically (see [data-layer.md](data-layer.md)).
-  - **Edit commands (async, `{ ok, errors[] }`):** `updateEvents` (edit → draft), `replaceData` (YAML-editor edit → provider `replaceDocument` + draft). These orchestrate the draft on top of provider CRUD.
+  - **Edit commands (async, `{ ok, errors[] }`):** `stageEvents` (stage an events edit into the draft), `stageDocument` (YAML-editor whole-document edit → provider `replaceDocument` + draft). These orchestrate the draft on top of provider CRUD. Named as *commands* (they can be rejected — e.g. a viewer's edit fails permission), not CRUD.
 
 `ROSTER_PROVIDER_KEYS = [...PROVIDER_KEYS, ...SESSION_KEYS]` is the full composed
 surface the UI consumes.
@@ -128,7 +128,7 @@ Server-side (Supabase dashboard, `config.toml` only, never shipped): `SUPABASE_A
 | --- | --- |
 | `src/components/` | React UI (views, panels, modals, shared primitives incl. `HoverCard`, `DesignSystem`). |
 | `src/data/` | Dual-mode data layer: mode detection, provider contract (`PROVIDER_KEYS`/`SESSION_KEYS`/`ROSTER_PROVIDER_KEYS` conformance), Supabase client, and the two **pure-CRUD** providers. |
-| `src/session/` | Session layer (the "time" layer, above the provider): `useSession` (wraps a CRUD provider — owns the draft/commit + undo/redo overlay and the `updateEvents`/`replaceData` command surface) and `useDraftHistory` (draft/commit + undo/redo pure transitions). |
+| `src/session/` | Session layer (the "time" layer, above the provider): `useSession` (wraps a CRUD provider — owns the draft/commit + undo/redo overlay and the `stageEvents`/`stageDocument` command surface) and `useDraftHistory` (draft/commit + undo/redo pure transitions). |
 | `src/hooks/` | `useAuth` (Google OAuth/session) and `useRosterData` (the dual-mode dispatcher). |
 | `src/schema/` | `rosterSchema.js` — schema constants (also used as test-data constants). |
 | `src/utils/` | Framework-agnostic helpers not yet homed to a layer: diffing, constraints, `bulkClear` (a session-command helper, → `session/` later). Being dissolved by the overhaul (see [architecture-overhaul.plan.md](architecture-overhaul.plan.md)). |

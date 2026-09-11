@@ -267,7 +267,10 @@ per-change (extend [`../AGENTS.md`](../AGENTS.md)'s isolated-vs-shared check):
    layer you're in.
 
 Concrete renames this implies (examples, not exhaustive; do them as the owning
-files move): `updateEvents` → a session command (`applyDraftEdit`/`stageEvents`);
+files move): `updateEvents` → a session command — **done as `stageEvents`** (not
+`applyDraftEdit`, which stays the internal `useDraftHistory` transition, so the
+surface command and the internal transition don't share a name); the YAML-editor
+edit `replaceData` → the command **`stageDocument`**;
 `generateRoster` stays the pure-core producer but the *click handler* becomes the
 session command `generateDraft`; provider `load`/`save`/`refreshSchema` keep CRUD
 names; the adapter's `toState`/`resolveState` (was `getDerivedState`/`resolveDerivedState`) + `resolveTenant` read as `toState`-family
@@ -759,14 +762,41 @@ and updates the owning spec:
    **8d ✅** moved `telegram.js` → `src/integrations/` (file move; it's a read-only
    integration today, so there was no write path to split — the future bot **write**
    path routing through the session command surface stays foreshadowed).
-9. **⬜ (rides along) Vocabulary rename pass** (folds through every step above, not a separate
+9. **◑ (rides along) Vocabulary rename pass** (folds through every step above, not a separate
    big-bang): as each file moves to its layer folder, rename its symbols to the
    layer's vocabulary (provider→CRUD, session→command/query, adapter→transform,
    rule→descriptor). Do it *per moved file* so each stays green; record notable
-   renames in the naming-decisions section.
+   renames in the naming-decisions section. **Landed so far:** the adapter transforms
+   (`getDerivedState`/`resolveDerivedState` → `toState`/`resolveState`); the Session
+   commands (`updateEvents` → `stageEvents`, `replaceData` → `stageDocument`). **Two
+   deliberate non-renames** (recorded so they're not "fixed" later): (a) the provider
+   write ops keep `saveEvents`/`replaceDocument` rather than collapsing to the table's
+   idealized `saveDocument` — they save *different scopes* (events-only vs. non-event
+   doc), so a single `save*` name would be *less* accurate, not more; the table's
+   `load`/`save` are style guidance, and these already read as CRUD. (b) The per-action
+   domain **commands** the table lists (`assign`/`unassign`/`swap`) are **not** created
+   here: today the UI computes `nextEvents` and funnels it through the single
+   `stageEvents` command, so there is no `assign`/`swap` to rename *to*. Splitting
+   `stageEvents` into evaluation-gated per-action commands (target model, §"The command
+   surface") is a **behaviour change** (a command becomes *rejectable* by Evaluation) and
+   is therefore **out of scope for this structural overhaul** — see the follow-on note
+   below.
 10. **⬜ (Optional) Enforce the graph**: a `dependency-cruiser` rule set that fails
     CI on an arrow pointing the wrong way (e.g. `rules/` importing `evaluation/`,
     or the core importing `session/`/`data/`).
+
+> **Follow-on (post-overhaul, behaviour change): per-action command surface.** The
+> target model (§"The command surface — one vocabulary, many callers") wants the
+> Session to expose evaluation-gated domain commands (`assign`/`unassign`/`swap`/
+> `generate`), each of which can be **rejected** by Evaluation, so a UI click and an
+> inbound bot command are true peers through one gate. Today the domain mutations live
+> in `App.jsx` handlers that compute `nextEvents` and funnel through the generic
+> `stageEvents`; nothing is rejectable at the command layer. Reaching the target means
+> **moving that mutation logic down into `session/` and wiring the Evaluation gate** —
+> new behaviour, not a rename — so it is explicitly deferred out of this overhaul (which
+> is "pure structure/renaming; every step behaviour-preserving", see *Explicitly OUT of
+> scope*). This is the cleanest end-state and the intended direction; it just isn't one
+> of the 10 structural steps.
 
 Steps 1–2 alone deliver most of the clarity; 3–10 are follow-ons. Step 9 is not a
 standalone commit — renaming rides along with each file's move so the tree never
@@ -787,11 +817,12 @@ goes red.
 | 3 — extract `state/` | ✅ done | `be74f5f` | 400 pass | ~~adapter + `documentValidation` import understudy vocabulary from `../utils/understudy`~~ **cleared by step 5** (now import `schema/understudyRoles.js`). The AGENTS-mandated `rosterSchema.js` test-data constants are honoured. |
 | 4 — split evaluation/generation | ✅ done | `b9c012a` | 400 pass | ~~`evaluation/` imports understudy from `../utils/understudy`~~ **cleared by step 5** (now `schema/understudyRoles.js` + `rules/understudyPolicy.js`). `evaluateState` (whole-roster judge) still lives inside `generation/index.js`. **Step 8a decision:** it stayed put during the `rosterGenerator/`→`generation/` rename — it is a *private* local-search objective (not an exported judge), tightly coupled to the generator's scoring internals, so hoisting it into `evaluation/` would mean exporting + untangling it, i.e. scope creep beyond a folder move. Deferred: fold it into `evaluation/` only if/when it needs to be reused outside the generator. |
 | 5 — split `understudy.js` by kind | ✅ done | `d59f896` | 400 pass (24 files) | **debt-clearing step.** `understudy.js` split: vocabulary → `schema/understudyRoles.js`, policy → `rules/understudyPolicy.js` (policy imports vocab — correct Rules→Schema direction). Old `utils/understudy.js`+test deleted; test split to match. No `utils/understudy` importers remain, so steps 1/3/4's coupling is gone. `UNDERSTUDY_SUFFIX` stays vocabulary-internal (no external importer). Seeding/promotion **phases** already live in `generation/` and were untouched. |
-| 6 — extract `session/` | ✅ done | `5626b91`; lift `3bba88a` | 404 pass (25 files) | ~~**Deferred debt:** draft/undo/commit still called *inside* both providers, so Session not yet above Provider.~~ **RESOLVED by the Session lift** (`3bba88a`): added `session/useSession.js` which wraps a provider and owns the draft/commit + undo/redo overlay + the `updateEvents`/`replaceData` commands; providers are now pure CRUD (`saveEvents`/`replaceDocument`), and `useRosterData` composes `useSession(provider)`. Session sits *above* Provider as the model prescribes. Internal `commands`/`store` split still deferred (see Resolved). |
-| 7 — provider CRUD contract | ✅ done | `073861e`; split `3bba88a` | 404 pass (25 files) | ~~**Deferred debt (from step 6):** the `draft/session` key group still lives on the provider surface.~~ **RESOLVED by the Session lift** (`3bba88a`): the contract is now split into `PROVIDER_KEYS` (pure CRUD) + `SESSION_KEYS` (draft/history + edit commands), `ROSTER_PROVIDER_KEYS = [...PROVIDER_KEYS, ...SESSION_KEYS]`. Conformance test asserts each provider returns exactly `PROVIDER_KEYS` and `useSession(provider)` returns exactly `ROSTER_PROVIDER_KEYS`. The adapter-rename half landed with step 9. |
-| 6/7 — Session lift (inversion) | ✅ done | `3bba88a` | 404 pass (25 files, +1 composition) | The structural inversion both prior steps deferred. Providers → pure CRUD; `useSession` composes the draft/command surface above them. **Judgment call:** the draft-reset that used to happen synchronously inside `applyDoc`/`importData`/`selectRoster` is now a single `useEffect` in `useSession` keyed on the provider's `originalData` reference (the one signal common to all load/import/clear/select paths *and* the only one available for the provider-internal background `loadRosters`). Trade-off: a one-tick lag between a new document loading and the draft resetting, vs. the old synchronous reset — acceptable because a fresh load rarely coexists with a live draft, and it unifies all reset paths through one mechanism. A future `specs/session.md` should own the Session command-surface + draft/commit contract in full (currently split across [data-layer.md](data-layer.md) + [architecture.md](architecture.md)). |
+| 6 — extract `session/` | ✅ done | `5626b91`; lift `159a55f` | 404 pass (25 files) | ~~**Deferred debt:** draft/undo/commit still called *inside* both providers, so Session not yet above Provider.~~ **RESOLVED by the Session lift** (`159a55f`): added `session/useSession.js` which wraps a provider and owns the draft/commit + undo/redo overlay + the edit commands (`stageEvents`/`stageDocument`, renamed from `updateEvents`/`replaceData` in the step-9 command rename); providers are now pure CRUD (`saveEvents`/`replaceDocument`), and `useRosterData` composes `useSession(provider)`. Session sits *above* Provider as the model prescribes. Internal `commands`/`store` split still deferred (see Resolved). |
+| 7 — provider CRUD contract | ✅ done | `073861e`; split `159a55f` | 404 pass (25 files) | ~~**Deferred debt (from step 6):** the `draft/session` key group still lives on the provider surface.~~ **RESOLVED by the Session lift** (`159a55f`): the contract is now split into `PROVIDER_KEYS` (pure CRUD) + `SESSION_KEYS` (draft/history + edit commands), `ROSTER_PROVIDER_KEYS = [...PROVIDER_KEYS, ...SESSION_KEYS]`. Conformance test asserts each provider returns exactly `PROVIDER_KEYS` and `useSession(provider)` returns exactly `ROSTER_PROVIDER_KEYS`. The adapter-rename half landed with step 9. |
+| 6/7 — Session lift (inversion) | ✅ done | `159a55f` | 404 pass (25 files, +1 composition) | The structural inversion both prior steps deferred. Providers → pure CRUD; `useSession` composes the draft/command surface above them. **Judgment call:** the draft-reset that used to happen synchronously inside `applyDoc`/`importData`/`selectRoster` is now a single `useEffect` in `useSession` keyed on the provider's `originalData` reference (the one signal common to all load/import/clear/select paths *and* the only one available for the provider-internal background `loadRosters`). Trade-off: a one-tick lag between a new document loading and the draft resetting, vs. the old synchronous reset — acceptable because a fresh load rarely coexists with a live draft, and it unifies all reset paths through one mechanism. A future `specs/session.md` should own the Session command-surface + draft/commit contract in full (currently split across [data-layer.md](data-layer.md) + [architecture.md](architecture.md)). |
 | 8 — tidy periphery | ✅ done | 8a `127ec27`; 8b `a779dc6`; 8c-i `cf44783`; 8c-ii `a7efdb7`; 8d `872817f` | 403 pass (25 files) | **Sub-committed** (too big for one commit). **8a:** `rosterGenerator/` → `src/generation/`. **8b:** read-model views → `src/readmodel/`. **8c-i:** the *genuinely generic* helpers `calendarUtils` + `dataExport` (leaf, no relative imports) → `src/lib/`; 4 importers rewired. **8c-ii:** `statsTheme.js` is the **misnamed design-system** token module → renamed to `designSystem.js` and rehomed with `colorUtils` (role-colour palette = colour policy) + the lint guard + both tests into a new `src/design/` folder; ~20 importers rewired (14 `statsTheme`, 6 `colorUtils`), lint-guard internal path/allowlist refs fixed, [design-system.md](design-system.md) + [architecture.md](architecture.md) + this plan updated. **8d:** `telegram.js` (root) → `src/integrations/` (git mv; no relative imports, one importer `main.jsx` rewired) — it's a **read-only** integration today (viewport/theme mirroring), so there was no write path to split; the future bot write path (actor on the session command surface) stays foreshadowed in [architecture.md](architecture.md). **8c decision:** `bulkClear` **stays** in `utils/` — it's *domain* (roster/slot shape, produces one draft edit + undo step), a session-command helper bound for `session/` when the command surface lands, not a `lib/` generic. |
 | 9 — vocabulary rename | ⬜ rides along (in progress) | 9-adapter `d437eae` | 403 pass (25 files) | not a standalone commit. **Pulled forward:** the `state/` adapter + `documentValidation` now name their inbound param `document` (not `data`), so the Document→State boundary reads in the code. **Adapter transform rename (this commit):** `getDerivedState` → `toState`, `resolveDerivedState` → `resolveState` (the naming table prescribes the verb-free `toState`-family; `resolveState` names the aggregator that adds the cross-team `externalAssignments`). `resolveTenant` keeps its name (it's the tenant-flatten half, already a transform verb). Rewired App.jsx (2 call sites) + the full `derivedState.test.js` suite (~50) + comment refs in `tenantResolver.js`/`rosterDefaults.js`/`availabilityUtils.test.js`; updated [data-layer.md](data-layer.md) + [multi-tenant.md](multi-tenant.md). *Lesson (earlier):* a blind `data`→`document` also rewrote a user-facing error string (`'YAML data is empty or invalid'`); reverted — renames must not change display text. |
+| 9 — session command rename | ⬜ rides along (in progress) | 9-commands `9e11c81` | 404 pass (25 files) | Session edit commands renamed to command vocabulary: `updateEvents` → `stageEvents`, `replaceData` → `stageDocument` ([useSession.js](../src/session/useSession.js), `SESSION_KEYS` + typedef in [providerContract.js](../src/data/providerContract.js), 7 call sites + 2 comments in App.jsx, [architecture.md](architecture.md) / [data-layer.md](data-layer.md) / [events-ui.md](events-ui.md)). Chose `stageEvents` over `applyDraftEdit` so the *surface command* doesn't collide with the internal `useDraftHistory` transition of that name. **Deliberately NOT renamed:** provider `saveEvents`/`replaceDocument` (they save different scopes — a single `saveDocument` would be *less* accurate, and they already read as CRUD). **Deferred as behaviour change:** splitting `stageEvents` into evaluation-gated per-action commands (`assign`/`swap`/…) — that is the post-overhaul follow-on, not a rename (see the follow-on note above §step 10). |
 | 10 — enforce the graph | ⬜ optional | — | — | the CI gate that makes all above debt un-reintroducible. |
 
 **Baseline before the overhaul:** 392 tests, `npm run build` green (commit `5bb41c8`).

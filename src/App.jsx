@@ -71,8 +71,8 @@ function App({ auth }) {
     selectRoster,
     importData, 
     clearData, 
-    updateEvents,
-    replaceData,
+    stageEvents,
+    stageDocument,
     logAction,
     undo,
     redo,
@@ -207,7 +207,7 @@ function App({ auth }) {
         { externalAssignments }
       )
 
-      updateEvents(result.events)
+      stageEvents(result.events)
       logAction(result.logEntries)
 
       // filled-this-run = (slots empty before) − (slots still unassignable after)
@@ -372,8 +372,8 @@ function App({ auth }) {
       return { ...event, roster: nextRoster }
     })
 
-    // updateEvents records the pre-mutation snapshot for undo automatically.
-    updateEvents(nextEvents)
+    // stageEvents records the pre-mutation snapshot for undo automatically.
+    stageEvents(nextEvents)
     if (logEntry) logAction(logEntry)
   }
 
@@ -454,7 +454,7 @@ function App({ auth }) {
   // Apply the staged swap after the user confirms.
   const confirmSwap = () => {
     if (!pendingSwap) return
-    updateEvents(pendingSwap.nextEvents)
+    stageEvents(pendingSwap.nextEvents)
     logAction({ level: 'info', category: 'swap', group: 'manual', message: pendingSwap.message })
     setPendingSwap(null)
   }
@@ -473,7 +473,7 @@ function App({ auth }) {
     })
     if (!added) return
     const event = events.find(e => e.date === eventDate)
-    updateEvents(nextEvents)
+    stageEvents(nextEvents)
     logAction({
       level: 'info', category: 'insert', group: 'manual',
       message: `Added ${role} role to ${eventDate}${event ? ` ${event.name}` : ''}`,
@@ -484,7 +484,7 @@ function App({ auth }) {
   // entire role requirement is destructive, so it is staged for confirmation.
   const confirmRemoveSlot = () => {
     if (!pendingRemoveSlot) return
-    updateEvents(pendingRemoveSlot.nextEvents)
+    stageEvents(pendingRemoveSlot.nextEvents)
     logAction({ level: 'info', category: 'delete', group: 'manual', message: pendingRemoveSlot.message })
     setPendingRemoveSlot(null)
   }
@@ -536,7 +536,7 @@ function App({ auth }) {
   // Apply the staged clear-generated action after the user confirms.
   const confirmClearGenerated = () => {
     if (!pendingClearGenerated) return
-    updateEvents(pendingClearGenerated.nextEvents)
+    stageEvents(pendingClearGenerated.nextEvents)
     logAction({
       level: 'info', category: 'delete', group: 'manual',
       message: `Removed ${pendingClearGenerated.count} generated assignment${pendingClearGenerated.count > 1 ? 's' : ''}`,
@@ -548,7 +548,7 @@ function App({ auth }) {
   //
   // "Clear" empties the member from each selected slot but keeps the role slot
   // (non-destructive, mirrors handleEditRosterSlot(...,null)). The whole set is
-  // applied in one updateEvents call so it is a single draft/undo step.
+  // applied in one stageEvents call so it is a single draft/undo step.
 
   // Toggle one slot key (`date#roleIndex`) in the selection.
   const toggleSlotSelected = (key) => {
@@ -606,7 +606,7 @@ function App({ auth }) {
   // Apply the staged bulk clear after the user confirms.
   const confirmBulkClear = () => {
     if (!pendingBulkClear) return
-    updateEvents(pendingBulkClear.nextEvents)
+    stageEvents(pendingBulkClear.nextEvents)
     logAction({
       level: 'info', category: 'delete', group: 'manual',
       message: `Cleared ${pendingBulkClear.count} assignment${pendingBulkClear.count > 1 ? 's' : ''}`,
@@ -937,7 +937,7 @@ function App({ auth }) {
           open={showDrawer}
           onClose={() => setShowDrawer(false)}
           data={data}
-          onReplace={replaceData}
+          onReplace={stageDocument}
           onImport={handleImport}
         />
       )}
