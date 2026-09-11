@@ -1,19 +1,18 @@
 /**
- * Bulk-clear helper for the Events multi-select feature.
+ * Bulk-clear helper for the Events multi-select feature — a Session-layer domain
+ * helper (it operates on the roster/slot shape and produces one draft edit).
  *
  * "Clear" means: empty the assigned member from a roster slot but KEEP the role
- * requirement (mirrors the single-slot `handleEditRosterSlot(date, idx, null)`
- * path). It is deliberately the non-destructive action — removing whole role
- * slots is a separate, more destructive operation (`handleRemoveRosterSlot`).
+ * requirement (mirrors the single-slot `assign(..., memberId:null)` path). It is
+ * deliberately the non-destructive action — removing whole role slots is a
+ * separate, more destructive operation (`removeSlot`).
  *
- * Slot keys are the same `"<date>#<roleIndex>"` format the Events view already
- * uses for the diff overlay, so the caller can pass the exact set the user
- * ticked. Applying the whole set in one pass means the change lands as a single
- * draft entry and a single undo step.
+ * Slot keys are the shared `slotKey` (`"<date>#<roleIndex>"`, from `lib/`) the
+ * Events view already uses for its diff overlay and selection, so the caller can
+ * pass the exact set the user ticked. Applying the whole set in one pass means
+ * the change lands as a single draft entry and a single undo step.
  */
-
-/** The slot key format shared with EventsView's diff map: `date#roleIndex`. */
-export const slotKey = (date, roleIndex) => `${date}#${roleIndex}`
+import { slotKey } from '../lib/slotKey'
 
 /**
  * Return `{ nextEvents, count }` where every slot named in `keys` has its

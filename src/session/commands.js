@@ -34,7 +34,7 @@
 
 import { validateEventAssignments } from '../evaluation/assignmentValidator'
 import { explainSwap } from '../evaluation/swapPolicy'
-import { buildBulkClear } from '../utils/bulkClear'
+import { buildBulkClear } from './bulkClear'
 
 const nameOfIn = (members) => (id) =>
   members.find((m) => m.id === id)?.name || id || '—'

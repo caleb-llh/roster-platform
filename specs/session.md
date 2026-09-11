@@ -49,7 +49,10 @@ are true peers through one surface — the reason C ("per-action commands") was
 pulled into the overhaul rather than left as a generic `stageEvents` escape hatch.
 
 The current commands are `assign`, `addSlot`, `removeSlot`, `swap`,
-`clearGenerated`, and `bulkClear`. `stageEvents` remains the **generic** apply
+`clearGenerated`, and `bulkClear` (the last delegates to the `buildBulkClear`
+helper in [`session/bulkClear.js`](../src/session/bulkClear.js); its shared
+`slotKey` primitive lives in `lib/slotKey.js` since the UI's diff/selection use
+it too). `stageEvents` remains the **generic** apply
 used by the generator (which produces a whole events array staged wholesale) and
 by the confirmation handlers below; `stageDocument` stages a whole-document edit
 from the YAML editor.

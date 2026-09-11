@@ -12,10 +12,11 @@
  *   - 'unchanged': same slot, same member_id
  *
  * `slotDiffByKey` keys are `"${date}#${roleIndex}"` so a view rendering a slot
- * can look up its status in O(1).
+ * can look up its status in O(1). The key format is the shared `slotKey`
+ * primitive (`lib/slotKey`), the same one EventsView and the bulk-clear command
+ * use, so the three never drift.
  */
-
-const slotKey = (date, index) => `${date}#${index}`
+import { slotKey } from '../lib/slotKey'
 
 /**
  * @param {Array} committed  events array as last saved (the binding)

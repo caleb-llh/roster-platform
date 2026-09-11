@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildBulkClear, slotKey } from './bulkClear'
+import { buildBulkClear } from './bulkClear'
+import { slotKey } from '../lib/slotKey'
 
 const makeEvents = () => [
   {

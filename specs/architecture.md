@@ -128,12 +128,12 @@ Server-side (Supabase dashboard, `config.toml` only, never shipped): `SUPABASE_A
 | --- | --- |
 | `src/components/` | React UI (views, panels, modals, shared primitives incl. `HoverCard`, `DesignSystem`). |
 | `src/data/` | Dual-mode data layer: mode detection, provider contract (`PROVIDER_KEYS`/`SESSION_KEYS`/`ROSTER_PROVIDER_KEYS` conformance), Supabase client, and the two **pure-CRUD** providers. |
-| `src/session/` | Session layer (the "time" layer, above the provider): `useSession` (wraps a CRUD provider — owns the draft/commit + undo/redo overlay and the `stageEvents`/`stageDocument` command surface) and `useDraftHistory` (draft/commit + undo/redo pure transitions). |
+| `src/session/` | Session layer (the "time" layer, above the provider): the pure per-action command surface (`commands.js` + its `bulkClear` helper — see [session.md](session.md)), `useSession` (wraps a CRUD provider — owns the draft/commit + undo/redo overlay and the `stageEvents`/`stageDocument` command surface) and `useDraftHistory` (draft/commit + undo/redo pure transitions). |
 | `src/hooks/` | `useAuth` (Google OAuth/session) and `useRosterData` (the dual-mode dispatcher). |
 | `src/schema/` | `rosterSchema.js` — schema constants (also used as test-data constants). |
-| `src/utils/` | Framework-agnostic helpers not yet homed to a layer: diffing, constraints, `bulkClear` (a session-command helper, → `session/` later). Being dissolved by the overhaul (see [architecture-overhaul.plan.md](architecture-overhaul.plan.md)). |
+| `src/utils/` | Framework-agnostic helpers not yet homed to a layer: diffing (`rosterDiff`), constraints. Being dissolved by the overhaul (see [architecture-overhaul.plan.md](architecture-overhaul.plan.md)). |
 | `src/design/` | Presentation vocabulary: `designSystem.js` (the Tailwind glass token module — see [design-system.md](design-system.md)) and `colorUtils` (functional role/day colour palette + date formatting). |
-| `src/lib/` | Genuinely generic, domain-free helpers: `calendarUtils` (date math), `dataExport` (YAML export/download). |
+| `src/lib/` | Genuinely generic, domain-free helpers: `calendarUtils` (date math), `dataExport` (YAML export/download), `slotKey` (the shared `date#roleIndex` roster-slot key used by the UI, the diff, and the bulk-clear command). |
 | `src/integrations/` | External-platform glue. Today: `telegram.js` (Telegram Mini App — read-only viewport/theme mirroring, no-op outside Telegram). A future bot **write** path (commands as actors on the session command surface) is foreshadowed — see [architecture-overhaul.plan.md](architecture-overhaul.plan.md). |
 | `src/readmodel/` | Live aggregate *views* of State — `rosterStats`, `availabilityUtils` (bench depth), `distributionUtils` (charts). Read-only; share counting primitives with `rules/` but do **not** route through the placement registry. |
 | `src/generation/` | The generation engine (seeding, promotion planning, scoring, local search, RNG) + its own `README.md`. Imports the judge from `src/evaluation/`. See [generation.md](generation.md) and [understudy.md](understudy.md). |
@@ -154,11 +154,12 @@ rather than a dependency sink. The allowed cross-layer arrows are:
 | `state/` | `schema`, `config`, `design`, `lib`, `rules` (the tracker reuses a rules counting primitive) |
 | `generation/` | `state`, `evaluation`, `rules`, `schema` |
 | `readmodel/` | `state`, `evaluation`, `rules`, `schema`, `design` (chart views use tokens) |
-| `session/` | `state`, `evaluation`, `utils` |
+| `session/` | `state`, `evaluation`, `utils`, `lib` (the `bulkClear` helper uses the shared `slotKey`) |
 | `data/` | `state` (providers use the adapter) |
 | `hooks/` | `data`, `session` |
 | `components/` | `readmodel`, `generation`, `rules`, `schema`, `design`, `lib`, `utils` |
-| `lib/`, `design/`, `integrations/`, `utils/` | nothing (domain-free / leaf) |
+| `lib/`, `design/`, `integrations/` | nothing (domain-free / leaf) |
+| `utils/` | `lib` (`rosterDiff` uses the shared `slotKey`); otherwise a leaf, being dissolved |
 | `config/` | `schema` |
 
 Key invariants: **the core (`schema`/`rules`/`evaluation`/`state`/`generation`)

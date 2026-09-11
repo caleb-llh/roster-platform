@@ -54,7 +54,7 @@ const ALLOWED = {
 
   // Periphery / above-core
   readmodel: ['state', 'evaluation', 'rules', 'schema', 'design'], // live views read the core; chart views use design tokens
-  session: ['state', 'evaluation', 'utils'], // the "time" layer above the provider
+  session: ['state', 'evaluation', 'utils', 'lib'], // the "time" layer above the provider; bulkClear uses the shared slotKey primitive
   data: ['state'], // pure-CRUD providers use the adapter (documentValidation/tenantResolver)
   hooks: ['data', 'session'], // dual-mode dispatcher composes them
   components: ['readmodel', 'generation', 'rules', 'schema', 'design', 'lib', 'utils'],
@@ -63,7 +63,7 @@ const ALLOWED = {
   lib: [],
   design: [],
   config: ['schema'],
-  utils: [], // bulkClear is a leaf domain helper
+  utils: ['lib'], // rosterDiff uses the shared slotKey primitive
   integrations: [],
 }
 

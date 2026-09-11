@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { assign, addSlot, removeSlot, swap, clearGenerated, bulkClear } from './commands'
-import { slotKey } from '../utils/bulkClear'
+import { slotKey } from '../lib/slotKey'
 
 // Minimal derived-state shape the commands consume (a subset of toState's output
 // plus externalAssignments). Members are role-capable and available unless a
