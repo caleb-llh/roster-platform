@@ -2,7 +2,6 @@ import { useState, useRef } from 'react'
 import yaml from 'js-yaml'
 import { runAllValidators } from '../state/documentValidation'
 import { LOCAL_PERMISSIONS } from './providerContract'
-import { useDraftHistory } from '../session/useDraftHistory'
 import { isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEvents, deriveExternalAssignments, validateTenantRosters } from '../state/tenantResolver'
 
 /**
@@ -13,6 +12,11 @@ import { isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEv
  * playground. Mutations are async-shaped and return { ok, errors } to match the
  * production contract exactly, even though local edits cannot really fail; this
  * keeps callers honest so the same code paths work in production.
+ *
+ * This is a **pure CRUD provider** — it owns the committed document and knows
+ * how to persist events (`saveEvents`), but it does NOT own the draft/undo/redo
+ * overlay. That is the Session layer (`useSession`, which wraps this provider and
+ * calls `saveEvents` on commit). See specs/data-layer.md and the overhaul plan.
  *
  * @returns {import('./providerContract').RosterProvider}
  */
@@ -58,9 +62,11 @@ export function useLocalRosterProvider() {
     ? deriveExternalAssignments(tenantDoc, { teamId: activeTeamId })
     : {}
 
-  // Draft overlay + undo/redo. Committed events live in `data.events`; edits
-  // build an uncommitted draft that is only merged back on commit().
-  const persistCommittedEvents = async (events) => {
+  // Persist committed events (the "binding"). Called by the Session layer on
+  // commit — never by draft edits, which stay in the Session's overlay. In
+  // local mode this just updates in-memory state (and writes back into the held
+  // tenant doc so a team/roster switch preserves the edit).
+  const saveEvents = async (events) => {
     setData(prevData => ({ ...prevData, events }))
     setHasGenerated(true)
     // Multi-tenant Phase 1 write-back: when a nested tenant doc is loaded,
@@ -77,7 +83,6 @@ export function useLocalRosterProvider() {
     }
     return { ok: true, errors: [] }
   }
-  const draft = useDraftHistory(data?.events, persistCommittedEvents)
 
   // Import YAML data (fresh session).
   const importData = async (yamlText) => {
@@ -124,7 +129,6 @@ export function useLocalRosterProvider() {
     )
     setError(null)
     setHasGenerated(false)
-    draft.resetDraftHistory()
     setActionLog([])
 
     return { ok: true, errors: [] }
@@ -138,7 +142,6 @@ export function useLocalRosterProvider() {
     setOriginalData(JSON.parse(JSON.stringify(flatData)))
     setData(flatData)
     setHasGenerated(false)
-    draft.resetDraftHistory()
     setActionLog([])
   }
 
@@ -167,29 +170,22 @@ export function useLocalRosterProvider() {
     setActiveTeamId(null)
     setActiveRosterId(null)
     setHasGenerated(false)
-    draft.resetDraftHistory()
     setActionLog([])
     setError(null)
   }
 
-  // Update events after generation / manual edit. Goes into the uncommitted
-  // draft (undoable); committed state changes only on commit().
-  const updateEvents = async (newEvents) => {
-    draft.applyDraftEdit(newEvents)
-    return { ok: true, errors: [] }
-  }
-
   /**
-   * Replace the entire working document from an edited object (e.g. the live
-   * YAML editor). Validates first; on failure the current state is kept
-   * unchanged and the errors are returned so the caller can surface them.
+   * Replace the non-event portion of the working document from an edited object
+   * (e.g. the live YAML editor). Validates first; on failure the current state
+   * is kept unchanged and the errors are returned so the caller can surface them.
    *
-   * Non-event fields (members, roles, constraints) apply to the working
-   * document immediately. The events portion is routed through the draft so
-   * YAML-editor roster changes are undoable and part of the same commit flow as
-   * manual edits (see README "Draft/commit is separate from undo/redo history").
+   * Non-event fields (members, roles, constraints) apply to the working document
+   * immediately, keeping the caller-supplied `keepEvents` on `data.events`. The
+   * events portion of the parsed doc is returned as `nextEvents` so the Session
+   * layer can route it through the draft (undoable, part of the same commit flow
+   * as manual edits — see README "Draft/commit is separate from undo/redo").
    */
-  const replaceData = async (parsedData) => {
+  const replaceDocument = async (parsedData, keepEvents) => {
     const validation = runAllValidators(parsedData)
     if (!validation.isValid) {
       return { ok: false, errors: validation.errors }
@@ -198,11 +194,10 @@ export function useLocalRosterProvider() {
     const { events: nextEvents, ...docWithoutEvents } = parsedData
     setData(prev => ({
       ...docWithoutEvents,
-      events: (draft.draftEvents !== null ? draft.draftEvents : prev?.events) || [],
+      events: (keepEvents !== null && keepEvents !== undefined ? keepEvents : prev?.events) || [],
       ...(validation.hasWarnings ? { warnings: validation.warnings } : {}),
     }))
-    draft.applyDraftEdit(nextEvents || [])
-    return { ok: true, errors: [] }
+    return { ok: true, errors: [], nextEvents: nextEvents || [] }
   }
 
   /**
@@ -222,12 +217,6 @@ export function useLocalRosterProvider() {
     error,
     loading,
     hasGenerated,
-    // Draft + undo/redo (see useDraftHistory)
-    draftEvents: draft.draftEvents,
-    effectiveEvents: draft.effectiveEvents,
-    hasUncommitted: draft.hasUncommitted,
-    canUndo: draft.canUndo,
-    canRedo: draft.canRedo,
     actionLog,
     permissions: LOCAL_PERMISSIONS,
     // Admin surface — production only. Local mode has no roles or membership,
@@ -254,16 +243,12 @@ export function useLocalRosterProvider() {
     listInvites: async () => ({ ok: true, errors: [], invites: [] }),
     revokeInvite: async () => ({ ok: false, errors: ['Not available in local mode.'] }),
 
-    // Actions
+    // CRUD actions (draft/undo/commit are owned by the Session layer above)
     importData,
     clearData,
-    updateEvents,
-    replaceData,
+    saveEvents,
+    replaceDocument,
     logAction,
-    undo: draft.undo,
-    redo: draft.redo,
-    commitDraft: draft.commit,
-    discardDraft: draft.discard,
     setError,
   }
 }

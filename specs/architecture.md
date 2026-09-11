@@ -31,27 +31,36 @@ If **both** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are present → `pr
 Components never check the mode. They depend only on the **`RosterProvider`
 contract** ([`src/data/providerContract.js`](../src/data/providerContract.js))
 and gate behaviour on `permissions`. A single dispatcher hook picks the
-implementation ([`src/hooks/useRosterData.js`](../src/hooks/useRosterData.js)):
+implementation and lifts it into the full surface via the Session layer
+([`src/hooks/useRosterData.js`](../src/hooks/useRosterData.js)):
 
 ```js
 const local = mode === 'local' ? useLocalRosterProvider() : null
 const production = mode === 'production' ? useSupabaseRosterProvider() : null
-return local ?? production
+return useSession(local ?? production)
 ```
 
-(Mode is constant, so calling one hook per render is Rules-of-Hooks-safe.)
+(Mode is constant, so calling one provider hook per render — plus `useSession`
+unconditionally — is Rules-of-Hooks-safe.)
 
-Both providers implement the same surface:
+The surface is **composed in two layers**:
 
-- **State:** `data`, `originalData`, `error`, `loading`, `hasGenerated`, `actionLog`.
-- **Draft/history:** `draftEvents`, `effectiveEvents` (= `draftEvents ?? data.events`), `hasUncommitted`, `canUndo`, `canRedo`. The draft/undo/redo logic is shared as pure transitions in [`useDraftHistory.js`](../src/session/useDraftHistory.js) so both modes behave identically (see [data-layer.md](data-layer.md)). *(This is a **Session** concern; it currently still lives inside the providers — the target is to lift it above them. See [architecture-overhaul.plan.md](architecture-overhaul.plan.md).)*
-- **Permissions/roles:** `permissions` (`{ canEditRoster, canImport, canUndo }`), `role` (`'owner' | 'editor' | 'viewer' | null`), `rosters`, `activeRosterId`.
-- **Mutations (all async, returning `{ ok, errors[] }`):** `importData`, `clearData`, `updateEvents`, `replaceData`, `logAction`, `undo`, `redo`, `commitDraft`, `discardDraft`, `setError`.
-- **Roster/admin:** `selectRoster`, `createRoster`, `listMembers`, `setMemberRole`, `removeMember`, `inviteMember`, `listInvites`, `revokeInvite`.
+- **Provider (pure CRUD storage)** — `PROVIDER_KEYS`. Owns the committed document
+  and knows only how to read/write it:
+  - **State:** `data`, `originalData`, `error`, `loading`, `hasGenerated`, `actionLog`.
+  - **Permissions/roles:** `permissions` (`{ canEditRoster, canImport, canUndo }`), `role` (`'owner' | 'editor' | 'viewer' | null`), `rosters`, `activeRosterId`.
+  - **CRUD mutations (async, `{ ok, errors[] }`):** `importData`, `clearData`, `saveEvents` (persist the committed events binding), `replaceDocument` (swap the non-event document, returning the parsed `nextEvents`), `logAction`, `setError`.
+  - **Roster/admin:** `selectRoster`, `selectTeam`, `createRoster`, `listMembers`, `setMemberRole`, `removeMember`, `inviteMember`, `listInvites`, `revokeInvite`.
+- **Session (the "time" layer, above the provider)** — `SESSION_KEYS`, added by [`useSession`](../src/session/useSession.js):
+  - **Draft/history:** `draftEvents`, `effectiveEvents` (= `draftEvents ?? data.events`), `hasUncommitted`, `canUndo`, `canRedo`, `undo`, `redo`, `commitDraft`, `discardDraft`. Owned by [`useDraftHistory.js`](../src/session/useDraftHistory.js) (pure transitions) so both modes behave identically (see [data-layer.md](data-layer.md)).
+  - **Edit commands (async, `{ ok, errors[] }`):** `updateEvents` (edit → draft), `replaceData` (YAML-editor edit → provider `replaceDocument` + draft). These orchestrate the draft on top of provider CRUD.
+
+`ROSTER_PROVIDER_KEYS = [...PROVIDER_KEYS, ...SESSION_KEYS]` is the full composed
+surface the UI consumes.
 
 The **local provider** ([`useLocalRosterProvider.js`](../src/data/useLocalRosterProvider.js)) resolves immediately, never denies permission (`LOCAL_PERMISSIONS` = all true), and stubs the admin methods as inert. The **Supabase provider** ([`useSupabaseRosterProvider.js`](../src/data/useSupabaseRosterProvider.js)) derives `permissions` from the authenticated role — but **the database (RLS) is the real authority**; client-side permissions only shape the UI.
 
-**The contract's shape is machine-checked, not just documented.** The exact key set is exported once as `ROSTER_PROVIDER_KEYS` in [`providerContract.js`](../src/data/providerContract.js), and [`providerContract.test.jsx`](../src/data/providerContract.test.jsx) renders *both real providers* and asserts each returns exactly those keys — so the two backends cannot silently drift out of interchangeability. (The Supabase provider is inert under test: with no `VITE_SUPABASE_*` env its client is `null`, so every effect early-returns and it yields the same shape with zero I/O.)
+**The contract's shape is machine-checked, not just documented.** The key sets are exported once in [`providerContract.js`](../src/data/providerContract.js), and [`providerContract.test.jsx`](../src/data/providerContract.test.jsx) renders *both real providers* and asserts each returns exactly `PROVIDER_KEYS`, plus asserts `useSession(provider)` returns exactly `ROSTER_PROVIDER_KEYS` — so neither the two backends nor the Session composition can silently drift out of interchangeability. (The Supabase provider is inert under test: with no `VITE_SUPABASE_*` env its client is `null`, so every effect early-returns and it yields the same shape with zero I/O.)
 
 ## Data model (Supabase, production only)
 
@@ -118,8 +127,8 @@ Server-side (Supabase dashboard, `config.toml` only, never shipped): `SUPABASE_A
 | Path | Holds |
 | --- | --- |
 | `src/components/` | React UI (views, panels, modals, shared primitives incl. `HoverCard`, `DesignSystem`). |
-| `src/data/` | Dual-mode data layer: mode detection, provider contract (+ `ROSTER_PROVIDER_KEYS` conformance), Supabase client, and the two providers. |
-| `src/session/` | Session layer: `useDraftHistory` (draft/commit + undo/redo pure transitions). Still invoked *inside* the providers today — see [architecture-overhaul.plan.md](architecture-overhaul.plan.md). |
+| `src/data/` | Dual-mode data layer: mode detection, provider contract (`PROVIDER_KEYS`/`SESSION_KEYS`/`ROSTER_PROVIDER_KEYS` conformance), Supabase client, and the two **pure-CRUD** providers. |
+| `src/session/` | Session layer (the "time" layer, above the provider): `useSession` (wraps a CRUD provider — owns the draft/commit + undo/redo overlay and the `updateEvents`/`replaceData` command surface) and `useDraftHistory` (draft/commit + undo/redo pure transitions). |
 | `src/hooks/` | `useAuth` (Google OAuth/session) and `useRosterData` (the dual-mode dispatcher). |
 | `src/schema/` | `rosterSchema.js` — schema constants (also used as test-data constants). |
 | `src/utils/` | Framework-agnostic helpers not yet homed to a layer: diffing, constraints, `bulkClear` (a session-command helper, → `session/` later). Being dissolved by the overhaul (see [architecture-overhaul.plan.md](architecture-overhaul.plan.md)). |

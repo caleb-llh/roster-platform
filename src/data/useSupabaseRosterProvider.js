@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import yaml from 'js-yaml'
 import { runAllValidators } from '../state/documentValidation'
 import { supabase } from './supabaseClient'
-import { useDraftHistory } from '../session/useDraftHistory'
 
 /**
  * Production (Supabase-backed) implementation of the roster data provider
@@ -49,10 +48,6 @@ export function useSupabaseRosterProvider() {
     return { ok: true, errors: [], doc }
   }
 
-  // Ref to the draft hook's reset, populated below (avoids a definition cycle
-  // between applyDoc and useDraftHistory).
-  const resetDraftRef = useRef(() => {})
-
   const applyDoc = useCallback((doc) => {
     if (doc) {
       const { doc: validated } = withWarnings(doc)
@@ -63,7 +58,6 @@ export function useSupabaseRosterProvider() {
       setOriginalData(null)
     }
     setHasGenerated(false)
-    resetDraftRef.current()
     setActionLog([])
   }, [])
 
@@ -80,11 +74,12 @@ export function useSupabaseRosterProvider() {
     return { ok: true, errors: [] }
   }, [rosterId])
 
-  // Draft overlay + undo/redo. Committed events live in `data.events`; edits
-  // build an uncommitted draft. Only commit() writes through to the backend.
+  // Persist committed events (the "binding") to the roster row. Called by the
+  // Session layer on commit — never by draft edits, which stay in the Session's
+  // overlay above this provider.
   const dataRef = useRef(data)
   dataRef.current = data
-  const persistCommittedEvents = useCallback(async (events) => {
+  const saveEvents = useCallback(async (events) => {
     if (!permissions.canEditRoster) return { ok: false, errors: ['You do not have permission to edit.'] }
     const next = { ...dataRef.current, events }
     const result = await persist(next)
@@ -93,8 +88,6 @@ export function useSupabaseRosterProvider() {
     setHasGenerated(true)
     return { ok: true, errors: [] }
   }, [persist, permissions.canEditRoster])
-  const draft = useDraftHistory(data?.events, persistCommittedEvents)
-  resetDraftRef.current = draft.resetDraftHistory
 
   // Load all of the user's rosters and activate one. `preferredId` wins if it
   // is among the memberships; otherwise the currently-active one is kept, else
@@ -179,7 +172,6 @@ export function useSupabaseRosterProvider() {
     setData(doc)
     setError(null)
     setHasGenerated(false)
-    setHistory([])
     setActionLog([])
     return { ok: true, errors: [] }
   }
@@ -189,33 +181,30 @@ export function useSupabaseRosterProvider() {
     // reload restores it. (Deleting a shared roster is a separate, deliberate
     // action, not wired in this iteration.)
     setData(null)
+    setOriginalData(null)
     setHasGenerated(false)
-    draft.resetDraftHistory()
     setActionLog([])
     setError(null)
   }
 
-  // Manual/generation edit → uncommitted draft (no network). Committed state is
-  // written only by commitDraft().
-  const updateEvents = async (newEvents) => {
-    if (!permissions.canEditRoster) return { ok: false, errors: ['You do not have permission to edit.'] }
-    draft.applyDraftEdit(newEvents)
-    return { ok: true, errors: [] }
-  }
-
-  // YAML editor: non-event fields apply to the working document immediately;
-  // the events portion goes into the draft (undoable, committed on save).
-  const replaceData = async (parsedData) => {
+  /**
+   * Replace the non-event portion of the working document from an edited object
+   * (e.g. the live YAML editor). Validates first; on failure the current state
+   * is kept unchanged and the errors are returned. Non-event fields apply to the
+   * working document immediately, keeping the caller-supplied `keepEvents`; the
+   * events portion is returned as `nextEvents` so the Session layer can route it
+   * through the draft.
+   */
+  const replaceDocument = async (parsedData, keepEvents) => {
     if (!permissions.canEditRoster) return { ok: false, errors: ['You do not have permission to edit.'] }
     const { ok, errors, doc } = withWarnings(parsedData)
     if (!ok) return { ok, errors }
     const { events: nextEvents, ...docWithoutEvents } = doc
     setData(prev => ({
       ...docWithoutEvents,
-      events: (draft.draftEvents !== null ? draft.draftEvents : prev?.events) || [],
+      events: (keepEvents !== null && keepEvents !== undefined ? keepEvents : prev?.events) || [],
     }))
-    draft.applyDraftEdit(nextEvents || [])
-    return { ok: true, errors: [] }
+    return { ok: true, errors: [], nextEvents: nextEvents || [] }
   }
 
   const logAction = (entryOrEntries) => {
@@ -299,11 +288,6 @@ export function useSupabaseRosterProvider() {
     error,
     loading,
     hasGenerated,
-    draftEvents: draft.draftEvents,
-    effectiveEvents: draft.effectiveEvents,
-    hasUncommitted: draft.hasUncommitted,
-    canUndo: draft.canUndo,
-    canRedo: draft.canRedo,
     actionLog,
     permissions,
     // Admin surface (production only).
@@ -329,15 +313,12 @@ export function useSupabaseRosterProvider() {
     listInvites,
     revokeInvite,
 
+    // CRUD actions (draft/undo/commit are owned by the Session layer above)
     importData,
     clearData,
-    updateEvents,
-    replaceData,
+    saveEvents,
+    replaceDocument,
     logAction,
-    undo: draft.undo,
-    redo: draft.redo,
-    commitDraft: draft.commit,
-    discardDraft: draft.discard,
     setError,
   }
 }

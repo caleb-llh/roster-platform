@@ -84,14 +84,22 @@
  *
  * @property {(yamlText: string) => Promise<MutationResult>} importData
  * @property {() => Promise<void>} clearData
- * @property {(events: any[]) => Promise<MutationResult>} updateEvents
- * @property {(parsedData: any) => Promise<MutationResult>} replaceData
+ * @property {(events: any[]) => Promise<MutationResult>} saveEvents  Persist committed
+ *   events (the "binding"). Called by the Session layer on commit — CRUD only.
+ * @property {(parsedData: any, keepEvents: any[]) => Promise<MutationResult & {nextEvents: any[]}>} replaceDocument
+ *   Replace the non-event document, keeping `keepEvents`; returns the parsed
+ *   document's events as `nextEvents` for the Session layer to route through the draft.
  * @property {(entryOrEntries: any) => void} logAction
+ * @property {(error: any) => void} setError
+ *
+ * The following keys are added by the SESSION layer (`useSession`), which wraps
+ * a provider. They are NOT part of the pure-CRUD provider surface:
+ * @property {(events: any[]) => Promise<MutationResult>} updateEvents  Edit → draft.
+ * @property {(parsedData: any) => Promise<MutationResult>} replaceData  YAML editor edit.
  * @property {() => boolean} undo             Undo one edit within the draft.
  * @property {() => boolean} redo             Redo one undone edit.
  * @property {() => Promise<MutationResult>} commitDraft   Persist the draft (the "binding").
  * @property {() => void} discardDraft        Drop the uncommitted draft.
- * @property {(error: any) => void} setError
  */
 
 /**
@@ -105,35 +113,56 @@ export const LOCAL_PERMISSIONS = Object.freeze({
 })
 
 /**
- * The exact set of keys every provider's returned object must expose — the
- * machine-checkable form of the `RosterProvider` typedef above. It is the single
- * source of truth for the contract's *shape*: the conformance test
- * (`providerContract.test.js`) renders both the local and Supabase providers and
- * asserts each returns exactly these keys, so the two backends cannot drift out
- * of interchangeability without a test failing.
+ * The exact set of keys every PROVIDER's returned object must expose — the pure
+ * CRUD storage surface. A provider owns the committed document and knows how to
+ * persist events (`saveEvents`) and swap the non-event document
+ * (`replaceDocument`), but it is timeless: it has NO draft/undo/redo overlay and
+ * no edit command surface. That is the Session layer's job (see below).
  *
- * Grouped by concern (the groups are documentation only — the surface is still a
- * flat object today). NOTE: the `draft/session` group is draft/commit/undo state
- * that architecturally belongs to the Session layer, not the Provider; it appears
- * here because the providers still wrap `useDraftHistory` internally. Lifting that
- * group out (providers → pure CRUD, Session above) is the deferred inversion from
- * overhaul step 6 and is the real structural simplification of this shape — see
- * specs/architecture-overhaul.plan.md.
+ * The conformance test renders both the local and Supabase providers and asserts
+ * each returns exactly these keys, so the two backends cannot drift out of
+ * interchangeability without a test failing.
  *
  * @type {readonly string[]}
  */
-export const ROSTER_PROVIDER_KEYS = Object.freeze([
+export const PROVIDER_KEYS = Object.freeze([
   // document
   'data', 'originalData', 'error', 'loading', 'hasGenerated', 'actionLog',
-  // draft/session (belongs to Session; still provider-embedded — see note above)
-  'draftEvents', 'effectiveEvents', 'hasUncommitted', 'canUndo', 'canRedo',
-  'undo', 'redo', 'commitDraft', 'discardDraft',
   // tenant/selection
   'teams', 'activeTeamId', 'activeTeamName', 'memberTeams', 'externalAssignments',
   'selectTeam', 'rosters', 'activeRosterId', 'selectRoster',
   // admin/membership
   'role', 'permissions', 'createRoster', 'listMembers', 'setMemberRole',
   'removeMember', 'inviteMember', 'listInvites', 'revokeInvite',
-  // document actions
-  'importData', 'clearData', 'updateEvents', 'replaceData', 'logAction', 'setError',
+  // CRUD document actions
+  'importData', 'clearData', 'saveEvents', 'replaceDocument', 'logAction', 'setError',
+])
+
+/**
+ * The keys the SESSION layer (`useSession`) adds on top of a provider: the
+ * draft/commit + undo/redo overlay and the edit command surface. Together with
+ * `PROVIDER_KEYS` these form the full composed surface (`ROSTER_PROVIDER_KEYS`)
+ * that the UI consumes via `useRosterData`.
+ *
+ * @type {readonly string[]}
+ */
+export const SESSION_KEYS = Object.freeze([
+  // draft/history overlay
+  'draftEvents', 'effectiveEvents', 'hasUncommitted', 'canUndo', 'canRedo',
+  'undo', 'redo', 'commitDraft', 'discardDraft',
+  // edit commands (orchestrate the draft on top of provider CRUD)
+  'updateEvents', 'replaceData',
+])
+
+/**
+ * The full composed surface returned by `useRosterData` (provider + Session).
+ * This is the machine-checkable form of the `RosterProvider` typedef above and
+ * is what components depend on. The conformance test asserts that
+ * `useSession(provider)` returns exactly these keys.
+ *
+ * @type {readonly string[]}
+ */
+export const ROSTER_PROVIDER_KEYS = Object.freeze([
+  ...PROVIDER_KEYS,
+  ...SESSION_KEYS,
 ])

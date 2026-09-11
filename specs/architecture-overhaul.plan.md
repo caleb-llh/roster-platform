@@ -307,9 +307,14 @@ about whether a roster is legal:
 
 Two history scopes exist today and must not be conflated: `useDraftHistory.js`
 (edit history) vs. the draft→commit boundary. Both are Session concerns.
-**`useDraftHistory.js` currently lives under `data/` (provider layer) — the
-overhaul moves it to the Session layer** (`hooks/` or a `session/` module),
-leaving `data/` as pure providers.
+`useDraftHistory.js` lives under `session/`, and the draft/commit + undo/redo
+overlay is owned by [`useSession.js`](../src/session/useSession.js), which
+**wraps** a provider. The providers are **pure CRUD** (`saveEvents`,
+`replaceDocument`) with no draft state; `useRosterData` composes
+`useSession(provider)`. Session detects a "new committed document" (import /
+clear / roster or team switch / background load) by the provider's `originalData`
+reference changing and resets the draft then — a `saveEvents` commit leaves
+`originalData` untouched, so the history stacks survive a commit.
 
 ### Generation runs *on* the Session's State — it doesn't live there
 
@@ -724,22 +729,26 @@ and updates the owning spec:
 5. **✅ DONE — Split `understudy.js` by kind**: vocabulary → `schema/understudyRoles.js`,
    policy → `rules/understudyPolicy.js`, leaving seeding/promotion phases in `generation/`.
    Cleared steps 1/3/4's residual coupling. Updated [understudy.md](understudy.md).
-6. **✅ DONE (file-move scope) — Extract `session/`**: moved `useDraftHistory.js`
-   out of `data/` into `session/` (git mv, rewired the 2 provider imports), naming
-   the Session concern and leaving `data/`'s folder cleaner. **Not yet** the full
-   inversion: draft/commit/undo is still invoked *inside* both providers (they wrap
-   `useDraftHistory`), so Session does not yet sit *above* Provider. Hoisting it
-   (providers → pure CRUD; Session calls down; UI calls the command surface) folds
-   into step 7. **Defer** the internal `session/commands` vs. `session/store` split
-   until authz-at-the-surface or the first write-integration lands (see "Resolved:
-   the session split").
-7. **✅ DONE (proof scope) — Formalize the `RosterProvider` CRUD contract**: exported
-   `ROSTER_PROVIDER_KEYS` as the contract's single source of truth and added a
-   conformance test that renders *both real providers* and asserts each returns
-   exactly those keys, so local/Supabase are *provably* interchangeable. The
-   adapter's `toState`/`toDocument` transform rename rides along with step 9; the
-   structural simplification (lifting the draft group off the provider surface) is
-   the step-6 Session inversion, still deferred. (Recorded in [architecture.md](architecture.md), which owns the provider contract.)
+6. **✅ DONE — Extract `session/` and lift it above the provider**: moved
+   `useDraftHistory.js` out of `data/` into `session/` (git mv), then completed the
+   **full inversion**: added [`useSession.js`](../src/session/useSession.js) which
+   **wraps** a provider and owns the draft/commit + undo/redo overlay plus the
+   `updateEvents`/`replaceData` command surface. Providers are now **pure CRUD** —
+   they expose `saveEvents`/`replaceDocument` and no longer touch drafts; Session
+   sits *above* Provider and calls `saveEvents` on commit. `useRosterData` composes
+   `useSession(provider)`, so the UI's flat surface is unchanged. **Defer** the
+   internal `session/commands` vs. `session/store` split until authz-at-the-surface
+   or the first write-integration lands (see "Resolved: the session split").
+7. **✅ DONE — Formalize the `RosterProvider` CRUD contract**: split the contract
+   into `PROVIDER_KEYS` (pure CRUD storage surface) + `SESSION_KEYS` (draft/history
+   + edit commands the Session adds), with `ROSTER_PROVIDER_KEYS = [...PROVIDER_KEYS,
+   ...SESSION_KEYS]` as the full composed surface. The conformance test renders
+   *both real providers* and asserts each returns exactly `PROVIDER_KEYS`, plus
+   asserts `useSession(provider)` returns exactly `ROSTER_PROVIDER_KEYS` — so both
+   the backends and the Session composition are *provably* correct. The structural
+   simplification (lifting the draft group off the provider surface) is done as part
+   of the step-6 Session inversion above. The adapter's `toState`/`toDocument`
+   transform rename rides along with step 9. (Recorded in [architecture.md](architecture.md), which owns the provider contract.)
 8. **✅ Tidy periphery** (sub-committed): **8a ✅** promoted
    `rosterGenerator/` → top-level `src/generation/` (a module, not a util). **8b ✅**
    moved the read-model views (`rosterStats`, `availabilityUtils`, `distributionUtils`)
@@ -778,10 +787,11 @@ goes red.
 | 3 — extract `state/` | ✅ done | `be74f5f` | 400 pass | ~~adapter + `documentValidation` import understudy vocabulary from `../utils/understudy`~~ **cleared by step 5** (now import `schema/understudyRoles.js`). The AGENTS-mandated `rosterSchema.js` test-data constants are honoured. |
 | 4 — split evaluation/generation | ✅ done | `b9c012a` | 400 pass | ~~`evaluation/` imports understudy from `../utils/understudy`~~ **cleared by step 5** (now `schema/understudyRoles.js` + `rules/understudyPolicy.js`). `evaluateState` (whole-roster judge) still lives inside `generation/index.js`. **Step 8a decision:** it stayed put during the `rosterGenerator/`→`generation/` rename — it is a *private* local-search objective (not an exported judge), tightly coupled to the generator's scoring internals, so hoisting it into `evaluation/` would mean exporting + untangling it, i.e. scope creep beyond a folder move. Deferred: fold it into `evaluation/` only if/when it needs to be reused outside the generator. |
 | 5 — split `understudy.js` by kind | ✅ done | `d59f896` | 400 pass (24 files) | **debt-clearing step.** `understudy.js` split: vocabulary → `schema/understudyRoles.js`, policy → `rules/understudyPolicy.js` (policy imports vocab — correct Rules→Schema direction). Old `utils/understudy.js`+test deleted; test split to match. No `utils/understudy` importers remain, so steps 1/3/4's coupling is gone. `UNDERSTUDY_SUFFIX` stays vocabulary-internal (no external importer). Seeding/promotion **phases** already live in `generation/` and were untouched. |
-| 6 — extract `session/` | ✅ done | `5626b91` | 400 pass (24 files) | **file-move scope only.** `useDraftHistory.js`(+test) moved `data/`→`session/` (git mv), the 2 provider imports rewired. This *names* the Session concern and cleans `data/`'s folder. **Deferred debt:** the draft/undo/commit logic is still called *inside* both providers (`useLocalRosterProvider`/`useSupabaseRosterProvider` wrap `useDraftHistory` and merge the draft into their returned surface), not by the UI — so Session is not yet *above* Provider as the model prescribes. Hoisting Session above the providers (providers become pure CRUD; Session calls down) folds into **step 7** (provider CRUD contract), which is the natural place to invert it. Internal `commands`/`store` split still deferred (see Resolved). |
-| 7 — provider CRUD contract | ✅ done (proof scope) | `073861e` | 403 pass (25 files, +3 conformance) | **contract-proof scope only** (chosen over restructuring the shape). Exported `ROSTER_PROVIDER_KEYS` in `providerContract.js` as the single source of truth for the surface; `providerContract.test.jsx` renders *both real providers* (Supabase inert with no env) and asserts each returns exactly those keys — interchangeability is now machine-checked. Updated [architecture.md](architecture.md). **Deferred debt (carried from step 6):** the `draft/session` key group still lives on the provider surface; the real structural *simplification* is lifting it out (providers → pure CRUD, Session above), not nesting the flat bag now — nesting would churn every call site and collide with that lift. The adapter-rename half of this step (`getDerivedState`→`toState`, `resolveDerivedState`→`resolveState`) landed with step 9. |
+| 6 — extract `session/` | ✅ done | `5626b91`; lift `3bba88a` | 404 pass (25 files) | ~~**Deferred debt:** draft/undo/commit still called *inside* both providers, so Session not yet above Provider.~~ **RESOLVED by the Session lift** (`3bba88a`): added `session/useSession.js` which wraps a provider and owns the draft/commit + undo/redo overlay + the `updateEvents`/`replaceData` commands; providers are now pure CRUD (`saveEvents`/`replaceDocument`), and `useRosterData` composes `useSession(provider)`. Session sits *above* Provider as the model prescribes. Internal `commands`/`store` split still deferred (see Resolved). |
+| 7 — provider CRUD contract | ✅ done | `073861e`; split `3bba88a` | 404 pass (25 files) | ~~**Deferred debt (from step 6):** the `draft/session` key group still lives on the provider surface.~~ **RESOLVED by the Session lift** (`3bba88a`): the contract is now split into `PROVIDER_KEYS` (pure CRUD) + `SESSION_KEYS` (draft/history + edit commands), `ROSTER_PROVIDER_KEYS = [...PROVIDER_KEYS, ...SESSION_KEYS]`. Conformance test asserts each provider returns exactly `PROVIDER_KEYS` and `useSession(provider)` returns exactly `ROSTER_PROVIDER_KEYS`. The adapter-rename half landed with step 9. |
+| 6/7 — Session lift (inversion) | ✅ done | `3bba88a` | 404 pass (25 files, +1 composition) | The structural inversion both prior steps deferred. Providers → pure CRUD; `useSession` composes the draft/command surface above them. **Judgment call:** the draft-reset that used to happen synchronously inside `applyDoc`/`importData`/`selectRoster` is now a single `useEffect` in `useSession` keyed on the provider's `originalData` reference (the one signal common to all load/import/clear/select paths *and* the only one available for the provider-internal background `loadRosters`). Trade-off: a one-tick lag between a new document loading and the draft resetting, vs. the old synchronous reset — acceptable because a fresh load rarely coexists with a live draft, and it unifies all reset paths through one mechanism. A future `specs/session.md` should own the Session command-surface + draft/commit contract in full (currently split across [data-layer.md](data-layer.md) + [architecture.md](architecture.md)). |
 | 8 — tidy periphery | ✅ done | 8a `127ec27`; 8b `a779dc6`; 8c-i `cf44783`; 8c-ii `a7efdb7`; 8d `872817f` | 403 pass (25 files) | **Sub-committed** (too big for one commit). **8a:** `rosterGenerator/` → `src/generation/`. **8b:** read-model views → `src/readmodel/`. **8c-i:** the *genuinely generic* helpers `calendarUtils` + `dataExport` (leaf, no relative imports) → `src/lib/`; 4 importers rewired. **8c-ii:** `statsTheme.js` is the **misnamed design-system** token module → renamed to `designSystem.js` and rehomed with `colorUtils` (role-colour palette = colour policy) + the lint guard + both tests into a new `src/design/` folder; ~20 importers rewired (14 `statsTheme`, 6 `colorUtils`), lint-guard internal path/allowlist refs fixed, [design-system.md](design-system.md) + [architecture.md](architecture.md) + this plan updated. **8d:** `telegram.js` (root) → `src/integrations/` (git mv; no relative imports, one importer `main.jsx` rewired) — it's a **read-only** integration today (viewport/theme mirroring), so there was no write path to split; the future bot write path (actor on the session command surface) stays foreshadowed in [architecture.md](architecture.md). **8c decision:** `bulkClear` **stays** in `utils/` — it's *domain* (roster/slot shape, produces one draft edit + undo step), a session-command helper bound for `session/` when the command surface lands, not a `lib/` generic. |
-| 9 — vocabulary rename | ⬜ rides along (in progress) | 9-adapter `cf2c26c` | 403 pass (25 files) | not a standalone commit. **Pulled forward:** the `state/` adapter + `documentValidation` now name their inbound param `document` (not `data`), so the Document→State boundary reads in the code. **Adapter transform rename (this commit):** `getDerivedState` → `toState`, `resolveDerivedState` → `resolveState` (the naming table prescribes the verb-free `toState`-family; `resolveState` names the aggregator that adds the cross-team `externalAssignments`). `resolveTenant` keeps its name (it's the tenant-flatten half, already a transform verb). Rewired App.jsx (2 call sites) + the full `derivedState.test.js` suite (~50) + comment refs in `tenantResolver.js`/`rosterDefaults.js`/`availabilityUtils.test.js`; updated [data-layer.md](data-layer.md) + [multi-tenant.md](multi-tenant.md). *Lesson (earlier):* a blind `data`→`document` also rewrote a user-facing error string (`'YAML data is empty or invalid'`); reverted — renames must not change display text. |
+| 9 — vocabulary rename | ⬜ rides along (in progress) | 9-adapter `d437eae` | 403 pass (25 files) | not a standalone commit. **Pulled forward:** the `state/` adapter + `documentValidation` now name their inbound param `document` (not `data`), so the Document→State boundary reads in the code. **Adapter transform rename (this commit):** `getDerivedState` → `toState`, `resolveDerivedState` → `resolveState` (the naming table prescribes the verb-free `toState`-family; `resolveState` names the aggregator that adds the cross-team `externalAssignments`). `resolveTenant` keeps its name (it's the tenant-flatten half, already a transform verb). Rewired App.jsx (2 call sites) + the full `derivedState.test.js` suite (~50) + comment refs in `tenantResolver.js`/`rosterDefaults.js`/`availabilityUtils.test.js`; updated [data-layer.md](data-layer.md) + [multi-tenant.md](multi-tenant.md). *Lesson (earlier):* a blind `data`→`document` also rewrote a user-facing error string (`'YAML data is empty or invalid'`); reverted — renames must not change display text. |
 | 10 — enforce the graph | ⬜ optional | — | — | the CI gate that makes all above debt un-reintroducible. |
 
 **Baseline before the overhaul:** 392 tests, `npm run build` green (commit `5bb41c8`).
