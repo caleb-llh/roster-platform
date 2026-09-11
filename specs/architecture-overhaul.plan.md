@@ -785,18 +785,38 @@ and updates the owning spec:
     CI on an arrow pointing the wrong way (e.g. `rules/` importing `evaluation/`,
     or the core importing `session/`/`data/`).
 
-> **Follow-on (post-overhaul, behaviour change): per-action command surface.** The
-> target model (§"The command surface — one vocabulary, many callers") wants the
-> Session to expose evaluation-gated domain commands (`assign`/`unassign`/`swap`/
-> `generate`), each of which can be **rejected** by Evaluation, so a UI click and an
-> inbound bot command are true peers through one gate. Today the domain mutations live
-> in `App.jsx` handlers that compute `nextEvents` and funnel through the generic
-> `stageEvents`; nothing is rejectable at the command layer. Reaching the target means
-> **moving that mutation logic down into `session/` and wiring the Evaluation gate** —
-> new behaviour, not a rename — so it is explicitly deferred out of this overhaul (which
-> is "pure structure/renaming; every step behaviour-preserving", see *Explicitly OUT of
-> scope*). This is the cleanest end-state and the intended direction; it just isn't one
-> of the 10 structural steps.
+11. **✅ (done — the one behaviour change) Per-action command surface.** The
+    target model (§"The command surface — one vocabulary, many callers") wants the
+    Session to expose domain commands (`assign`/`addSlot`/`removeSlot`/`swap`/
+    `clearGenerated`/`bulkClear`/`generate`), each carrying an Evaluation **verdict**,
+    so a UI click and an inbound bot command are true peers through one gate. Before
+    this step the domain mutations lived in `App.jsx` handlers that compute `nextEvents`
+    and funnel through the generic `stageEvents`; nothing carried a verdict at the
+    command layer. This step moves the pure mutation into `session/commands.js` and
+    surfaces a verdict. **Decisions (locked with the user):**
+    - **Per-action commands** (not a generic `stageEvents` escape hatch) — one command
+      per user action, so the gate attaches to a named action.
+    - **Warn-still-apply gate** for the actions that had *no* gate before (assign / addSlot
+      / removeSlot / clearGenerated / bulkClear): the command still applies, but returns a
+      **warning** verdict (reusing `validateEventAssignments` — the one authority — over the
+      affected events) that the UI surfaces as a notice. This **preserves the intentional
+      manual-override freedom** (a coordinator may knowingly place an unavailable member)
+      while making the rule verdict visible. It is a real behaviour change: those edits now
+      produce a warning where before they were silent.
+    - **`swap` keeps its existing HARD reject** (`explainSwap`): a swap that violates
+      feasibility is still blocked with a reason, exactly as before — not downgraded to a
+      warning, since that behaviour predates this step and users rely on it.
+    - Commands are **pure** (`(state, args) → { nextEvents, verdict, logEntry }`); `useSession`
+      derives `state` from `toState({ ...provider.data, events: effectiveEvents })` +
+      `provider.externalAssignments`, wires the result to `applyDraftEdit`, and returns the
+      verdict/logEntry so App.jsx surfaces warnings + logs. Confirmation-dialog staging and
+      toast wording stay in the UI (view concerns), not in the command.
+    See [session.md](session.md) for the command contract.
+
+> Historical note: this step was originally deferred as a post-overhaul follow-on
+> ("pure structure/renaming; every step behaviour-preserving"). It was later pulled
+> into the overhaul by explicit user decision — hence it is the single documented
+> behaviour-changing step (see *Explicitly OUT of scope*).
 
 Steps 1–2 alone deliver most of the clarity; 3–10 are follow-ons. Step 9 is not a
 standalone commit — renaming rides along with each file's move so the tree never
@@ -822,8 +842,9 @@ goes red.
 | 6/7 — Session lift (inversion) | ✅ done | `159a55f` | 404 pass (25 files, +1 composition) | The structural inversion both prior steps deferred. Providers → pure CRUD; `useSession` composes the draft/command surface above them. **Judgment call:** the draft-reset that used to happen synchronously inside `applyDoc`/`importData`/`selectRoster` is now a single `useEffect` in `useSession` keyed on the provider's `originalData` reference (the one signal common to all load/import/clear/select paths *and* the only one available for the provider-internal background `loadRosters`). Trade-off: a one-tick lag between a new document loading and the draft resetting, vs. the old synchronous reset — acceptable because a fresh load rarely coexists with a live draft, and it unifies all reset paths through one mechanism. A future `specs/session.md` should own the Session command-surface + draft/commit contract in full (currently split across [data-layer.md](data-layer.md) + [architecture.md](architecture.md)). |
 | 8 — tidy periphery | ✅ done | 8a `127ec27`; 8b `a779dc6`; 8c-i `cf44783`; 8c-ii `a7efdb7`; 8d `872817f` | 403 pass (25 files) | **Sub-committed** (too big for one commit). **8a:** `rosterGenerator/` → `src/generation/`. **8b:** read-model views → `src/readmodel/`. **8c-i:** the *genuinely generic* helpers `calendarUtils` + `dataExport` (leaf, no relative imports) → `src/lib/`; 4 importers rewired. **8c-ii:** `statsTheme.js` is the **misnamed design-system** token module → renamed to `designSystem.js` and rehomed with `colorUtils` (role-colour palette = colour policy) + the lint guard + both tests into a new `src/design/` folder; ~20 importers rewired (14 `statsTheme`, 6 `colorUtils`), lint-guard internal path/allowlist refs fixed, [design-system.md](design-system.md) + [architecture.md](architecture.md) + this plan updated. **8d:** `telegram.js` (root) → `src/integrations/` (git mv; no relative imports, one importer `main.jsx` rewired) — it's a **read-only** integration today (viewport/theme mirroring), so there was no write path to split; the future bot write path (actor on the session command surface) stays foreshadowed in [architecture.md](architecture.md). **8c decision:** `bulkClear` **stays** in `utils/` — it's *domain* (roster/slot shape, produces one draft edit + undo step), a session-command helper bound for `session/` when the command surface lands, not a `lib/` generic. |
 | 9 — vocabulary rename | ⬜ rides along (in progress) | 9-adapter `d437eae` | 403 pass (25 files) | not a standalone commit. **Pulled forward:** the `state/` adapter + `documentValidation` now name their inbound param `document` (not `data`), so the Document→State boundary reads in the code. **Adapter transform rename (this commit):** `getDerivedState` → `toState`, `resolveDerivedState` → `resolveState` (the naming table prescribes the verb-free `toState`-family; `resolveState` names the aggregator that adds the cross-team `externalAssignments`). `resolveTenant` keeps its name (it's the tenant-flatten half, already a transform verb). Rewired App.jsx (2 call sites) + the full `derivedState.test.js` suite (~50) + comment refs in `tenantResolver.js`/`rosterDefaults.js`/`availabilityUtils.test.js`; updated [data-layer.md](data-layer.md) + [multi-tenant.md](multi-tenant.md). *Lesson (earlier):* a blind `data`→`document` also rewrote a user-facing error string (`'YAML data is empty or invalid'`); reverted — renames must not change display text. |
-| 9 — session command rename | ⬜ rides along (in progress) | 9-commands `9e11c81` | 404 pass (25 files) | Session edit commands renamed to command vocabulary: `updateEvents` → `stageEvents`, `replaceData` → `stageDocument` ([useSession.js](../src/session/useSession.js), `SESSION_KEYS` + typedef in [providerContract.js](../src/data/providerContract.js), 7 call sites + 2 comments in App.jsx, [architecture.md](architecture.md) / [data-layer.md](data-layer.md) / [events-ui.md](events-ui.md)). Chose `stageEvents` over `applyDraftEdit` so the *surface command* doesn't collide with the internal `useDraftHistory` transition of that name. **Deliberately NOT renamed:** provider `saveEvents`/`replaceDocument` (they save different scopes — a single `saveDocument` would be *less* accurate, and they already read as CRUD). **Deferred as behaviour change:** splitting `stageEvents` into evaluation-gated per-action commands (`assign`/`swap`/…) — that is the post-overhaul follow-on, not a rename (see the follow-on note above §step 10). |
+| 9 — session command rename | ⬜ rides along (in progress) | 9-commands `ac31edf` | 404 pass (25 files) | Session edit commands renamed to command vocabulary: `updateEvents` → `stageEvents`, `replaceData` → `stageDocument` ([useSession.js](../src/session/useSession.js), `SESSION_KEYS` + typedef in [providerContract.js](../src/data/providerContract.js), 7 call sites + 2 comments in App.jsx, [architecture.md](architecture.md) / [data-layer.md](data-layer.md) / [events-ui.md](events-ui.md)). Chose `stageEvents` over `applyDraftEdit` so the *surface command* doesn't collide with the internal `useDraftHistory` transition of that name. **Deliberately NOT renamed:** provider `saveEvents`/`replaceDocument` (they save different scopes — a single `saveDocument` would be *less* accurate, and they already read as CRUD). **Deferred as behaviour change:** splitting `stageEvents` into evaluation-gated per-action commands (`assign`/`swap`/…) — that is the post-overhaul follow-on, not a rename (see the follow-on note above §step 10). |
 | 10 — enforce the graph | ⬜ optional | — | — | the CI gate that makes all above debt un-reintroducible. |
+| 11 — per-action command surface | ✅ done | `04c28d6` | 415 pass (26 files, +11 commands.test) | **The one behaviour change.** Pulled in by explicit user decision. Pure per-action commands ([`session/commands.js`](../src/session/commands.js)): `assign`/`addSlot`/`removeSlot`/`swap`/`clearGenerated`/`bulkClear`, each `(state, args) → { ok, reason, nextEvents, verdict:{warnings}, logEntry, ... }`. Wired in [`useSession.js`](../src/session/useSession.js) via `runCommand(fn)` (permission-gate → apply to draft → return verdict), with a `{ preview }` mode that computes-without-applying for the confirmation-staged actions (swap/removeSlot/clearGenerated/bulkClear) — replacing an earlier apply-then-undo hack. App.jsx handlers now call the commands and surface `verdict.warnings` via a new amber toast; the confirmation-dialog staging + log prose stay in the UI. Contract: 6 new keys added to `SESSION_KEYS` + typedef ([providerContract.js](../src/data/providerContract.js)); conformance test asserts them. **Gate policy** (see [session.md](session.md)): warn-still-apply for the previously-ungated actions (preserves intentional manual override; makes the verdict visible via the shared `validateEventAssignments`); `swap` keeps its pre-existing hard reject (`explainSwap`). New spec [session.md](session.md) owns the command surface + gate policy; [specs/README.md](README.md) map + planned-spec list updated. **Residual debt:** none new. `state/` vocabulary tidy (`writeBackEvents` actor verb, missing `toDocument` export, private-judge naming) and step 10's CI graph gate remain deferred. |
 
 **Baseline before the overhaul:** 392 tests, `npm run build` green (commit `5bb41c8`).
 
@@ -865,8 +886,12 @@ above are cross-referenced; newly-accounted items are called out.
 ### Explicitly OUT of scope
 
 `todo.md`, `local/` (gitignored inputs), `dist/` (build output), `node_modules/`.
-Behaviour changes of any kind are out of scope — **this overhaul is pure
-structure/renaming; every step is behaviour-preserving and green.**
+
+Steps 1–10 are pure structure/renaming — every one is behaviour-preserving and
+green. **Step 11 (per-action command surface) is the one deliberate exception:**
+it was pulled into the overhaul by explicit decision and *does* change behaviour
+(new warn-verdicts on manual edits). It is called out as such in its own step and
+progress row; the "behaviour-preserving" guarantee applies to steps 1–10.
 
 ## Specs & tests migration plan
 
@@ -886,7 +911,7 @@ not be 1:1, but every layer must have an owning spec, and no fact may live in tw
 | 3 `state/` + doc-validation | [data-layer.md](data-layer.md) | adapter=inbound port; the two-validators distinction; `data.warnings` |
 | 4 evaluation/generation split | [generation.md](generation.md) | judge vs. agent boundary |
 | 5 understudy split | [understudy.md](understudy.md) | vocabulary/policy/phases split by layer |
-| 6 `session/` | **new `specs/session.md`** (or a section in data-layer) | draft/commit/undo + command surface — **currently unspecified**; needs a home |
+| 6 `session/` | [session.md](session.md) | draft/commit/undo (deferred to [data-layer.md](data-layer.md)) + command surface + gate policy — **created at step 11** |
 | 7 provider CRUD contract | [data-layer.md](data-layer.md) | `RosterProvider` = CRUD; one shared adapter |
 | 8 readmodel/integrations/lib | **new `specs/integrations.md`** (planned) + [architecture.md](architecture.md) | read-model bright line (live, non-registry); read vs. write integrations; lib boundary |
 | 10 graph enforcement | [architecture.md](architecture.md) | the dependency-direction rule as an enforced invariant |
@@ -894,10 +919,11 @@ not be 1:1, but every layer must have an owning spec, and no fact may live in tw
 Spec housekeeping the overhaul must also do:
 - **Retire this file** once built: fold its now-true parts into `architecture.md`
   and delete the `.plan.md`, per the README's plan-doc convention.
-- **Update [specs/README.md](README.md)** — the map of which file owns what. The
-  two future specs (`session.md`, `integrations.md`) are already **foreshadowed**
-  in the README's "Planned specs" note; when each is created, move it from that
-  note into the map, and remove this plan's entry when it retires.
+- **Update [specs/README.md](README.md)** — the map of which file owns what.
+  `session.md` has been **created (step 11)** and moved into the map;
+  `integrations.md` remains foreshadowed in the README's "Planned specs" note.
+  When it is created, move it from that note into the map, and remove this plan's
+  entry when it retires.
 - **Move code-level detail beside code**, not in specs: e.g. `rosterGenerator`'s
   internals README travels with the folder to `generation/README.md`.
 

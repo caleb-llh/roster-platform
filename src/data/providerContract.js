@@ -96,6 +96,19 @@
  * a provider. They are NOT part of the pure-CRUD provider surface:
  * @property {(events: any[]) => Promise<MutationResult>} stageEvents  Command: stage an events edit into the draft.
  * @property {(parsedData: any) => Promise<MutationResult>} stageDocument  Command: stage a YAML-editor whole-document edit.
+ *
+ * Per-action domain commands (`session/commands.js`). Each derives its own state
+ * from the effective draft, applies the mutation, and returns a `verdict`
+ * (Evaluation warnings) alongside the applied result. `swap`/`removeSlot`/
+ * `clearGenerated`/`bulkClear` support a `{ preview }` option to compute-without-
+ * applying so the UI can stage a confirmation dialog. All are warn-still-apply
+ * except `swap`, which HARD-rejects an infeasible move via `explainSwap`.
+ * @property {(args: {eventDate: string, roleIndex: number, memberId: string|null}, opts?: {preview?: boolean}) => any} assign  Command: assign/clear a member in a slot.
+ * @property {(args: {eventDate: string, role: string}, opts?: {preview?: boolean}) => any} addSlot  Command: append a role slot to an event.
+ * @property {(args: {eventDate: string, roleIndex: number}, opts?: {preview?: boolean}) => any} removeSlot  Command: remove a role slot from an event.
+ * @property {(args: {source: any, target: any}, opts?: {preview?: boolean}) => any} swap  Command: swap/move two slots (hard-rejects infeasible moves).
+ * @property {(opts?: {preview?: boolean}) => any} clearGenerated  Command: clear all generated assignments.
+ * @property {(args: {selectedSlots: any}, opts?: {preview?: boolean}) => any} bulkClear  Command: clear a selected set of slots.
  * @property {() => boolean} undo             Undo one edit within the draft.
  * @property {() => boolean} redo             Redo one undone edit.
  * @property {() => Promise<MutationResult>} commitDraft   Persist the draft (the "binding").
@@ -150,8 +163,10 @@ export const SESSION_KEYS = Object.freeze([
   // draft/history overlay
   'draftEvents', 'effectiveEvents', 'hasUncommitted', 'canUndo', 'canRedo',
   'undo', 'redo', 'commitDraft', 'discardDraft',
-  // edit commands (orchestrate the draft on top of provider CRUD)
+  // whole-document commands (orchestrate the draft on top of provider CRUD)
   'stageEvents', 'stageDocument',
+  // per-action domain commands (pure mutation + Evaluation verdict)
+  'assign', 'addSlot', 'removeSlot', 'swap', 'clearGenerated', 'bulkClear',
 ])
 
 /**

@@ -7,8 +7,6 @@ import { toState } from './state/derivedState'
 import { computeRosterDiff } from './utils/rosterDiff'
 import { computeAvailabilityByRole } from './readmodel/availabilityUtils'
 import { useRosterData } from './hooks/useRosterData'
-import { explainSwap } from './evaluation/swapPolicy'
-import { buildBulkClear } from './utils/bulkClear'
 import { getActiveConstraints, getActivePreferences, getConstraintDescription, getPreferenceDescription, MEMBER_PREF_FIELDS } from './schema/rosterSchema'
 import { ErrorDisplay, GlassFab, HoverCard } from './components/SharedComponents'
 import MembersView from './components/MembersView'
@@ -18,7 +16,7 @@ import AlgorithmDescriptionModal from './components/AlgorithmDescriptionModal'
 import ChangeReviewPanel from './components/ChangeReviewPanel'
 import YamlDrawer from './components/YamlDrawer'
 import AdminModal from './components/AdminModal'
-import { headingPage, headingModal, glassModal, glassCard, modalBackdrop, btnDanger, btnPrimary, tabActive, tabInactive, monoChip, semanticError, glassPanel, draftBar, tierSection, zSticky, zPopover, zToast, zModal } from './design/designSystem'
+import { headingPage, headingModal, glassModal, glassCard, modalBackdrop, btnDanger, btnPrimary, tabActive, tabInactive, monoChip, semanticError, semanticWarning, glassPanel, draftBar, tierSection, zSticky, zPopover, zToast, zModal } from './design/designSystem'
 
 function App({ auth }) {
   // UI State
@@ -39,6 +37,7 @@ function App({ auth }) {
   const tabBarRef = useRef(null)
   const [tabBarHeight, setTabBarHeight] = useState(0)
   const [swapNotice, setSwapNotice] = useState(null)
+  const [editWarning, setEditWarning] = useState(null) // transient amber toast: a command applied but a rule verdict warns
   const [pendingSwap, setPendingSwap] = useState(null) // { nextEvents, logEntry, message } awaiting confirmation
   const [showChanges, setShowChanges] = useState(false) // expand the uncommitted-changes review list
   const [pendingRemoveSlot, setPendingRemoveSlot] = useState(null) // { nextEvents, prompt, message } awaiting confirmation
@@ -73,6 +72,12 @@ function App({ auth }) {
     clearData, 
     stageEvents,
     stageDocument,
+    assign,
+    addSlot,
+    removeSlot,
+    swap,
+    clearGenerated,
+    bulkClear,
     logAction,
     undo,
     redo,
@@ -332,122 +337,46 @@ function App({ auth }) {
     return () => ro.disconnect()
   }, [])
 
-  // Handle a manual roster slot edit from the Events view.
-  // memberId === null removes the current occupant; otherwise inserts/replaces.
-  const handleEditRosterSlot = (eventDate, roleIndex, memberId) => {
-    const nameOf = (id) => members.find(m => m.id === id)?.name || id || '—'
-    let logEntry = null
-
-    const nextEvents = events.map(event => {
-      if (event.date !== eventDate || !event.roster?.[roleIndex]) return event
-
-      const nextRoster = event.roster.map((slot, idx) => {
-        if (idx !== roleIndex) return slot
-
-        const previous = slot.member_id || null
-        const role = slot.role
-        const where = `${event.date} ${event.name} / ${role}`
-
-        if (!memberId) {
-          logEntry = {
-            level: 'info', category: 'delete', group: 'manual',
-            message: `Removed ${nameOf(previous)} from ${where}`,
-          }
-          const { isGenerated, ...rest } = slot
-          return { ...rest, member_id: null }
-        }
-
-        logEntry = previous
-          ? {
-              level: 'info', category: 'replace', group: 'manual',
-              message: `Replaced ${nameOf(previous)} with ${nameOf(memberId)} on ${where}`,
-            }
-          : {
-              level: 'info', category: 'insert', group: 'manual',
-              message: `Assigned ${nameOf(memberId)} to ${where}`,
-            }
-        return { ...slot, member_id: memberId, isGenerated: false }
-      })
-
-      return { ...event, roster: nextRoster }
-    })
-
-    // stageEvents records the pre-mutation snapshot for undo automatically.
-    stageEvents(nextEvents)
-    if (logEntry) logAction(logEntry)
+  // Surface a command's verdict: log its audit line and, if the warn-still-apply
+  // gate produced warnings, show them in a transient amber toast (the edit still
+  // applied — this is a heads-up, not a block). See specs/session.md.
+  const surfaceVerdict = (result) => {
+    if (result.logEntry) logAction(result.logEntry)
+    const warnings = result.verdict?.warnings || []
+    if (warnings.length) {
+      setEditWarning(warnings.join(' · '))
+      setTimeout(() => setEditWarning(null), 5000)
+    }
   }
 
-  // Handle a drag-and-drop swap between two roster slots.
-  // Swaps the two occupants (or moves one into an empty slot) only if both
-  // resulting assignments are valid: role compatibility, date availability,
-  // and no duplicate member within the same event.
+  // Handle a manual roster slot edit from the Events view.
+  // memberId === null removes the current occupant; otherwise inserts/replaces.
+  // The pure mutation + rule verdict live in the `assign` session command; this
+  // handler only surfaces the verdict (log + any warning toast).
+  const handleEditRosterSlot = (eventDate, roleIndex, memberId) => {
+    const result = assign({ eventDate, roleIndex, memberId })
+    surfaceVerdict(result)
+  }
+
+  // Handle a drag-and-drop swap between two roster slots. The `swap` command
+  // enforces feasibility with a HARD reject (role compatibility, availability,
+  // once-per-event, no clash); an infeasible swap is blocked with a reason. A
+  // valid swap is loss-ful (rewrites two occupants), so it is staged for
+  // confirmation rather than applied immediately — the command's `preview`
+  // carries the before/after occupants for the dialog.
   const handleSwapRosterSlots = (source, target) => {
-    if (
-      source.eventDate === target.eventDate &&
-      source.roleIndex === target.roleIndex
-    ) return
-
-    const memberById = (id) => members.find(m => m.id === id)
-    const nameOf = (id) => memberById(id)?.name || id || '—'
-
-    const eventA = events.find(e => e.date === source.eventDate)
-    const eventB = events.find(e => e.date === target.eventDate)
-    if (!eventA || !eventB) return
-
-    const slotA = eventA.roster?.[source.roleIndex]
-    const slotB = eventB.roster?.[target.roleIndex]
-    if (!slotA || !slotB) return
-
-    const memberA = slotA.member_id || null
-    const memberB = slotB.member_id || null
-    if (!memberA && !memberB) return
-
-    const { ok, reason } = explainSwap({
-      memberA, memberB, eventA, eventB,
-      sourceIndex: source.roleIndex, targetIndex: target.roleIndex,
-      slotA, slotB, members, memberConstraints, allEvents: events,
-      externalAssignments,
-    })
-
-    if (!ok) {
-      setSwapNotice(reason || 'Invalid swap.')
+    const result = swap({ source, target }, { preview: true })
+    if (!result.nextEvents && result.ok) return // no-op (same slot / empty)
+    if (!result.ok) {
+      setSwapNotice(result.reason || 'Invalid swap.')
       setTimeout(() => setSwapNotice(null), 3000)
       return
     }
-
-    const nextEvents = events.map(event => {
-      if (event !== eventA && event !== eventB) return event
-      const nextRoster = event.roster.map((slot, idx) => {
-        const isSlotA = event === eventA && idx === source.roleIndex
-        const isSlotB = event === eventB && idx === target.roleIndex
-        if (isSlotA) {
-          if (!memberB) { const { isGenerated, ...rest } = slot; return { ...rest, member_id: null } }
-          return { ...slot, member_id: memberB, isGenerated: false }
-        }
-        if (isSlotB) {
-          if (!memberA) { const { isGenerated, ...rest } = slot; return { ...rest, member_id: null } }
-          return { ...slot, member_id: memberA, isGenerated: false }
-        }
-        return slot
-      })
-      return { ...event, roster: nextRoster }
-    })
-
-    const message =
-      memberA && memberB
-        ? `Swapped ${nameOf(memberA)} (${eventA.date}/${slotA.role}) ↔ ${nameOf(memberB)} (${eventB.date}/${slotB.role})`
-        : `Moved ${nameOf(memberA || memberB)} to ${(memberA ? eventB : eventA).date}/${(memberA ? slotB : slotA).role}`
-
-    // A swap rewrites two occupants at once (loss-ful), so stage it for
-    // confirmation instead of applying immediately. The payload carries the
-    // two slots' before/after occupants so the dialog can render a structured
-    // before→after card rather than a prose sentence.
+    // Valid but loss-ful — stage for confirmation; apply on confirmSwap.
     setPendingSwap({
-      nextEvents,
-      message,
-      isMove: !(memberA && memberB),
-      slotA: { date: eventA.date, role: slotA.role, before: nameOf(memberA), after: nameOf(memberB) },
-      slotB: { date: eventB.date, role: slotB.role, before: nameOf(memberB), after: nameOf(memberA) },
+      nextEvents: result.nextEvents,
+      logEntry: result.logEntry,
+      ...result.preview,
     })
   }
 
@@ -455,29 +384,16 @@ function App({ auth }) {
   const confirmSwap = () => {
     if (!pendingSwap) return
     stageEvents(pendingSwap.nextEvents)
-    logAction({ level: 'info', category: 'swap', group: 'manual', message: pendingSwap.message })
+    if (pendingSwap.logEntry) logAction(pendingSwap.logEntry)
     setPendingSwap(null)
   }
 
   // Add a new (unassigned) role requirement to an event. Non-destructive, so
-  // it applies immediately. Ignores roles already present on the event.
+  // it applies immediately via the `addSlot` command.
   const handleAddRosterSlot = (eventDate, role) => {
-    if (!role) return
-    let added = false
-    const nextEvents = events.map(event => {
-      if (event.date !== eventDate) return event
-      const roster = event.roster || []
-      if (roster.some(slot => slot.role === role)) return event // no duplicate roles
-      added = true
-      return { ...event, roster: [...roster, { role, member_id: null }] }
-    })
-    if (!added) return
-    const event = events.find(e => e.date === eventDate)
-    stageEvents(nextEvents)
-    logAction({
-      level: 'info', category: 'insert', group: 'manual',
-      message: `Added ${role} role to ${eventDate}${event ? ` ${event.name}` : ''}`,
-    })
+    const result = addSlot({ eventDate, role })
+    if (!result.nextEvents) return // no-op (duplicate / missing role)
+    surfaceVerdict(result)
   }
 
   // Apply the staged role-slot removal after the user confirms. Removing an
@@ -485,25 +401,29 @@ function App({ auth }) {
   const confirmRemoveSlot = () => {
     if (!pendingRemoveSlot) return
     stageEvents(pendingRemoveSlot.nextEvents)
-    logAction({ level: 'info', category: 'delete', group: 'manual', message: pendingRemoveSlot.message })
+    if (pendingRemoveSlot.logEntry) logAction(pendingRemoveSlot.logEntry)
+    if (pendingRemoveSlot.warnings?.length) {
+      setEditWarning(pendingRemoveSlot.warnings.join(' · '))
+      setTimeout(() => setEditWarning(null), 5000)
+    }
     setPendingRemoveSlot(null)
   }
 
   // Stage the removal of an entire role slot from an event for confirmation.
+  // The `removeSlot` command computes the result + verdict; the UI holds it
+  // pending (it does not apply until confirmRemoveSlot).
   const handleRemoveRosterSlot = (eventDate, roleIndex) => {
     const event = events.find(e => e.date === eventDate)
     const slot = event?.roster?.[roleIndex]
     if (!slot) return
-
+    const result = removeSlot({ eventDate, roleIndex }, { preview: true })
+    if (!result.nextEvents) return
     const nameOf = (id) => members.find(m => m.id === id)?.name || id
-    const nextEvents = events.map(e => {
-      if (e.date !== eventDate) return e
-      return { ...e, roster: e.roster.filter((_, idx) => idx !== roleIndex) }
-    })
-
     const occupant = slot.member_id ? ` (currently ${nameOf(slot.member_id)})` : ''
     setPendingRemoveSlot({
-      nextEvents,
+      nextEvents: result.nextEvents,
+      logEntry: result.logEntry,
+      warnings: result.verdict?.warnings || [],
       prompt: `Remove the ${slot.role} role?`,
       message: `Removes the ${slot.role} role from ${event.date} ${event.name}${occupant}.`,
     })
@@ -511,24 +431,17 @@ function App({ auth }) {
 
   // Clear all auto-generated assignments (slots tagged isGenerated), leaving
   // their role requirements in place but unassigned. Manual assignments are
-  // untouched. Staged for confirmation since it's destructive.
+  // untouched. Staged for confirmation since it's destructive — the
+  // `clearGenerated` command computes the result; the UI applies on confirm.
   const handleClearGenerated = () => {
-    let count = 0
-    const nextEvents = events.map(event => {
-      if (!event.roster?.some(s => s.isGenerated)) return event
-      const nextRoster = event.roster.map(slot => {
-        if (!slot.isGenerated) return slot
-        count++
-        const { isGenerated, ...rest } = slot
-        return { ...rest, member_id: null }
-      })
-      return { ...event, roster: nextRoster }
-    })
-    if (count === 0) return
+    const result = clearGenerated(undefined, { preview: true })
+    if (!result.nextEvents) return
     setPendingClearGenerated({
-      nextEvents,
-      count,
-      prompt: `Remove ${count} generated assignment${count > 1 ? 's' : ''}?`,
+      nextEvents: result.nextEvents,
+      count: result.count,
+      logEntry: result.logEntry,
+      warnings: result.verdict?.warnings || [],
+      prompt: `Remove ${result.count} generated assignment${result.count > 1 ? 's' : ''}?`,
       message: 'Clears every assignment tagged "generated", leaving the role slots empty. Manual assignments are kept.',
     })
   }
@@ -537,10 +450,7 @@ function App({ auth }) {
   const confirmClearGenerated = () => {
     if (!pendingClearGenerated) return
     stageEvents(pendingClearGenerated.nextEvents)
-    logAction({
-      level: 'info', category: 'delete', group: 'manual',
-      message: `Removed ${pendingClearGenerated.count} generated assignment${pendingClearGenerated.count > 1 ? 's' : ''}`,
-    })
+    if (pendingClearGenerated.logEntry) logAction(pendingClearGenerated.logEntry)
     setPendingClearGenerated(null)
   }
 
@@ -591,14 +501,16 @@ function App({ auth }) {
   }
 
   // Stage the bulk clear for confirmation (only slots that actually hold a
-  // member are counted; empty/unknown keys are ignored by buildBulkClear).
+  // member are counted; empty/unknown keys are ignored by the command).
   const handleBulkClear = () => {
-    const { nextEvents, count } = buildBulkClear(events, selectedSlots)
-    if (count === 0) return
+    const result = bulkClear({ selectedSlots }, { preview: true })
+    if (!result.nextEvents) return
     setPendingBulkClear({
-      nextEvents,
-      count,
-      prompt: `Clear ${count} assignment${count > 1 ? 's' : ''}?`,
+      nextEvents: result.nextEvents,
+      count: result.count,
+      logEntry: result.logEntry,
+      warnings: result.verdict?.warnings || [],
+      prompt: `Clear ${result.count} assignment${result.count > 1 ? 's' : ''}?`,
       message: 'Empties the selected assignments, leaving their role slots in place to re-fill. Nothing is deleted.',
     })
   }
@@ -607,10 +519,7 @@ function App({ auth }) {
   const confirmBulkClear = () => {
     if (!pendingBulkClear) return
     stageEvents(pendingBulkClear.nextEvents)
-    logAction({
-      level: 'info', category: 'delete', group: 'manual',
-      message: `Cleared ${pendingBulkClear.count} assignment${pendingBulkClear.count > 1 ? 's' : ''}`,
-    })
+    if (pendingBulkClear.logEntry) logAction(pendingBulkClear.logEntry)
     setPendingBulkClear(null)
     exitSelectMode()
   }
@@ -950,6 +859,14 @@ function App({ auth }) {
       {swapNotice && (
         <div className={`fixed bottom-20 left-1/2 ${zToast} -translate-x-1/2 rounded-lg px-4 py-2 text-sm shadow-lg ${semanticError}`}>
           {swapNotice}
+        </div>
+      )}
+      {/* Edit-warning toast (amber): a warn-still-apply command applied but a
+          rule verdict flagged something (e.g. member unavailable). Heads-up,
+          not a block — see specs/session.md. */}
+      {editWarning && (
+        <div className={`fixed bottom-20 left-1/2 ${zToast} -translate-x-1/2 max-w-md rounded-lg px-4 py-2 text-sm shadow-lg ${semanticWarning}`}>
+          {editWarning}
         </div>
       )}
       {/* Generation-complete toast (neutral; detail lives in the stats panel) */}

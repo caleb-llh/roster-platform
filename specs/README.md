@@ -21,6 +21,7 @@ understudy feature, re-read the relevant file below.
 | [architecture.md](architecture.md) | System architecture and **off-repo context** you can't learn from the code alone: the dual-mode data layer, the provider contract, the Supabase **data model**, OAuth setup, GitHub Pages deployment, the env-var mode switch, and a high-level generation-pipeline overview. (Authorization has its own file — see permissions.md.) |
 | [permissions.md](permissions.md) | The **authorization model** in one place: the `(actor, action, target)` principle, the **permission-role vs. team-role** invariant (governance vs. schedulable capability — must not be conflated), the current per-roster RBAC (client flags → RLS policies, DB-is-authority invariant), and the planned tenant-scoped `can(action, target)` model with its action matrix. |
 | [data-layer.md](data-layer.md) | The `event.roster` positional-array data structure, the draft/commit model (separate from undo/redo history), inline change review, and why roster statistics are recomputed live rather than read from a generation snapshot. |
+| [session.md](session.md) | The **Session command surface**: the pure per-action commands (`assign`/`addSlot`/`removeSlot`/`swap`/`clearGenerated`/`bulkClear`) that express every domain mutation once, the **warn-still-apply vs. swap-hard-reject gate policy**, the compute-without-applying `preview` mode for confirmation-staged actions, and the pure-command / hook-wiring / UI separation of concerns. (The draft/commit + undo/redo model it sits on top of lives in data-layer.md.) |
 | [generation.md](generation.md) | The generation algorithm's binding rules: generated-vs-locked slots, "generation only fills empty slots" (default) + `optimizeExisting`, consecutive-weekend avoidance as a Phase-2 objective term, the removed availability scorer, the **hard-constraint registry ("one authority, many consumers")** — the `CONSTRAINTS` list every consumer (generator, validator, swap, dropdown) reads instead of re-owning the rules — and determinism. Scoring weights and internals live in [`../src/utils/rosterGenerator/README.md`](../src/utils/rosterGenerator/README.md). |
 | [understudy.md](understudy.md) | The understudy/promotion feature end-to-end: the model, the two role-capability rules that must not be conflated, the understudy hard-constraint *domain rules* (min-sessions, cap=1, two-sided gate — enforced via the shared `CONSTRAINTS` registry, see generation.md), and the promotion-aware seeding and backtracking-planner phases. |
 | [design-system.md](design-system.md) | The look-and-feel spec: the `designSystem.js` token module, the named z-index scale, the `HoverCard` popup primitive, sticky-chrome stacking, the colour policy, the no-emoji rule, and the UI's calibrated typographic decisions. |
@@ -32,13 +33,14 @@ understudy feature, re-read the relevant file below.
 ### Planned specs (not yet created)
 
 The [architecture-overhaul.plan.md](architecture-overhaul.plan.md) refactor will,
-as it lands, introduce two new spec files that this map does not yet list because
-they do not yet exist:
+as it lands, introduce one further new spec file that this map does not yet list
+because it does not yet exist:
 
-- **`session.md`** — will own the draft/commit/undo model and the command surface
-  (currently unspecified; created at overhaul step 6).
 - **`integrations.md`** — will own the read-model bright line and the read-vs-write
   integrations split (created at overhaul step 8).
+
+(`session.md` was foreshadowed here too; it now exists and is listed in the map
+above.)
 
 When either file is created, add it to the map above and remove it from this list.
 When the overhaul completes, `architecture-overhaul.plan.md` folds into

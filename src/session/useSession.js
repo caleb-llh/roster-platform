@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useDraftHistory } from './useDraftHistory'
+import { toState } from '../state/derivedState'
+import * as commands from './commands'
 
 /**
  * The Session layer — the "time" layer that sits ABOVE a pure CRUD provider.
@@ -12,7 +14,13 @@ import { useDraftHistory } from './useDraftHistory'
  *  - It owns `useDraftHistory`, keyed off the provider's committed events.
  *  - It exposes the draft/history keys (`draftEvents`, `effectiveEvents`,
  *    `hasUncommitted`, `canUndo`, `canRedo`, `undo`, `redo`, `commitDraft`,
- *    `discardDraft`) and the edit commands (`stageEvents`, `stageDocument`).
+ *    `discardDraft`), the whole-document commands (`stageEvents`,
+ *    `stageDocument`), and the per-action domain commands (`assign`, `addSlot`,
+ *    `removeSlot`, `swap`, `clearGenerated`, `bulkClear`). Each per-action
+ *    command runs a pure function from `commands.js` against the effective
+ *    state, applies the result to the draft, and returns an Evaluation verdict
+ *    (see specs/session.md). `stageEvents` remains the generic apply used by the
+ *    generator (`generateRoster` produces events that are staged wholesale).
  *  - It resets the draft whenever a fresh committed document arrives (import,
  *    clear, roster/team switch, or a background load). That is detected by the
  *    provider's `originalData` reference changing — the providers set a new
@@ -70,6 +78,37 @@ export function useSession(provider) {
     return { ok: true, errors: [] }
   }
 
+  // The derived state a pure command consumes: the EFFECTIVE document (committed
+  // + uncommitted draft overlaid) run through the adapter, plus the provider's
+  // externalAssignments (person-global other-team load). Recomputed per call so
+  // a command always sees the latest draft.
+  const commandState = () => {
+    const effectiveData = provider.data
+      ? { ...provider.data, events: draft.effectiveEvents }
+      : provider.data
+    return { ...toState(effectiveData), externalAssignments: provider.externalAssignments }
+  }
+
+  // Run a pure command: check edit permission, apply its `nextEvents` to the
+  // draft, and return the command's verdict/logEntry/preview to the caller so
+  // the UI can surface warnings, write the audit line, and (for a loss-ful
+  // action like swap) stage a confirmation. A hard-rejected command
+  // (`ok: false`, e.g. an infeasible swap) is NOT applied.
+  //
+  // `preview` mode computes the same result WITHOUT applying it — used by the
+  // loss-ful/destructive actions (swap, removeSlot, clearGenerated, bulkClear)
+  // that the UI stages behind a confirmation dialog and only applies on confirm
+  // (via `stageEvents(result.nextEvents)`). This keeps "compute + verdict" in the
+  // command and "confirm UX" in the UI, without an apply/undo hack.
+  const runCommand = (fn) => (args, { preview = false } = {}) => {
+    if (!provider.permissions.canEditRoster) {
+      return { ok: false, reason: 'You do not have permission to edit.', nextEvents: null, verdict: { warnings: [] }, logEntry: null }
+    }
+    const result = fn(commandState(), args)
+    if (!preview && result.ok && result.nextEvents) draft.applyDraftEdit(result.nextEvents)
+    return result
+  }
+
   return {
     ...provider,
     // Draft / history overlay.
@@ -82,8 +121,16 @@ export function useSession(provider) {
     redo: draft.redo,
     commitDraft: draft.commit,
     discardDraft: draft.discard,
-    // Edit commands (orchestrate the draft on top of provider CRUD).
+    // Whole-document commands (orchestrate the draft on top of provider CRUD).
     stageEvents,
     stageDocument,
+    // Per-action domain commands (pure mutation + Evaluation verdict). Each
+    // returns { ok, reason, nextEvents, verdict:{warnings}, logEntry, ... }.
+    assign: runCommand(commands.assign),
+    addSlot: runCommand(commands.addSlot),
+    removeSlot: runCommand(commands.removeSlot),
+    swap: runCommand(commands.swap),
+    clearGenerated: runCommand(commands.clearGenerated),
+    bulkClear: runCommand(commands.bulkClear),
   }
 }
