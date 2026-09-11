@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { getAvailableMembersForEvent } from '../rules/constraintPrimitives'
 import { getCardColorForDay, formatDate } from '../utils/colorUtils'
-import { exportToYAML, downloadYAML } from '../utils/dataExport'
+import { exportToYAML, downloadYAML } from '../lib/dataExport'
 import RosterSlotPill from './RosterSlotPill'
 import { IssueSummary } from './SharedComponents'
 import { understudySlotRole, isUnderstudyRole, baseRoleOf } from '../schema/understudyRoles'
 import { slotKey } from '../utils/bulkClear'
-import { parseDayKey } from '../utils/calendarUtils'
+import { parseDayKey } from '../lib/calendarUtils'
 import { headingPage, glassMenu, glassCard, hoverRow, tierSection, semanticError, semanticWarning, glassPanel, zInCard, zSticky, zPopover } from '../utils/statsTheme'
 
 /**

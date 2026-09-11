@@ -3,7 +3,7 @@
 // the shared grab-bag. Reusable primitives/hooks stay in SharedComponents.jsx.
 import { useState } from 'react'
 import { monoChip, glassPanel, tierSection } from '../utils/statsTheme'
-import { expandUnavailableDays, monthsFromDays, monthGridCells, MONTH_LABEL, WEEKDAY_INITIALS } from '../utils/calendarUtils'
+import { expandUnavailableDays, monthsFromDays, monthGridCells, MONTH_LABEL, WEEKDAY_INITIALS } from '../lib/calendarUtils'
 
 /**
  * A minimalist month grid for member unavailability. Unavailable days are
