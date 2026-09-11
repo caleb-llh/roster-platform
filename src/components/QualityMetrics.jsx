@@ -4,7 +4,7 @@ import {
   spacingDotConcern,
   normalizeMetricRange,
   fullTrackConcernGradient,
-} from '../utils/distributionUtils.jsx'
+} from '../readmodel/distributionUtils.jsx'
 import { tierTitle, tierSection, tierUnit, helperText, glassCard, glassPopup, glassArrow } from '../utils/statsTheme'
 
 /**

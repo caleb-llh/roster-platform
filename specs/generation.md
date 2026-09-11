@@ -98,7 +98,7 @@ swap, and the dropdown ask the same rule set different questions. Adding/changin
 a constraint touches one descriptor, not one-per-consumer copies.**
 
 Not every place that mentions availability is a registry consumer. The
-**roster-stats availability chart** ([`computeAvailabilityByRole`](../src/utils/availabilityUtils.js))
+**roster-stats availability chart** ([`computeAvailabilityByRole`](../src/readmodel/availabilityUtils.js))
 deliberately is **not**: it answers a bench-depth question ("how many members
 *could* I field for role R on date D") that is capability-AND-free and ignores
 who is already assigned, any specific slot, and all caps. It shares the same

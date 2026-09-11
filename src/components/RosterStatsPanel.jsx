@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import QualityMetrics from './QualityMetrics'
-import { AvailabilityHeatmap } from '../utils/distributionUtils'
+import { AvailabilityHeatmap } from '../readmodel/distributionUtils'
 import { formatEntry } from '../generation/actionLog'
 import { tierTitle, tierLabel, tierSection, tierUnit, helperText, glassPanel, glassCard, semanticError, monoChip } from '../utils/statsTheme'
 

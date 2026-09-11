@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { glassPopup, glassArrow, tierUnit } from './statsTheme'
-import { formatDate } from './colorUtils'
+import { glassPopup, glassArrow, tierUnit } from '../utils/statsTheme'
+import { formatDate } from '../utils/colorUtils'
 import { availabilityCellColor } from './availabilityUtils'
 import { isMemberIncluded } from '../schema/rosterSchema'
 
