@@ -1,6 +1,6 @@
 # Architecture overhaul (IN PROGRESS — living migration doc)
 
-> **Status: in progress (steps 1–7 landed).** This is a *target* architecture
+> **Status: in progress (steps 1–8 landed).** This is a *target* architecture
 > plus the **living record** of an incremental refactor toward it — see the
 > [Migration progress log](#migration-progress-log-living) for what has landed
 > and what debt is outstanding. It does **not** describe the full current on-disk
@@ -546,7 +546,7 @@ src/
                  #   from utils/statsTheme.js (renamed), utils/colorUtils.js
   integrations/  # read: cron/calendar-export/bot-query (read-model consumers)
                  # write: bot commands (actors on the session command surface)
-                 #   from telegram.js (root, today)
+                 #   telegram.js lives here (read-only today; write path future)
 
   # ── cross-cutting ────────────────────────────────────────────
   lib/           # generic helpers: calendarUtils, dataExport
@@ -740,15 +740,16 @@ and updates the owning spec:
    adapter's `toState`/`toDocument` transform rename rides along with step 9; the
    structural simplification (lifting the draft group off the provider surface) is
    the step-6 Session inversion, still deferred. (Recorded in [architecture.md](architecture.md), which owns the provider contract.)
-8. **◑ IN PROGRESS — Tidy periphery** (sub-committed): **8a ✅** promoted
+8. **✅ Tidy periphery** (sub-committed): **8a ✅** promoted
    `rosterGenerator/` → top-level `src/generation/` (a module, not a util). **8b ✅**
    moved the read-model views (`rosterStats`, `availabilityUtils`, `distributionUtils`)
    → `src/readmodel/`. **8c-i ✅** moved generic helpers (`calendarUtils`, `dataExport`)
    → `src/lib/`. **8c-ii ✅** resolved the misnamed `statsTheme` — it's the
    design-system token module, not a stat — renaming it to `designSystem` and moving it
    (with `colorUtils`, its lint guard, and both tests) to a new `src/design/` folder.
-   **▶ next (8d):** `integrations/` split into read-model consumers vs. command-surface
-   actors (telegram write path routes through the session command surface).
+   **8d ✅** moved `telegram.js` → `src/integrations/` (file move; it's a read-only
+   integration today, so there was no write path to split — the future bot **write**
+   path routing through the session command surface stays foreshadowed).
 9. **⬜ (rides along) Vocabulary rename pass** (folds through every step above, not a separate
    big-bang): as each file moves to its layer folder, rename its symbols to the
    layer's vocabulary (provider→CRUD, session→command/query, adapter→transform,
@@ -779,7 +780,7 @@ goes red.
 | 5 — split `understudy.js` by kind | ✅ done | `d59f896` | 400 pass (24 files) | **debt-clearing step.** `understudy.js` split: vocabulary → `schema/understudyRoles.js`, policy → `rules/understudyPolicy.js` (policy imports vocab — correct Rules→Schema direction). Old `utils/understudy.js`+test deleted; test split to match. No `utils/understudy` importers remain, so steps 1/3/4's coupling is gone. `UNDERSTUDY_SUFFIX` stays vocabulary-internal (no external importer). Seeding/promotion **phases** already live in `generation/` and were untouched. |
 | 6 — extract `session/` | ✅ done | `5626b91` | 400 pass (24 files) | **file-move scope only.** `useDraftHistory.js`(+test) moved `data/`→`session/` (git mv), the 2 provider imports rewired. This *names* the Session concern and cleans `data/`'s folder. **Deferred debt:** the draft/undo/commit logic is still called *inside* both providers (`useLocalRosterProvider`/`useSupabaseRosterProvider` wrap `useDraftHistory` and merge the draft into their returned surface), not by the UI — so Session is not yet *above* Provider as the model prescribes. Hoisting Session above the providers (providers become pure CRUD; Session calls down) folds into **step 7** (provider CRUD contract), which is the natural place to invert it. Internal `commands`/`store` split still deferred (see Resolved). |
 | 7 — provider CRUD contract | ✅ done (proof scope) | `073861e` | 403 pass (25 files, +3 conformance) | **contract-proof scope only** (chosen over restructuring the shape). Exported `ROSTER_PROVIDER_KEYS` in `providerContract.js` as the single source of truth for the surface; `providerContract.test.jsx` renders *both real providers* (Supabase inert with no env) and asserts each returns exactly those keys — interchangeability is now machine-checked. Updated [architecture.md](architecture.md). **Deferred debt (carried from step 6):** the `draft/session` key group still lives on the provider surface; the real structural *simplification* is lifting it out (providers → pure CRUD, Session above), not nesting the flat bag now — nesting would churn every call site and collide with that lift. The `toState`/`toDocument` adapter-rename half of this step also still pending (rides along with step 9). |
-| 8 — tidy periphery | ◑ in progress (8a, 8b, 8c-i, 8c-ii done) | 8a `127ec27`; 8b `a779dc6`; 8c-i `cf44783`; 8c-ii `2bf321d` | 403 pass (25 files) | **Sub-committed** (too big for one commit). **8a:** `rosterGenerator/` → `src/generation/`. **8b:** read-model views → `src/readmodel/`. **8c-i:** the *genuinely generic* helpers `calendarUtils` + `dataExport` (leaf, no relative imports) → `src/lib/`; 4 importers rewired. **8c-ii:** `statsTheme.js` is the **misnamed design-system** token module → renamed to `designSystem.js` and rehomed with `colorUtils` (role-colour palette = colour policy) + the lint guard + both tests into a new `src/design/` folder; ~20 importers rewired (14 `statsTheme`, 6 `colorUtils`), lint-guard internal path/allowlist refs fixed, [design-system.md](design-system.md) + [architecture.md](architecture.md) + this plan updated. **8c decision:** `bulkClear` **stays** in `utils/` — it's *domain* (roster/slot shape, produces one draft edit + undo step), a session-command helper bound for `session/` when the command surface lands, not a `lib/` generic. **▶ next:** 8d `telegram.js` → `integrations/`. |
+| 8 — tidy periphery | ✅ done | 8a `127ec27`; 8b `a779dc6`; 8c-i `cf44783`; 8c-ii `a7efdb7`; 8d `44ecf13` | 403 pass (25 files) | **Sub-committed** (too big for one commit). **8a:** `rosterGenerator/` → `src/generation/`. **8b:** read-model views → `src/readmodel/`. **8c-i:** the *genuinely generic* helpers `calendarUtils` + `dataExport` (leaf, no relative imports) → `src/lib/`; 4 importers rewired. **8c-ii:** `statsTheme.js` is the **misnamed design-system** token module → renamed to `designSystem.js` and rehomed with `colorUtils` (role-colour palette = colour policy) + the lint guard + both tests into a new `src/design/` folder; ~20 importers rewired (14 `statsTheme`, 6 `colorUtils`), lint-guard internal path/allowlist refs fixed, [design-system.md](design-system.md) + [architecture.md](architecture.md) + this plan updated. **8d:** `telegram.js` (root) → `src/integrations/` (git mv; no relative imports, one importer `main.jsx` rewired) — it's a **read-only** integration today (viewport/theme mirroring), so there was no write path to split; the future bot write path (actor on the session command surface) stays foreshadowed in [architecture.md](architecture.md). **8c decision:** `bulkClear` **stays** in `utils/` — it's *domain* (roster/slot shape, produces one draft edit + undo step), a session-command helper bound for `session/` when the command surface lands, not a `lib/` generic. |
 | 9 — vocabulary rename | ⬜ rides along (started) | — | 400 pass | not a standalone commit. **Pulled forward:** the `state/` adapter + `documentValidation` now name their inbound param `document` (not `data`), so the Document→State boundary reads in the code. *Lesson:* a blind `data`→`document` also rewrote a user-facing error string (`'YAML data is empty or invalid'`); reverted — renames must not change display text. |
 | 10 — enforce the graph | ⬜ optional | — | — | the CI gate that makes all above debt un-reintroducible. |
 
@@ -808,7 +809,7 @@ above are cross-referenced; newly-accounted items are called out.
 | `rosterGenerator/` | **→ `src/generation/` (step 8a ✅ done)** + `evaluation/` split (steps 4–5) | |
 | `data/` | Storage/Providers (+ `useDraftHistory.js` → `session/`) | steps 6–7. |
 | `hooks/useRosterData.js` | → `session/`; `useAuth.js` stays `hooks/` | |
-| `telegram.js` (root) | → `integrations/` (read vs. write split) (step 8) | |
+| `telegram.js` (root) | **→ `src/integrations/telegram.js` (step 8d ✅ done)** | read-only integration today; write-path split foreshadowed (see architecture.md). |
 | **`src/test/setup.js`** | test harness — **stays**, path preserved | **newly accounted** — see migration plan; `vitest.config.js` `setupFiles` must keep resolving. |
 
 ### Outside `src/` (previously unmapped)
