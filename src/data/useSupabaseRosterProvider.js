@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import yaml from 'js-yaml'
 import { runAllValidators } from '../state/documentValidation'
 import { supabase } from './supabaseClient'
-import { useDraftHistory } from './useDraftHistory'
+import { useDraftHistory } from '../session/useDraftHistory'
 
 /**
  * Production (Supabase-backed) implementation of the roster data provider

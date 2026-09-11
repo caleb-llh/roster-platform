@@ -1,6 +1,6 @@
 # Architecture overhaul (IN PROGRESS — living migration doc)
 
-> **Status: in progress (steps 1–5 landed).** This is a *target* architecture
+> **Status: in progress (steps 1–6 landed).** This is a *target* architecture
 > plus the **living record** of an incremental refactor toward it — see the
 > [Migration progress log](#migration-progress-log-living) for what has landed
 > and what debt is outstanding. It does **not** describe the full current on-disk
@@ -721,12 +721,16 @@ and updates the owning spec:
 5. **✅ DONE — Split `understudy.js` by kind**: vocabulary → `schema/understudyRoles.js`,
    policy → `rules/understudyPolicy.js`, leaving seeding/promotion phases in `generation/`.
    Cleared steps 1/3/4's residual coupling. Updated [understudy.md](understudy.md).
-6. **▶ NEXT — Extract `session/`** as *one* layer: move `useDraftHistory.js` out of
-   `data/`, and define the uniform command surface (query/generate/swap/commit/
-   undo) the UI calls. Leaves `data/` as pure providers. **Defer** the internal
-   `session/commands` vs. `session/store` split until authz-at-the-surface or the
-   first write-integration lands (see "Resolved: the session split").
-7. **⬜ Formalize the `RosterProvider` CRUD contract** (`load`/`save`/`list`/
+6. **✅ DONE (file-move scope) — Extract `session/`**: moved `useDraftHistory.js`
+   out of `data/` into `session/` (git mv, rewired the 2 provider imports), naming
+   the Session concern and leaving `data/`'s folder cleaner. **Not yet** the full
+   inversion: draft/commit/undo is still invoked *inside* both providers (they wrap
+   `useDraftHistory`), so Session does not yet sit *above* Provider. Hoisting it
+   (providers → pure CRUD; Session calls down; UI calls the command surface) folds
+   into step 7. **Defer** the internal `session/commands` vs. `session/store` split
+   until authz-at-the-surface or the first write-integration lands (see "Resolved:
+   the session split").
+7. **▶ NEXT — Formalize the `RosterProvider` CRUD contract** (`load`/`save`/`list`/
    `select`/`subscribe`) so local/Supabase are provably interchangeable, and keep
    the adapter's two-fn transform contract (`toState`/`toDocument`). One shared
    adapter — never per-backend. (Update [data-layer.md](data-layer.md).)
@@ -761,8 +765,8 @@ goes red.
 | 2 — unify registries | ✅ done | `b8151d4` | 400 pass (+8 conformance) | none new. `defineRule`/`defineScorer` are identity validators by design (no machinery). |
 | 3 — extract `state/` | ✅ done | `be74f5f` | 400 pass | ~~adapter + `documentValidation` import understudy vocabulary from `../utils/understudy`~~ **cleared by step 5** (now import `schema/understudyRoles.js`). The AGENTS-mandated `rosterSchema.js` test-data constants are honoured. |
 | 4 — split evaluation/generation | ✅ done | `b9c012a` | 400 pass | ~~`evaluation/` imports understudy from `../utils/understudy`~~ **cleared by step 5** (now `schema/understudyRoles.js` + `rules/understudyPolicy.js`). `evaluateState` (whole-roster judge) still lives inside `rosterGenerator/`; folds into `evaluation/` when the generator folder is renamed (deferred to the step-8/9 periphery tidy). |
-| 5 — split `understudy.js` by kind | ✅ done | _(uncommitted)_ | 400 pass (24 files) | **debt-clearing step.** `understudy.js` split: vocabulary → `schema/understudyRoles.js`, policy → `rules/understudyPolicy.js` (policy imports vocab — correct Rules→Schema direction). Old `utils/understudy.js`+test deleted; test split to match. No `utils/understudy` importers remain, so steps 1/3/4's coupling is gone. `UNDERSTUDY_SUFFIX` stays vocabulary-internal (no external importer). Seeding/promotion **phases** already live in `generation/` and were untouched. |
-| 6 — extract `session/` | ▶ next | — | — | internal `commands`/`store` split deferred (see Resolved). |
+| 5 — split `understudy.js` by kind | ✅ done | `d59f896` | 400 pass (24 files) | **debt-clearing step.** `understudy.js` split: vocabulary → `schema/understudyRoles.js`, policy → `rules/understudyPolicy.js` (policy imports vocab — correct Rules→Schema direction). Old `utils/understudy.js`+test deleted; test split to match. No `utils/understudy` importers remain, so steps 1/3/4's coupling is gone. `UNDERSTUDY_SUFFIX` stays vocabulary-internal (no external importer). Seeding/promotion **phases** already live in `generation/` and were untouched. |
+| 6 — extract `session/` | ✅ done | `5626b91` | 400 pass (24 files) | **file-move scope only.** `useDraftHistory.js`(+test) moved `data/`→`session/` (git mv), the 2 provider imports rewired. This *names* the Session concern and cleans `data/`'s folder. **Deferred debt:** the draft/undo/commit logic is still called *inside* both providers (`useLocalRosterProvider`/`useSupabaseRosterProvider` wrap `useDraftHistory` and merge the draft into their returned surface), not by the UI — so Session is not yet *above* Provider as the model prescribes. Hoisting Session above the providers (providers become pure CRUD; Session calls down) folds into **step 7** (provider CRUD contract), which is the natural place to invert it. Internal `commands`/`store` split still deferred (see Resolved). |
 | 7 — provider CRUD contract | ⬜ | — | — | — |
 | 8 — tidy periphery | ⬜ | — | — | — |
 | 9 — vocabulary rename | ⬜ rides along (started) | — | 400 pass | not a standalone commit. **Pulled forward:** the `state/` adapter + `documentValidation` now name their inbound param `document` (not `data`), so the Document→State boundary reads in the code. *Lesson:* a blind `data`→`document` also rewrote a user-facing error string (`'YAML data is empty or invalid'`); reverted — renames must not change display text. |

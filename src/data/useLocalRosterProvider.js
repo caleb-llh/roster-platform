@@ -2,7 +2,7 @@ import { useState, useRef } from 'react'
 import yaml from 'js-yaml'
 import { runAllValidators } from '../state/documentValidation'
 import { LOCAL_PERMISSIONS } from './providerContract'
-import { useDraftHistory } from './useDraftHistory'
+import { useDraftHistory } from '../session/useDraftHistory'
 import { isTenantShape, tenantSelection, resolveTenant, memberTeams, writeBackEvents, deriveExternalAssignments, validateTenantRosters } from '../state/tenantResolver'
 
 /**
