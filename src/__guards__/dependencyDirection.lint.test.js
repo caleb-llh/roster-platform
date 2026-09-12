@@ -25,7 +25,7 @@
  *
  * `App.jsx` / `main.jsx` are the composition root (they may import anything) and
  * are intentionally out of scope. Test files are skipped — they legitimately
- * reach across layers to exercise integrations (e.g. `utils/crossTeam.test.js`).
+ * reach across layers to exercise integrations (e.g. `evaluation/crossTeam.test.js`).
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
@@ -53,17 +53,16 @@ const ALLOWED = {
   generation: ['state', 'evaluation', 'rules', 'schema'],
 
   // Periphery / above-core
-  readmodel: ['state', 'evaluation', 'rules', 'schema', 'design'], // live views read the core; chart views use design tokens
-  session: ['state', 'evaluation', 'utils', 'lib'], // the "time" layer above the provider; bulkClear uses the shared slotKey primitive
+  readmodel: ['state', 'evaluation', 'rules', 'schema', 'design', 'lib'], // live views read the core; chart views use design tokens; rosterDiff uses the shared slotKey primitive
+  session: ['state', 'evaluation', 'lib'], // the "time" layer above the provider; bulkClear uses the shared slotKey primitive
   data: ['state'], // pure-CRUD providers use the adapter (documentValidation/tenantResolver)
   hooks: ['data', 'session'], // dual-mode dispatcher composes them
-  components: ['readmodel', 'generation', 'rules', 'schema', 'design', 'lib', 'utils'],
+  components: ['readmodel', 'generation', 'rules', 'schema', 'design', 'lib'],
 
-  // Domain-free leaves / grab-bag being dissolved
+  // Domain-free leaves
   lib: [],
   design: [],
   config: ['schema'],
-  utils: ['lib'], // rosterDiff uses the shared slotKey primitive
   integrations: [],
 }
 
