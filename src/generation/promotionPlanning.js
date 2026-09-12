@@ -27,7 +27,7 @@
  *    it on backtrack, so every feasibility check sees the true running state.
  *  - Only fills EMPTY real slots; never displaces an existing occupant.
  *  - Pinned via `slot._pinnedPromotion = true` so local search leaves it alone
- *    (see rosterState.isLocked). The flag is stripped before returning results.
+ *    (see workingRoster.isLocked). The flag is stripped before returning results.
  */
 
 import { understudySlotRole } from '../schema/understudyRoles'

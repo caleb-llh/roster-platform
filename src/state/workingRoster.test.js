@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { RosterState } from './rosterState'
+import { WorkingRoster } from './workingRoster'
 import { AssignmentTracker } from './assignmentTracker'
 
 const members = [
@@ -33,11 +33,11 @@ function snapshot(tracker) {
   }))
 }
 
-describe('RosterState reversible moves', () => {
+describe('WorkingRoster reversible moves', () => {
   it('applyMove then revertMove restores events and tracker exactly', () => {
     const events = makeEvents()
     const tracker = new AssignmentTracker(members, events)
-    const state = new RosterState(events, tracker)
+    const state = new WorkingRoster(events, tracker)
 
     const before = snapshot(tracker)
     const beforeEvents = JSON.parse(JSON.stringify(events))
@@ -58,7 +58,7 @@ describe('RosterState reversible moves', () => {
   it('reassigning an occupied slot and reverting restores exactly', () => {
     const events = makeEvents()
     const tracker = new AssignmentTracker(members, events)
-    const state = new RosterState(events, tracker)
+    const state = new WorkingRoster(events, tracker)
 
     const before = snapshot(tracker)
     const beforeEvents = JSON.parse(JSON.stringify(events))
@@ -78,7 +78,7 @@ describe('RosterState reversible moves', () => {
   it('applySwap then revertSwap restores exactly', () => {
     const events = makeEvents()
     const tracker = new AssignmentTracker(members, events)
-    const state = new RosterState(events, tracker)
+    const state = new WorkingRoster(events, tracker)
 
     const before = snapshot(tracker)
     const beforeEvents = JSON.parse(JSON.stringify(events))
@@ -99,7 +99,7 @@ describe('RosterState reversible moves', () => {
   it('allSlots enumerates every role slot', () => {
     const events = makeEvents()
     const tracker = new AssignmentTracker(members, events)
-    const state = new RosterState(events, tracker)
+    const state = new WorkingRoster(events, tracker)
     expect(state.allSlots()).toHaveLength(3)
   })
 })

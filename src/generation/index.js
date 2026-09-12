@@ -41,7 +41,7 @@
 import { AssignmentTracker } from '../state/assignmentTracker'
 import { EligibilityChecker } from '../evaluation/eligibilityChecker'
 import { ScoringEngine, SCORING_WEIGHTS } from './scoringEngine'
-import { RosterState } from '../state/rosterState'
+import { WorkingRoster } from '../state/workingRoster'
 import { optimizeRoster } from './localSearch'
 import { createRng } from './rng'
 import { ActionLogger, NULL_LOGGER } from './actionLog'
@@ -143,18 +143,18 @@ function runGeneration(
   const sortedEvents = newEvents.sort((a, b) => new Date(a.date) - new Date(b.date))
   
   // The eligibility checker's clash constraint scans OTHER events for time
-  // overlap; give it the live sorted array (mutated in place by RosterState) so
+  // overlap; give it the live sorted array (mutated in place by WorkingRoster) so
   // the scan reflects current assignments.
   eligibilityChecker.events = sortedEvents
   
   // Reversible state layer: all assignments go through applyMove so the tracker
   // and events stay in lock-step (and so the same primitives power local search).
-  const state = new RosterState(sortedEvents, tracker)
+  const state = new WorkingRoster(sortedEvents, tracker)
 
   // Default behaviour: generation only FILLS EMPTY SLOTS — it must not reshuffle
   // assignments that already exist (including ones an earlier, still-uncommitted
   // generation produced). We tag every slot occupied at the start of this run as
-  // `_preExisting` so `RosterState.isLocked` treats it as fixed and Phase 2 local
+  // `_preExisting` so `WorkingRoster.isLocked` treats it as fixed and Phase 2 local
   // search leaves it alone. `optimizeExisting` (future algorithm-settings toggle)
   // opts back into whole-roster re-optimization. The tag is stripped before
   // returning so it never leaks into the roster data.
@@ -345,7 +345,7 @@ function calculateRosterQuality(result, memberPreferences, rosterPreferences) {
 
 /**
  * Roster quality objective (higher is better), computed directly from a
- * RosterState-like object ({ events, tracker }). Shared by the final quality
+ * WorkingRoster-like object ({ events, tracker }). Shared by the final quality
  * report (calculateRosterQuality) and the local-search loop so both optimize
  * the same objective.
  */

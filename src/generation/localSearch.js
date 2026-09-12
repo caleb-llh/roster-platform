@@ -1,7 +1,7 @@
 /**
  * Local-search optimizer.
  *
- * Given an already-constructed RosterState (produced by the greedy pass), this
+ * Given an already-constructed WorkingRoster (produced by the greedy pass), this
  * hill-climbs by repeatedly applying the single best *improving* move until no
  * improving move exists (a local optimum) or a safety cap is reached.
  *

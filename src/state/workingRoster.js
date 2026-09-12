@@ -1,5 +1,9 @@
 /**
- * Reversible roster state for local-search optimization.
+ * Reversible working roster for local-search optimization.
+ *
+ * (Named `WorkingRoster`, not `RosterState`, to avoid colliding with the
+ * adapter's "State" vocabulary — `toState` there means the document→engine-input
+ * transform, a different concept. This is the engine's mutable working memory.)
  *
  * Wraps the cloned `events` (the source of truth for who is assigned where) and
  * the AssignmentTracker (the derived counters used for scoring/eligibility), and
@@ -14,7 +18,7 @@
  * revertMove() restores the exact prior state (events + tracker).
  */
 
-export class RosterState {
+export class WorkingRoster {
   /**
    * @param {Array} events  cloned events (will be mutated in place)
    * @param {AssignmentTracker} tracker  tracker already seeded from these events

@@ -22,7 +22,7 @@ export class EligibilityChecker {
     this.tracker = tracker
     // The live (chronologically-sorted) events array being filled. Kept as a
     // reference so the clash constraint can scan for OTHER events overlapping a
-    // placement's event; RosterState mutates these in place, so the scan always
+    // placement's event; WorkingRoster mutates these in place, so the scan always
     // reflects the current assignments. Empty by default (some call sites build
     // a checker without events, e.g. stats — the clash rule then finds nothing).
     this.events = options.events || []

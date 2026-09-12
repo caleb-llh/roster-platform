@@ -29,8 +29,8 @@ src/generation/
 > [data-layer.md](../../specs/data-layer.md).
 
 > State lives in the state layer, not here: `AssignmentTracker`
-> (`../state/assignmentTracker.js`) and `RosterState`
-> (`../state/rosterState.js`) are the engine's working-memory shape and moved to
+> (`../state/assignmentTracker.js`) and `WorkingRoster`
+> (`../state/workingRoster.js`) are the engine's working-memory shape and moved to
 > `src/state/` (overhaul step 3). The generator imports them; it does not own them.
 > See the [data-layer spec](../../specs/data-layer.md).
 
@@ -74,7 +74,7 @@ A single seeded pass (reproducible / deterministic):
    non-generated) slots and pinned promotions are excluded from swaps.** **By
    default (`optimizeExisting: false`) slots that were already filled when the
    run started are locked too** — tagged `_preExisting` up front so
-   `RosterState.isLocked` protects them — so generation is *additive* (only fills
+   `WorkingRoster.isLocked` protects them — so generation is *additive* (only fills
    empty slots; it will not reshuffle prior, still-uncommitted assignments).
    Pass `optimizeExisting: true` to re-open the whole roster to optimization. The
    objective is the whole-roster `scoreRoster`: fairness, spread, day/role
@@ -96,7 +96,7 @@ Maintains state during generation:
 - Spread metrics (temporal distribution)
 - `recordAssignment` / `removeAssignment` — exact inverses, enabling reversible moves
 
-### RosterState
+### WorkingRoster
 Reversible move layer pairing the events (source of truth) with the tracker
 (derived counters), keeping them in lock-step:
 - `applyMove` / `revertMove` — set/clear a slot's occupant; revert restores exactly
@@ -104,7 +104,7 @@ Reversible move layer pairing the events (source of truth) with the tracker
 - `allSlots`, `getOccupant` — enumeration/inspection for the search loop
 
 ### localSearch
-Hill-climbing optimizer over `RosterState`. Enumerates candidate swaps and
+Hill-climbing optimizer over `WorkingRoster`. Enumerates candidate swaps and
 fill-empty moves, validates each via the `EligibilityChecker`, and applies the
 best positive-delta move each iteration. Objective supplied by the caller
 (`scoreRoster`, which reuses `SCORING_WEIGHTS`). Stops at a local optimum.
@@ -277,7 +277,7 @@ The modular design allows easy extensions:
    (a `defineScorer({ key, enabled, score })` descriptor); it is automatically used by both
    per-candidate scoring and roster-quality evaluation
 3. **New Move Types** - Add to `localSearch.js` using the reversible primitives
-   in `../../state/rosterState.js` (e.g. 3-way rotations, chain moves)
+   in `../../state/workingRoster.js` (e.g. 3-way rotations, chain moves)
 4. **Advanced Search** - Swap hill-climbing for simulated annealing by changing
    the acceptance rule in `optimizeRoster` (state is already reversible)
 5. **Custom Metrics** - Extend `../../state/assignmentTracker.js`
@@ -292,6 +292,6 @@ The modular design allows easy extensions:
 ## Future Enhancements
 
 - Simulated annealing / tabu search for escaping local optima
-- User-facing swap suggestions (reuse `RosterState` + `EligibilityChecker`)
+- User-facing swap suggestions (reuse `WorkingRoster` + `EligibilityChecker`)
 - Multi-objective optimization
 - Configurable weight tuning UI
