@@ -153,7 +153,7 @@ export class EligibilityChecker {
    * understudy-before-role gate (seeding is what will satisfy it) so we can
    * tell whether seeding this trainee here would actually pay off later.
    */
-  canBePromotedTo(memberId, role, event) {
+  isEligibleForPromotion(memberId, role, event) {
     const member = this.members.find(m => m.id === memberId)
     if (!isMemberIncluded(member)) return false
     if (!isRoleCapable(member, role)) return false

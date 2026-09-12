@@ -54,7 +54,7 @@ A single seeded pass (reproducible / deterministic):
 2. **Phase 0 — Understudy seeding** (`understudySeeding.js`): pre-fill understudy
    slots so trainees shadow early. Base-role-centric with lookahead — at each
    shadowing opportunity it picks the still-needed trainee who can be *promoted
-   soonest* afterwards (`EligibilityChecker.canBePromotedTo`).
+   soonest* afterwards (`EligibilityChecker.isEligibleForPromotion`).
 3. **Phase 0.5 — Promotion planning** (`promotionPlanning.js`): before greedy can
    spend a trainee's limited monthly budget, **backtrack** over all unlocked
    trainees to promote as many as possible into later real base-role slots
@@ -122,7 +122,7 @@ Validates hard constraints (must satisfy):
   - can't take another understudy slot once the cap (`= 1`) is reached
     (hard-block, so trainees get promoted rather than shadow forever).
 
-Also exposes `canBePromotedTo(memberId, role, event)` — a lookahead probe
+Also exposes `isEligibleForPromotion(memberId, role, event)` — a lookahead probe
 (capability + availability + not-already-assigned; ignores the understudy gate)
 used by Phase 0 seeding to rank promotable trainees.
 

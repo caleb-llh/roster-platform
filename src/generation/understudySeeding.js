@@ -105,7 +105,7 @@ export function seedUnderstudySlots(events, members, eligibilityChecker, tracker
       // session (index into laterRealEvents). Promotable candidates sort first;
       // among them the one reachable soonest wins so the chain stays tight.
       const rankOf = (m) => {
-        const idx = laterRealEvents.findIndex(e => eligibilityChecker.canBePromotedTo(m.id, baseRole, e))
+        const idx = laterRealEvents.findIndex(e => eligibilityChecker.isEligibleForPromotion(m.id, baseRole, e))
         return idx === -1 ? Number.POSITIVE_INFINITY : idx
       }
       candidates.sort((a, b) => rankOf(a) - rankOf(b))
