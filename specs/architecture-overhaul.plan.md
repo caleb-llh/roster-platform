@@ -852,9 +852,83 @@ goes red.
 | 10 — enforce the graph | ✅ done | `5d92b65` | 417 pass (27 files) | the CI gate that makes all above debt un-reintroducible. Dependency-free Vitest guard ([`__guards__/dependencyDirection.lint.test.js`](../src/__guards__/dependencyDirection.lint.test.js)): default-deny allow-list of cross-layer arrows, keyed by source layer; fails on any arrow not whitelisted. Verified it *catches* a `rules/`→`evaluation/` regression (temporary probe, reverted). Matrix + rationale recorded in [architecture.md](architecture.md) ("Dependency direction"). **Reconciled two under-specified arrows during authoring** (real, pre-existing, healthy): `state/assignmentTracker` → `rules` (reuses `getWeekKey`) and `readmodel/distributionUtils` → `design` (chart views use tokens) — added to the allow-list with notes. Chose the guard-test pattern over `dependency-cruiser` (no new tooling; matches the design-system lint precedent). **Residual debt:** none. The overhaul is complete. |
 | 11 — per-action command surface | ✅ done | `e54e6db` | 415 pass (26 files, +11 commands.test) | **The one behaviour change.** Pulled in by explicit user decision. Pure per-action commands ([`session/commands.js`](../src/session/commands.js)): `assign`/`addSlot`/`removeSlot`/`swap`/`clearGenerated`/`bulkClear`, each `(state, args) → { ok, reason, nextEvents, verdict:{warnings}, logEntry, ... }`. Wired in [`useSession.js`](../src/session/useSession.js) via `runCommand(fn)` (permission-gate → apply to draft → return verdict), with a `{ preview }` mode that computes-without-applying for the confirmation-staged actions (swap/removeSlot/clearGenerated/bulkClear) — replacing an earlier apply-then-undo hack. App.jsx handlers now call the commands and surface `verdict.warnings` via a new amber toast; the confirmation-dialog staging + log prose stay in the UI. Contract: 6 new keys added to `SESSION_KEYS` + typedef ([providerContract.js](../src/data/providerContract.js)); conformance test asserts them. **Gate policy** (see [session.md](session.md)): warn-still-apply for the previously-ungated actions (preserves intentional manual override; makes the verdict visible via the shared `validateEventAssignments`); `swap` keeps its pre-existing hard reject (`explainSwap`). New spec [session.md](session.md) owns the command surface + gate policy; [specs/README.md](README.md) map + planned-spec list updated. **Residual debt:** ~~`state/` vocabulary tidy (`writeBackEvents` actor verb, missing `toDocument` export, private-judge naming)~~ **cleared by the 11-follow-on tidy** (`9ae2d6b`, next row). Step 10's CI graph gate landed after this (see the step-10 row). |
 | 11-follow-on — state/ + generator tidy | ✅ done | `9ae2d6b` | 415 pass (26 files) | The step-11 residual debt, closed. (a) reverse events transform `writeBackEvents` → `withRosterEvents` ([tenantResolver.js](../src/state/tenantResolver.js) + provider call site + tests): a pure `(document, selection, events) → document`, matching the forward `toState`, not an I/O actor verb. (b) private generator objective `evaluateState` → `scoreRoster` ([generation/index.js](../src/generation/index.js) + README + specs + CONTRIBUTING); reads as the objective function it is, location stays inside `generation/`. (c) **decision recorded:** there is no full `toDocument(State) → document` — deliberately; nothing reconstructs a whole document from State (the raw document is the source of truth, only *events* round-trip), so building it would be a consumer-less function = over-engineering. Captured in the adapter naming table, write-back note, and naming-mandate example. **Residual debt:** none new. Step 10's CI graph gate landed next (see the step-10 row). |
-| bulkClear follow-on — home the last `utils/` domain helper | ✅ done | `ff33da4` | 417 pass (27 files) | The `bulkClear` "→ `session/` later" note (module map row) closed. Split rather than moved wholesale: `buildBulkClear` (domain) → [`session/bulkClear.js`](../src/session/bulkClear.js); the shared `slotKey` (`date#roleIndex`) primitive → [`lib/slotKey.js`](../src/lib/slotKey.js), because the guard forbids `components → session` and `EventsView` needs `slotKey` — so it is a domain-free leaf, not session-domain. Deduped `rosterDiff`'s local `slotKey` copy into the same primitive. Guard allow-list gained two justified arrows: `session → lib` and `utils → lib` (both consume `slotKey`). **Residual debt:** none. |
+| bulkClear follow-on — home the last `utils/` domain helper | ✅ done | `f72d571` | 417 pass (27 files) | The `bulkClear` "→ `session/` later" note (module map row) closed. Split rather than moved wholesale: `buildBulkClear` (domain) → [`session/bulkClear.js`](../src/session/bulkClear.js); the shared `slotKey` (`date#roleIndex`) primitive → [`lib/slotKey.js`](../src/lib/slotKey.js), because the guard forbids `components → session` and `EventsView` needs `slotKey` — so it is a domain-free leaf, not session-domain. Deduped `rosterDiff`'s local `slotKey` copy into the same primitive. Guard allow-list gained two justified arrows: `session → lib` and `utils → lib` (both consume `slotKey`). **Residual debt:** none. |
 
 **Baseline before the overhaul:** 392 tests, `npm run build` green (commit `5bb41c8`).
+
+## Post-overhaul readability audit (living backlog)
+
+> The layer graph is now correct and enforced. This backlog is the output of a
+> **read-only, per-directory audit** (one pass per `src/` layer) checking that
+> **file names, symbol names, and code boundaries** still read cleanly for a
+> newcomer. These are *not* graph violations (the guard is green) — they are
+> naming/placement/readability debts that a fresh reader trips over. Each item is
+> a candidate follow-on; land them the same way as the overhaul steps (one green
+> commit each, spec updated in the same change). Ranked by reader-impact.
+> **Nothing here is authorized to implement yet** — this is the task list.
+>
+> **Verified-clean during the audit (do NOT "fix" — the names are load-bearing):**
+> `canFillSlotRole` vs `isRoleCapable` (distinct concepts, correctly named);
+> the unified `CONSTRAINTS`/`SCORERS` registries (conformance-tested);
+> `getWeekKey` single-sourced; no core→session/data imports; the
+> `toState`/`resolveState`/`withRosterEvents`/`scoreRoster` transform vocabulary;
+> provider-contract keys match reality (`providerContract.test.jsx`).
+
+### High — structural / boundary (a reader lands in the wrong layer)
+
+| # | Finding | Fix | Owning spec |
+| --- | --- | --- | --- |
+| A1 | **Dissolve `utils/`.** Only `rosterDiff.js` (+ its `crossTeam.test.js`) remains. `rosterDiff` is a pure read-only diff *view* of State, so it belongs in `readmodel/`; `crossTeam.test.js` asserts evaluation behaviour, so it belongs beside `evaluation/`. | `git mv utils/rosterDiff.js readmodel/`; add `'lib'` to `readmodel`'s guard allow-list (it consumes `slotKey`); `git mv utils/crossTeam.test.js evaluation/`; delete `utils/` and its `utils:['lib']` guard entry. Last file blocking utils/ elimination. | [architecture.md](architecture.md) module map + guard |
+| A2 | **`getAvailableMembersForEvent` misfiled in `rules/constraintPrimitives.js`.** It's a UI/evaluation judge, and its presence forces the "leaf primitives" file to import `constraints.js`/`understudyPolicy.js` — muddying the one file that should be dependency-light. | Move it to `evaluation/`; leave `constraintPrimitives.js` as true leaf primitives. Re-check the guard arrows after the move. | [generation.md](generation.md) |
+| A3 | **`EventsView.jsx` (~860 lines) mixes three concerns:** the view, an *untested* tabular export engine, and a generic `copyText` clipboard util. | Extract the export builders to `lib/` (with tests) and `copyText` to `lib/`; leave `EventsView` as a view. | [events-ui.md](events-ui.md) |
+
+### Medium/Low — the rename backlog, as a verb–noun table
+
+The renames all reduce to the same defect: **the symbol's verb (its action-kind)
+or noun (the thing it names) doesn't match what it actually does or the layer it
+lives in.** This is the concrete, per-symbol application of the
+[Naming mandate](#naming-mandate-foldersfiles-reflect-layers-symbols-reflect-vocabulary)
+and the [per-layer verb table](#each-layer-has-a-vocabulary-fit-to-its-nature)
+above. Read each row as: *current* verb+noun → *what it truly is* → *proposed*
+verb+noun. Land as symbol-only renames (one green commit each).
+
+| # | Current name | Verb (is) | Noun (is) | The mismatch | → Proposed verb·noun |
+| --- | --- | --- | --- | --- | --- |
+| N1 | `hasGenerated` (provider) | `has` (state predicate) | `Generated` | **noun lies**: set on *every* `saveEvents`, so it means "something committed", not "a roster was generated" — and it's near-dead (`EventsView` recomputes locally from `s.isGenerated`, line ~313). | `hasCommitted` — or **delete** (verified no consumer relies on the "generated" meaning). |
+| N2 | `MEMBER_PREF_FIELDS.PREFERRED_ROLES` = `'roles'` | (constant key) | `PREFERRED_ROLES` | **noun ≠ value**: the key says `PREFERRED_ROLES` but the field is `'roles'`; also a **stale import** in `evaluation/assignmentValidator.js` (imported, unused). | `ROLES` (match the value) — or drop if unused; remove the stale import. |
+| N3 | `canBePromotedTo` / `isPromotedForRole` | `canBe`/`is` (predicates) | both say `Promoted` | **one noun, two meanings** of "promoted" (eligibility vs. current-state). | disambiguate one — e.g. `isEligibleForPromotion` vs. `isPromotedForRole`. |
+| N4 | `rosterState.js` | (module) | `State` | **noun collides** with the adapter's `toState`/State vocabulary (a different "State"). | `workingRoster.js`. |
+| N5 | `swap` result field `preview` | (result field) | `preview` | **noun collides** with the call-mode `{ preview }` input flag on the same command. | rename the result field (e.g. `previewEvents`). |
+| N6 | `SharedComponents.jsx` | (module) | `SharedComponents` | **noun says nothing** — a grab-bag name, not its contents. | name for its actual contents (or split). |
+| N7 | `availabilityUtils.js` | (module) | `…Utils` (+ two concerns) | **noun over-broad** *and* conflates bench-depth **data** with a heatmap **colour ramp**. | data half → `benchDepth.js`; ramp → the shared token (see B2). |
+| N8 | `distributionUtils.jsx`, `dataExport.js` | (modules) | `…Utils` / vague | **noun over-broad** — "Utils" names the shape, not the product. | name for what they produce. |
+| N9 | `getMemberDisplay` / `getMemberName` | `get` | `Display`/`Name` | **verb+noun inconsistent** across two very similar accessors. | pick one convention. |
+
+> **Not renames — kept in the structural list below** because they need a *move*,
+> a *dedupe*, or a *split*, not a new name: B1 (`formatDate` → `lib/`), B2 (shared
+> slate ramp), B4 (`generation/index.js` grab-bag → extract objective), B5
+> (inline `useClickOutside` ×4), B8 (split validation cross-ref), B9 (provider
+> `logAction`/`replaceDocument` duplication + warnings divergence), C2
+> (`_currentRoster` instance round-trip), C6 (`bulkClear` hand-parses the slot
+> key → `parseSlotKey` in `lib/slotKey.js`), C8 (opportunistic: stale header in
+> `documentValidation.js`; conditional provider-hook calls in `useRosterData`
+> (Rules-of-Hooks smell, safe); `AlgorithmDescriptionModal` parses prose into
+> sections in-view + duplicated modal chrome; `RosterStatsPanel` fabricates a
+> fake `generationResult` for `QualityMetrics`).
+
+### Medium — structural (moves / dedupes / splits, not renames)
+
+| # | Finding | Fix |
+| --- | --- | --- |
+| B1 | **`formatDate`/`formatDateRange` live in `design/colorUtils.js`** — date formatting is not colour policy (flagged by two audit passes). | Move to `lib/calendarUtils.js` (its natural home). |
+| B2 | **Concern→HSL slate ramp (hue 215) duplicated 3×** — `QualityMetrics.jsx`, `readmodel/distributionUtils.jsx`, `readmodel/availabilityUtils.js`. | Extract one shared ramp (design token) and reuse. |
+| B4 | **`generation/index.js` is a grab-bag** — owns the `scoreRoster` objective + stats + orchestration. | Extract the objective (`scoreRoster`) to its own module *within* `generation/` (per the step-4/11-follow-on note, only when it earns a second reader — this is that trigger). |
+| B5 | **`useClickOutside` re-implemented inline 4×** despite a shared hook existing. | Replace the inline copies with the shared hook. |
+| B8 | **Validation split across `documentValidation.js` + `tenantResolver.validateTenantRosters`** with no cross-reference. | Add a cross-ref (or consolidate) so a reader finds both halves. |
+| B9 | **Provider duplication** — `logAction` is byte-identical across the two providers; `replaceDocument` is near-identical but **diverges**: local re-attaches `warnings`, Supabase drops them. | Extract the shared helper; decide the intended warnings behaviour and make both consistent. |
+| C2 | **`_currentRoster` instance-state round-trip in `eligibilityChecker.js`** — a set-then-read on `this`. | Pass explicitly instead of stashing on the instance. |
+| C6 | **`bulkClear` (session/commands.js line ~267) hand-parses the slot key** (`String(k).split('#')[0]`) despite `lib/slotKey.js`. | Add `parseSlotKey`/`dateOfSlotKey` to `lib/slotKey.js` and use it. |
+| C8 | Stale header comment in `documentValidation.js`; conditional provider-hook calls in `useRosterData` (Rules-of-Hooks smell, currently safe); `AlgorithmDescriptionModal` parses a prose string into sections in-view + duplicates modal chrome; `RosterStatsPanel` fabricates a fake `generationResult` for `QualityMetrics`. | Address opportunistically when touching those files. |
 
 ## Full scope coverage (nothing silently left out)
 
