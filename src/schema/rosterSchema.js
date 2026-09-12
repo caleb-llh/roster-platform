@@ -164,7 +164,6 @@ export const MEMBER_PREF_FIELDS = {
   MEMBER_NAME: 'member_name',
   PREFERRED_DAY: 'preferred_day',
   MAX_ASSIGNMENTS: 'max_assignments',
-  PREFERRED_ROLES: 'roles',
 }
 
 // ============================================================================

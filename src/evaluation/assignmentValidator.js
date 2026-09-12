@@ -20,7 +20,7 @@ import {
   externalWeeklyCount,
   externalMonthlyCount
 } from '../rules/constraintPrimitives'
-import { PREFERENCE_KEYS, isPreferenceEnabled, MEMBER_PREF_FIELDS, CONSTRAINT_KEYS, isConstraintEnabled } from '../schema/rosterSchema'
+import { PREFERENCE_KEYS, isPreferenceEnabled, CONSTRAINT_KEYS, isConstraintEnabled } from '../schema/rosterSchema'
 import { countUnderstudySessionsBefore } from '../rules/understudyPolicy'
 import { getConstraintRule, CONSTRAINT_MODES } from '../rules/constraints'
 
