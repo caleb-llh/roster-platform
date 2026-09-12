@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { getAvailableMembersForEvent } from '../evaluation/availableMembers'
 import { getCardColorForDay, formatDate } from '../design/colorUtils'
 import { exportToYAML, downloadYAML } from '../lib/dataExport'
+import { buildExportColumns, buildExportHeader, buildExportRows, toCSV, toTSV } from '../readmodel/rosterTable'
+import { copyText } from '../lib/clipboard'
 import RosterSlotPill from './RosterSlotPill'
 import { IssueSummary } from './SharedComponents'
 import { understudySlotRole, isUnderstudyRole, baseRoleOf } from '../schema/understudyRoles'
@@ -29,39 +31,6 @@ function StatusCorner({ level }) {
       <div className={`absolute -right-4 -top-4 h-8 w-8 rotate-45 ${wedge}`} />
     </div>
   )
-}
-
-/**
- * Copy text to the clipboard, returning true on success.
- *
- * Uses the async Clipboard API when available (HTTPS / localhost), and falls
- * back to a hidden <textarea> + execCommand('copy') otherwise (e.g. insecure
- * origins, older browsers, or when the async write is blocked/rejected).
- */
-async function copyText(text) {
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text)
-      return true
-    }
-  } catch {
-    // fall through to the legacy path
-  }
-
-  try {
-    const textarea = document.createElement('textarea')
-    textarea.value = text
-    textarea.setAttribute('readonly', '')
-    textarea.style.position = 'fixed'
-    textarea.style.top = '-9999px'
-    document.body.appendChild(textarea)
-    textarea.select()
-    const ok = document.execCommand('copy')
-    document.body.removeChild(textarea)
-    return ok
-  } catch {
-    return false
-  }
 }
 
 /**
@@ -268,46 +237,10 @@ export default function EventsView({ events, members, memberConstraints, roleCol
   // Use roles from builder config (already ordered)
   const allRoles = roles || []
 
-  // Column layout for tabular exports (CSV / clipboard). An event may contain
-  // the same role more than once (e.g. two "roving-cam" slots), so we widen to
-  // the MAX count of each role across all events. Columns are ordered by the
-  // base catalog with each base role's understudy column ("X-understudy")
-  // inserted right after it; duplicate columns get a numbered label
-  // ("roving-cam 2"). Returns { columns: [{role,label}], maxCount: {role:n} }.
-  const exportColumnLayout = (() => {
-    const maxCount = {}
-    ;(events || []).forEach(e => {
-      const perEvent = {}
-      e.roster?.forEach(s => { if (s.role) perEvent[s.role] = (perEvent[s.role] || 0) + 1 })
-      Object.entries(perEvent).forEach(([role, n]) => {
-        if (n > (maxCount[role] || 0)) maxCount[role] = n
-      })
-    })
-
-    const columns = []
-    const pushRole = (role) => {
-      const n = maxCount[role] || 0
-      for (let i = 0; i < n; i++) {
-        columns.push({ role, index: i, label: i === 0 ? role : `${role} ${i + 1}` })
-      }
-    }
-    // All REAL roles first (in catalog order), then all UNDERSTUDY columns
-    // after them, so the sequence is: real roles..., then X-understudy columns.
-    allRoles.forEach(role => pushRole(role))
-    allRoles.forEach(role => pushRole(understudySlotRole(role)))
-    // Roles present in data but not derived from a base catalog role: append
-    // real ones with the real block and understudy ones at the very end.
-    Object.keys(maxCount).forEach(role => {
-      if (columns.some(c => c.role === role)) return
-      if (!isUnderstudyRole(role)) pushRole(role)
-    })
-    Object.keys(maxCount).forEach(role => {
-      if (columns.some(c => c.role === role)) return
-      if (isUnderstudyRole(role)) pushRole(role)
-    })
-    return { columns, maxCount }
-  })()
-  const exportColumns = exportColumnLayout.columns
+  // Column layout for tabular exports (CSV / clipboard) — a read-model
+  // projection (see readmodel/rosterTable.js). Ordered real-roles-first, then
+  // understudy columns; duplicate roles widen to numbered columns.
+  const exportColumns = buildExportColumns(events, allRoles).columns
 
   // Whether any slot carries the auto-generated tag (enables "Remove generated").
   const hasGenerated = (events || []).some(e => e.roster?.some(s => s.isGenerated))
@@ -378,56 +311,17 @@ export default function EventsView({ events, members, memberConstraints, roleCol
   const roleColor = (role) =>
     roleColorMap[role] || (isUnderstudyRole(role) ? roleColorMap[baseRoleOf(role)] : undefined) || ''
 
-  // Generate export data with roles as columns
-  const generateExportData = () => {
-    const rows = []
-    
-    filteredMonths.forEach(month => {
-      month.events.forEach(event => {
-        const validation = validationResults?.[event.date] || { errors: [], warnings: [] }
-        const errorSummary = validation.errors.length > 0 ? validation.errors.join('; ') : ''
-        const warningSummary = validation.warnings.length > 0 ? validation.warnings.join('; ') : ''
-        
-        // Group this event's assignments by role so duplicate roles (e.g. two
-        // "roving-cam" slots) can be placed into their own columns positionally.
-        const byRole = {}
-        if (event.roster) {
-          event.roster.forEach(assignment => {
-            ;(byRole[assignment.role] = byRole[assignment.role] || []).push(assignment.member_id)
-          })
-        }
+  // The (search-filtered) events to export, flattened in month/date order, and
+  // the table header. Row/CSV/TSV building is the readmodel/rosterTable engine;
+  // member labelling is injected so that projection stays free of the UI props.
+  const exportEvents = filteredMonths.flatMap(month => month.events)
+  const exportHeader = buildExportHeader(exportColumns)
+  const buildExportRowsForView = () =>
+    buildExportRows(exportEvents, exportColumns, { validationResults, memberLabel: getMemberDisplay })
 
-        // Build row: metadata (date, day, reporting time, name), then one cell
-        // per export column (real roles first, then understudy columns).
-        const row = [
-          event.date,
-          event.day_of_week,
-          event.reporting_time,
-          event.name,
-          ...exportColumns.map(col => {
-            const memberId = byRole[col.role]?.[col.index]
-            return memberId !== undefined && memberId !== null ? getMemberDisplay(memberId) : '-'
-          }),
-          errorSummary,
-          warningSummary
-        ]
-        rows.push(row)
-      })
-    })
-    
-    return rows
-  }
-
-  // Export to CSV
+  // Export to CSV (build the table, then trigger a browser download).
   const exportToCSV = () => {
-    const header = ['Date', 'Day', 'Reporting Time', 'Event Name', ...exportColumns.map(c => c.label), 'Errors', 'Warnings']
-    const data = generateExportData()
-    const csvRows = [
-      header.join(','),
-      ...data.map(row => row.map(cell => `"${cell}"`).join(','))
-    ]
-    
-    const csvContent = csvRows.join('\n')
+    const csvContent = toCSV(exportHeader, buildExportRowsForView())
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
@@ -441,12 +335,7 @@ export default function EventsView({ events, members, memberConstraints, roleCol
 
   // Copy to clipboard in tab-separated format
   const copyToClipboard = async () => {
-    const header = ['Date', 'Day', 'Reporting Time', 'Event Name', ...exportColumns.map(c => c.label), 'Errors', 'Warnings']
-    const data = generateExportData()
-    const tsvContent = [
-      header.join('\t'),
-      ...data.map(row => row.join('\t'))
-    ].join('\n')
+    const tsvContent = toTSV(exportHeader, buildExportRowsForView())
 
     const ok = await copyText(tsvContent)
     if (ok) {
