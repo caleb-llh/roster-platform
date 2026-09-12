@@ -216,7 +216,9 @@ export const swap = (state, { source, target }) => {
     // View helpers for the confirmation dialog (the swap is loss-ful, so the UI
     // stages it before applying). Not part of the command result contract other
     // consumers depend on; the UI reads these to render a before/after card.
-    preview: {
+    // Named `previewCard` (not `preview`) so it does not collide with the
+    // `{ preview }` call-mode input flag `runCommand` reads on the same command.
+    previewCard: {
       message,
       isMove: !(memberA && memberB),
       slotA: { date: eventA.date, role: slotA.role, before: nameOf(memberA), after: nameOf(memberB) },

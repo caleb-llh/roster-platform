@@ -27,7 +27,7 @@ Every domain mutation is expressed **once**, as a pure function in
   nextEvents,  // Event[] | null — the events to stage (null on reject / no-op)
   verdict,     // { warnings: string[] } — soft gate; surfaced, does NOT block
   logEntry,    // audit line(s) | null
-  ...extra     // e.g. swap's `preview`, clear's `count`
+  ...extra     // e.g. swap's `previewCard`, clear's `count`
 }
 ```
 
@@ -91,13 +91,15 @@ Loss-ful or destructive actions (`swap`, `removeSlot`, `clearGenerated`,
 `bulkClear`) are staged behind a **confirmation dialog** in the UI. To support
 that without polluting the undo/redo stacks, `runCommand(fn)(args, { preview: true })`
 computes the **same result without applying it**. The UI reads the result
-(warnings, `count`, swap `preview` card) to render the confirmation, then applies
+(warnings, `count`, swap `previewCard`) to render the confirmation, then applies
 on confirm via `stageEvents(result.nextEvents)` and writes the audit line.
 
 **Why not apply-then-undo:** an earlier design applied the edit and immediately
 called `undo()` for staged actions. That was hacky and polluted the redo stack.
-`preview` keeps "compute + verdict" in the command and "confirm UX" in the UI
-with no history side effect.
+The `{ preview }` call-mode flag keeps "compute + verdict" in the command and
+"confirm UX" in the UI with no history side effect. (The swap result *card* is
+named `previewCard`, not `preview`, so the loss-ful action's before/after payload
+does not collide with the `{ preview }` input flag on the same command.)
 
 ## Separation of concerns
 

@@ -104,7 +104,7 @@ describe('session/commands', () => {
       expect(r.ok).toBe(true)
       expect(slotAt(r.nextEvents, '2026-08-01', 0).member_id).toBe('bob')
       expect(slotAt(r.nextEvents, '2026-08-01', 1).member_id).toBe('alice')
-      expect(r.preview).toBeDefined()
+      expect(r.previewCard).toBeDefined()
     })
 
     it('HARD rejects an infeasible swap (role-incapable)', () => {

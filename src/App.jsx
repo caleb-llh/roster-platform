@@ -362,7 +362,7 @@ function App({ auth }) {
   // enforces feasibility with a HARD reject (role compatibility, availability,
   // once-per-event, no clash); an infeasible swap is blocked with a reason. A
   // valid swap is loss-ful (rewrites two occupants), so it is staged for
-  // confirmation rather than applied immediately — the command's `preview`
+  // confirmation rather than applied immediately — the command's `previewCard`
   // carries the before/after occupants for the dialog.
   const handleSwapRosterSlots = (source, target) => {
     const result = swap({ source, target }, { preview: true })
@@ -376,7 +376,7 @@ function App({ auth }) {
     setPendingSwap({
       nextEvents: result.nextEvents,
       logEntry: result.logEntry,
-      ...result.preview,
+      ...result.previewCard,
     })
   }
 
