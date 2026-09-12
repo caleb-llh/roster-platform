@@ -32,7 +32,6 @@ export function useSupabaseRosterProvider() {
   const [originalData, setOriginalData] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [hasGenerated, setHasGenerated] = useState(false)
   const [actionLog, setActionLog] = useState([])
 
   const permissions = {
@@ -57,7 +56,6 @@ export function useSupabaseRosterProvider() {
       setData(null)
       setOriginalData(null)
     }
-    setHasGenerated(false)
     setActionLog([])
   }, [])
 
@@ -85,7 +83,6 @@ export function useSupabaseRosterProvider() {
     const result = await persist(next)
     if (!result.ok) return result
     setData(next)
-    setHasGenerated(true)
     return { ok: true, errors: [] }
   }, [persist, permissions.canEditRoster])
 
@@ -171,7 +168,6 @@ export function useSupabaseRosterProvider() {
     setOriginalData(JSON.parse(JSON.stringify(parsed)))
     setData(doc)
     setError(null)
-    setHasGenerated(false)
     setActionLog([])
     return { ok: true, errors: [] }
   }
@@ -182,7 +178,6 @@ export function useSupabaseRosterProvider() {
     // action, not wired in this iteration.)
     setData(null)
     setOriginalData(null)
-    setHasGenerated(false)
     setActionLog([])
     setError(null)
   }
@@ -287,7 +282,6 @@ export function useSupabaseRosterProvider() {
     originalData,
     error,
     loading,
-    hasGenerated,
     actionLog,
     permissions,
     // Admin surface (production only).

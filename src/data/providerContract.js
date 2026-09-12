@@ -43,7 +43,6 @@
  * @property {any} originalData               Snapshot for diffing (or null).
  * @property {{type: string, message: string}|null} error
  * @property {boolean} loading
- * @property {boolean} hasGenerated
  * @property {(any[]|null)} draftEvents    Uncommitted working events, or null when clean.
  * @property {any[]} effectiveEvents       What the UI should render: draftEvents ?? data.events.
  * @property {boolean} hasUncommitted      Whether an uncommitted draft exists.
@@ -140,7 +139,7 @@ export const LOCAL_PERMISSIONS = Object.freeze({
  */
 export const PROVIDER_KEYS = Object.freeze([
   // document
-  'data', 'originalData', 'error', 'loading', 'hasGenerated', 'actionLog',
+  'data', 'originalData', 'error', 'loading', 'actionLog',
   // tenant/selection
   'teams', 'activeTeamId', 'activeTeamName', 'memberTeams', 'externalAssignments',
   'selectTeam', 'rosters', 'activeRosterId', 'selectRoster',

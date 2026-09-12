@@ -25,7 +25,6 @@ export function useLocalRosterProvider() {
   const [originalData, setOriginalData] = useState(null)
   const [error, setError] = useState(null)
   const [loading] = useState(false)
-  const [hasGenerated, setHasGenerated] = useState(false)
   const [actionLog, setActionLog] = useState([]) // Generic roster action log
 
   // Multi-tenant Phase 1: when a nested tenant document is imported, the raw
@@ -68,7 +67,6 @@ export function useLocalRosterProvider() {
   // tenant doc so a team/roster switch preserves the edit).
   const saveEvents = async (events) => {
     setData(prevData => ({ ...prevData, events }))
-    setHasGenerated(true)
     // Multi-tenant Phase 1 write-back: when a nested tenant doc is loaded,
     // committing also persists the events into that roster inside the tenant
     // doc, so switching team/roster and returning preserves the edit.
@@ -128,9 +126,7 @@ export function useLocalRosterProvider() {
         : flatData
     )
     setError(null)
-    setHasGenerated(false)
     setActionLog([])
-
     return { ok: true, errors: [] }
   }
 
@@ -141,7 +137,6 @@ export function useLocalRosterProvider() {
     const flatData = resolveTenant(tenantDoc, { teamId: teamIdSel, rosterId: rosterIdSel })
     setOriginalData(JSON.parse(JSON.stringify(flatData)))
     setData(flatData)
-    setHasGenerated(false)
     setActionLog([])
   }
 
@@ -169,7 +164,6 @@ export function useLocalRosterProvider() {
     setTenantDoc(null)
     setActiveTeamId(null)
     setActiveRosterId(null)
-    setHasGenerated(false)
     setActionLog([])
     setError(null)
   }
@@ -216,7 +210,6 @@ export function useLocalRosterProvider() {
     originalData,
     error,
     loading,
-    hasGenerated,
     actionLog,
     permissions: LOCAL_PERMISSIONS,
     // Admin surface — production only. Local mode has no roles or membership,

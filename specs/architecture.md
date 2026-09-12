@@ -47,7 +47,7 @@ The surface is **composed in two layers**:
 
 - **Provider (pure CRUD storage)** — `PROVIDER_KEYS`. Owns the committed document
   and knows only how to read/write it:
-  - **State:** `data`, `originalData`, `error`, `loading`, `hasGenerated`, `actionLog`.
+  - **State:** `data`, `originalData`, `error`, `loading`, `actionLog`.
   - **Permissions/roles:** `permissions` (`{ canEditRoster, canImport, canUndo }`), `role` (`'owner' | 'editor' | 'viewer' | null`), `rosters`, `activeRosterId`.
   - **CRUD mutations (async, `{ ok, errors[] }`):** `importData`, `clearData`, `saveEvents` (persist the committed events binding), `replaceDocument` (swap the non-event document, returning the parsed `nextEvents`), `logAction`, `setError`.
   - **Roster/admin:** `selectRoster`, `selectTeam`, `createRoster`, `listMembers`, `setMemberRole`, `removeMember`, `inviteMember`, `listInvites`, `revokeInvite`.
