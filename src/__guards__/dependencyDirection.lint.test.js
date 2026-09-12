@@ -57,7 +57,7 @@ const ALLOWED = {
   session: ['state', 'evaluation', 'lib'], // the "time" layer above the provider; bulkClear uses the shared slotKey primitive
   data: ['state'], // pure-CRUD providers use the adapter (documentValidation/tenantResolver)
   hooks: ['data', 'session'], // dual-mode dispatcher composes them
-  components: ['readmodel', 'generation', 'rules', 'schema', 'design', 'lib'],
+  components: ['readmodel', 'evaluation', 'generation', 'rules', 'schema', 'design', 'lib'], // evaluation: the picker UI reads the availability judge (availableMembers)
 
   // Domain-free leaves
   lib: [],

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { getAvailableMembersForEvent } from '../rules/constraintPrimitives'
+import { getAvailableMembersForEvent } from '../evaluation/availableMembers'
 import { getCardColorForDay, formatDate } from '../design/colorUtils'
 import { exportToYAML, downloadYAML } from '../lib/dataExport'
 import RosterSlotPill from './RosterSlotPill'

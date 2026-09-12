@@ -156,7 +156,7 @@ rather than a dependency sink. The allowed cross-layer arrows are:
 | `session/` | `state`, `evaluation`, `lib` (the `bulkClear` helper uses the shared `slotKey`) |
 | `data/` | `state` (providers use the adapter) |
 | `hooks/` | `data`, `session` |
-| `components/` | `readmodel`, `generation`, `rules`, `schema`, `design`, `lib` |
+| `components/` | `readmodel`, `evaluation`, `generation`, `rules`, `schema`, `design`, `lib` |
 | `lib/`, `design/`, `integrations/` | nothing (domain-free / leaf) |
 | `config/` | `schema` |
 
