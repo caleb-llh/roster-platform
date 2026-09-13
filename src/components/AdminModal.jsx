@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { modalBackdrop, glassModal, tierSection, semanticError, btnPrimary, monoChip, zModal } from '../design/designSystem'
-import { ModalHeader } from './SharedComponents'
+import { ModalHeader } from './glassPrimitives'
 
 /**
  * Owner-only admin panel: create a roster, invite/manage members by email.

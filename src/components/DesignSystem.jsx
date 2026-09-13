@@ -2,7 +2,7 @@
  * Living design-system reference page.
  *
  * A lightweight, standalone visual catalogue of every design token in
- * `designSystem.js` and every shared primitive in `SharedComponents.jsx`. It is
+ * `designSystem.js` and every shared glass primitive in `glassPrimitives.jsx`. It is
  * the reference new work should look at so the app stays consistent (see
  * specs/design-system.md, the binding spec).
  *
@@ -18,7 +18,7 @@ import {
   IssueSummary,
   ModalHeader,
   ModalCloseButton,
-} from './SharedComponents'
+} from './glassPrimitives'
 
 const {
   tierTitle,

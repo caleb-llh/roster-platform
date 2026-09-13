@@ -1,6 +1,8 @@
 // Member card + its per-month availability calendar. These are members-domain
 // UI (not app-wide primitives), so they live in their own module rather than
-// the shared grab-bag. Reusable primitives/hooks stay in SharedComponents.jsx.
+// with the shared glass primitives. Reusable primitives live in
+// `glassPrimitives.jsx`, the `HoverCard` overlay in `HoverCard.jsx`, and the
+// generic outside-click hook in `lib/useClickOutside.js`.
 import { useState } from 'react'
 import { monoChip, glassPanel, tierSection } from '../design/designSystem'
 import { expandUnavailableDays, monthsFromDays, monthGridCells, MONTH_LABEL, WEEKDAY_INITIALS } from '../lib/calendarUtils'

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { glassMenu, glassPopup, hoverRow, btnDanger, monoChip, zInCard } from '../design/designSystem'
-import { HoverCard } from './SharedComponents'
+import { HoverCard } from './HoverCard'
 
 /**
  * A single roster slot rendered as a pillbox with an inline dropdown picker.

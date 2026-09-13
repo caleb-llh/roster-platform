@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { IssueSummary } from './SharedComponents'
+import { IssueSummary } from './glassPrimitives'
 import { MemberCard } from './MemberCard'
 import { headingPage, hoverRow } from '../design/designSystem'
 import { isMemberIncluded } from '../schema/rosterSchema'
