@@ -1,5 +1,9 @@
 import yaml from 'js-yaml'
 
+// Named `yamlExport`, not `dataExport`: this module does exactly one thing --
+// serialize roster data to a YAML string and hand it to the browser as a
+// download. The old "data" name said nothing about the format it produces.
+
 /**
  * Export current roster data to YAML format
  */

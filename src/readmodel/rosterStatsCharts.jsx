@@ -1,3 +1,9 @@
+// Named `rosterStatsCharts`, not `distributionUtils`: this module produces the
+// roster-stats panel's charts and their helpers -- the shift-distribution bell
+// curve, the concern gradients, the availability-heatmap cell colour, and the
+// `BellCurveChart` / `AvailabilityHeatmap` components. The old "distribution
+// Utils" name described only one of those concerns and named a shape, not the
+// product.
 import { useState } from 'react'
 import { glassPopup, glassArrow, tierUnit } from '../design/designSystem'
 import { formatDate } from '../design/colorUtils'

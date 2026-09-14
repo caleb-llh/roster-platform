@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { getAvailableMembersForEvent } from '../evaluation/availableMembers'
 import { getCardColorForDay, formatDate } from '../design/colorUtils'
-import { exportToYAML, downloadYAML } from '../lib/dataExport'
+import { exportToYAML, downloadYAML } from '../lib/yamlExport'
 import { buildExportColumns, buildExportHeader, buildExportRows, toCSV, toTSV } from '../readmodel/rosterTable'
 import { copyText } from '../lib/clipboard'
 import RosterSlotPill from './RosterSlotPill'

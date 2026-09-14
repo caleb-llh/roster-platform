@@ -7,7 +7,7 @@ import {
   horizontalConcernGradient,
   fullTrackConcernGradient,
   availabilityCellColor,
-} from './distributionUtils.jsx'
+} from './rosterStatsCharts.jsx'
 
 describe('distributionConcern', () => {
   it('gets darker as shift count rises across the chart range', () => {

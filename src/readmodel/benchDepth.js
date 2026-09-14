@@ -8,7 +8,7 @@ import { isMemberIncluded } from '../schema/rosterSchema'
  * each event date -- the "bench depth" behind the roster-stats availability
  * heatmap. This is pure DATA (counts, required, slack, scale); the heatmap's
  * colour is a separate view concern (`availabilityCellColor` in
- * distributionUtils, built on the shared `design/slateRamp` token).
+ * rosterStatsCharts, built on the shared `design/slateRamp` token).
  *
  * "Available for role R on date D" means the member (a) is included in the
  * roster (`include !== false`), (b) can fully perform R (`canFillSlotRole`,
@@ -42,7 +42,7 @@ import { isMemberIncluded } from '../schema/rosterSchema'
  *   roster-wide range of coverage RATIOS (`available/required`) over cells with
  *   real slack, used as the continuous gradient's endpoints so the slate ramp
  *   adapts to this roster's actual bench (see `availabilityCellColor` in
- *   distributionUtils, which renders this data as the availability heatmap).
+ *   rosterStatsCharts, which renders this data as the availability heatmap).
  */
 export function computeAvailabilityByRole(events, members, roles, memberConstraints) {
   const realRoles = (roles || []).filter(r => typeof r === 'string' && !isUnderstudyRole(r))

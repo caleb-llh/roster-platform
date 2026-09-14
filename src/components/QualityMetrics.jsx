@@ -4,7 +4,7 @@ import {
   spacingDotConcern,
   normalizeMetricRange,
   fullTrackConcernGradient,
-} from '../readmodel/distributionUtils.jsx'
+} from '../readmodel/rosterStatsCharts.jsx'
 import { tierTitle, tierSection, tierUnit, helperText, glassCard, glassPopup, glassArrow } from '../design/designSystem'
 import { slateRampColor } from '../design/slateRamp'
 
