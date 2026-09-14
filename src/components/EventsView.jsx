@@ -95,8 +95,11 @@ export default function EventsView({ events, members, memberConstraints, roleCol
     monthRefs.current[key]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
   
-  // Helper to get member display name from member_id
-  const getMemberDisplay = (memberId) => {
+  // Full presentational label for a member ("Name - telegram", or "Unassigned").
+  // Named `getMemberLabel` to match the canonical `memberLabel` vocabulary the
+  // export projection (rosterTable) and RosterSlotPill already use, and to read
+  // distinctly against `getMemberName` (the short, name-only label below).
+  const getMemberLabel = (memberId) => {
     if (!memberId) return 'Unassigned'
     const member = members.find(m => m.id === memberId)
     if (!member) return memberId
@@ -317,7 +320,7 @@ export default function EventsView({ events, members, memberConstraints, roleCol
   const exportEvents = filteredMonths.flatMap(month => month.events)
   const exportHeader = buildExportHeader(exportColumns)
   const buildExportRowsForView = () =>
-    buildExportRows(exportEvents, exportColumns, { validationResults, memberLabel: getMemberDisplay })
+    buildExportRows(exportEvents, exportColumns, { validationResults, memberLabel: getMemberLabel })
 
   // Export to CSV (build the table, then trigger a browser download).
   const exportToCSV = () => {
@@ -579,7 +582,7 @@ export default function EventsView({ events, members, memberConstraints, roleCol
                               role={assignment.role}
                               roleColorClass={roleColor(assignment.role)}
                               memberId={assignment.member_id}
-                              memberLabel={getMemberDisplay(assignment.member_id)}
+                              memberLabel={getMemberLabel(assignment.member_id)}
                               isGenerated={assignment.isGenerated}
                               diffChange={rosterDiff ? diffChangeFor(event.date, idx) : undefined}
                               availableMembers={roleAvailability}
