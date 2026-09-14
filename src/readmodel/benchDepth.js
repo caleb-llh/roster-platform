@@ -5,7 +5,10 @@ import { isMemberIncluded } from '../schema/rosterSchema'
 
 /**
  * Compute, for each real role, how many members are AVAILABLE for that role on
- * each event date — the data behind the roster-stats availability line chart.
+ * each event date -- the "bench depth" behind the roster-stats availability
+ * heatmap. This is pure DATA (counts, required, slack, scale); the heatmap's
+ * colour is a separate view concern (`availabilityCellColor` in
+ * distributionUtils, built on the shared `design/slateRamp` token).
  *
  * "Available for role R on date D" means the member (a) is included in the
  * roster (`include !== false`), (b) can fully perform R (`canFillSlotRole`,
@@ -38,7 +41,8 @@ import { isMemberIncluded } from '../schema/rosterSchema'
  *   `counts[i] - required[i]` (negative = short of members). `scale` is the
  *   roster-wide range of coverage RATIOS (`available/required`) over cells with
  *   real slack, used as the continuous gradient's endpoints so the slate ramp
- *   adapts to this roster's actual bench (see `availabilityCellColor`).
+ *   adapts to this roster's actual bench (see `availabilityCellColor` in
+ *   distributionUtils, which renders this data as the availability heatmap).
  */
 export function computeAvailabilityByRole(events, members, roles, memberConstraints) {
   const realRoles = (roles || []).filter(r => typeof r === 'string' && !isUnderstudyRole(r))
@@ -100,42 +104,4 @@ export function computeAvailabilityByRole(events, members, roles, memberConstrai
   const scale = Number.isFinite(min) ? { min, max } : { min: 1, max: 1 }
 
   return { dates, series, maxCount, scale }
-}
-
-// Monochrome slack ramp: the same muted SLATE hue the rest of the roster-stats
-// panel uses, varying only in lightness so CONCERN reads darker. Short/exact
-// cells already reserve red; within the still-coverable slack cells, the user
-// now reads "thinner bench = darker slate, comfortable bench = lighter slate".
-// One hue keeps the heatmap consistent with its neighbours while preserving
-// red as the only true danger colour.
-const RAMP_HUE = 215
-const RAMP_LIGHT = { s: 16, l: 74 } // comfortable cover: pale slate
-const RAMP_DEEP = { s: 25, l: 30 }  // thin-but-coverable cover: deep slate, aligned with sibling charts
-
-/**
- * Colour for one heatmap cell. Reserved flat colours apply first (independent
- * of the roster scale, so a real shortage is never painted healthy):
- *  - no demand  → neutral slate
- *  - short (available < required) or exactly enough (=== required) → RED
- * Cells with real slack (available > required) get a CONTINUOUS single-hue
- * (slate) ramp, deepening as the cell's coverage ratio FALLS within the
- * roster's slack-ratio range (`scale`). Returns an rgb/hsl CSS colour string
- * plus a `category` for tooltips/tests.
- *
- * @returns {{ category: 'none'|'short'|'exact'|'slack', color: string }}
- */
-export function availabilityCellColor(available, required, scale) {
-  if (!required || required <= 0) return { category: 'none', color: 'rgba(226,232,240,0.4)' } // slate-200/40
-  if (available < required) return { category: 'short', color: 'rgba(220,38,38,0.62)' }        // muted red
-  if (available === required) return { category: 'exact', color: 'rgba(220,38,38,0.42)' }      // muted red, lighter
-
-  const { min = 1, max = 1 } = scale || {}
-  const ratio = available / required
-  // Normalized concern in [0,1] across the roster's slack range. The thinnest
-  // still-coverable cell (the roster's slack minimum) is the darkest slate;
-  // the most comfortable cover is the palest.
-  const t = max > min ? 1 - Math.min(1, Math.max(0, (ratio - min) / (max - min))) : 1
-  const s = RAMP_LIGHT.s + (RAMP_DEEP.s - RAMP_LIGHT.s) * t
-  const l = RAMP_LIGHT.l + (RAMP_DEEP.l - RAMP_LIGHT.l) * t
-  return { category: 'slack', color: `hsla(${RAMP_HUE}, ${s.toFixed(0)}%, ${l.toFixed(0)}%, 0.72)` }
 }

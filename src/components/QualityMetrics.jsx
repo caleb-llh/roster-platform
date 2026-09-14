@@ -6,6 +6,7 @@ import {
   fullTrackConcernGradient,
 } from '../readmodel/distributionUtils.jsx'
 import { tierTitle, tierSection, tierUnit, helperText, glassCard, glassPopup, glassArrow } from '../design/designSystem'
+import { slateRampColor } from '../design/slateRamp'
 
 /**
  * Light, translucent "glass" tooltip shown above its parent on hover. The
@@ -23,6 +24,15 @@ function Tooltip({ children }) {
     </span>
   )
 }
+
+// Spacing-dot slate ramp: tightly-packed shift dates read darker/denser, spread
+// dates paler. Endpoints stay local (the dots run paler and carry a coloured
+// border, unlike the sibling charts); the hue + interpolation are the shared
+// `slateRamp` token.
+const SPACING_DOT_FILL_LIGHT = { s: 15, l: 92, a: 0.42 } // spread apart: pale, faint
+const SPACING_DOT_FILL_DEEP = { s: 25, l: 30, a: 0.72 }  // tightly packed: deep, solid
+const SPACING_DOT_BORDER_LIGHT = { s: 18, l: 68, a: 0.56 }
+const SPACING_DOT_BORDER_DEEP = { s: 25, l: 44, a: 0.72 }
 
 /**
  * Shared component for displaying quality metrics (shift balance, time spacing, role rotation)
@@ -118,8 +128,8 @@ export default function QualityMetrics({ generationResult, members, stats, showR
                           <span
                             className="block h-2.5 w-2.5 rounded-full backdrop-blur-sm"
                             style={{
-                              backgroundColor: `hsla(215, ${(15 + concern * 10).toFixed(0)}%, ${(92 - concern * 62).toFixed(0)}%, ${(0.42 + concern * 0.30).toFixed(2)})`,
-                              border: `1px solid hsla(215, ${(18 + concern * 7).toFixed(0)}%, ${(68 - concern * 24).toFixed(0)}%, ${(0.56 + concern * 0.16).toFixed(2)})`,
+                              backgroundColor: slateRampColor(SPACING_DOT_FILL_LIGHT, SPACING_DOT_FILL_DEEP, concern),
+                              border: `1px solid ${slateRampColor(SPACING_DOT_BORDER_LIGHT, SPACING_DOT_BORDER_DEEP, concern)}`,
                             }}
                           />
                           <Tooltip>{d.role ? `${d.date} · ${d.role}` : d.date}</Tooltip>

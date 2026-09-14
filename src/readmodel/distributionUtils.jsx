@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { glassPopup, glassArrow, tierUnit } from '../design/designSystem'
 import { formatDate } from '../design/colorUtils'
-import { availabilityCellColor } from './availabilityUtils'
+import { SLATE_HUE, slateRampColor } from '../design/slateRamp'
 import { isMemberIncluded } from '../schema/rosterSchema'
 
 /**
@@ -69,11 +69,13 @@ export function calculateDistribution(generationResult, members) {
   }
 }
 
-// Shared slate ramp for the roster-stats visuals. Its deepest endpoint is
-// intentionally aligned to the availability heatmap's darkest slate so the
+// Slate-ramp endpoints for the roster-stats bars. Hue + interpolation live in
+// the shared `design/slateRamp` token; only these per-chart endpoints stay
+// local. The deep endpoint is intentionally aligned to the availability
+// heatmap's darkest slate (see `availabilityCellColor` / HEATMAP_* below) so the
 // compact charts share one common "maximum concern" shade.
-const STATS_SLATE_LIGHT = { h: 215, s: 16, l: 80, a: 0.72 }
-const STATS_SLATE_DEEP = { h: 215, s: 25, l: 30, a: 0.72 }
+const STATS_SLATE_LIGHT = { s: 16, l: 80, a: 0.72 }
+const STATS_SLATE_DEEP = { s: 25, l: 30, a: 0.72 }
 
 const clamp01 = (n) => Math.min(1, Math.max(0, n))
 
@@ -83,20 +85,14 @@ export function normalizeMetricRange(value, min, max, fallback = 0.5) {
   return clamp01((value - min) / (max - min))
 }
 
-const mixStatSlate = (concern) => {
-  const t = clamp01(concern)
-  const s = STATS_SLATE_LIGHT.s + (STATS_SLATE_DEEP.s - STATS_SLATE_LIGHT.s) * t
-  const l = STATS_SLATE_LIGHT.l + (STATS_SLATE_DEEP.l - STATS_SLATE_LIGHT.l) * t
-  const a = STATS_SLATE_LIGHT.a + (STATS_SLATE_DEEP.a - STATS_SLATE_LIGHT.a) * t
-  return `hsla(${STATS_SLATE_LIGHT.h}, ${s.toFixed(0)}%, ${l.toFixed(0)}%, ${a.toFixed(2)})`
-}
+const mixStatSlate = (concern) => slateRampColor(STATS_SLATE_LIGHT, STATS_SLATE_DEEP, concern)
 
 const tintTowardsLight = (concern, delta = 12) => {
   const t = clamp01(concern)
   const lBase = STATS_SLATE_LIGHT.l + (STATS_SLATE_DEEP.l - STATS_SLATE_LIGHT.l) * t
   const l = Math.max(18, Math.min(92, lBase + delta))
   const s = STATS_SLATE_LIGHT.s + (STATS_SLATE_DEEP.s - STATS_SLATE_LIGHT.s) * t
-  return `hsla(${STATS_SLATE_LIGHT.h}, ${s.toFixed(0)}%, ${l.toFixed(0)}%, 0.72)`
+  return `hsla(${SLATE_HUE}, ${s.toFixed(0)}%, ${l.toFixed(0)}%, 0.72)`
 }
 
 export function distributionConcern(shiftCount, minShiftCount, maxShiftCount) {
@@ -139,6 +135,51 @@ export function horizontalConcernGradient(concern) {
 
 export function fullTrackConcernGradient() {
   return `linear-gradient(to right, ${mixStatSlate(1)}, ${mixStatSlate(0)})`
+}
+
+// Availability-heatmap slate ramp: comfortable cover is pale slate, thin-but-
+// coverable cover is deep slate. Endpoints stay local; the hue + interpolation
+// are the shared `slateRamp` token. The deep endpoint is aligned to the sibling
+// bars' darkest slate (STATS_SLATE_DEEP) so the whole panel shares one "maximum
+// concern" shade. Alpha is fixed at 0.72 across the ramp.
+const HEATMAP_SLATE_LIGHT = { s: 16, l: 74, a: 0.72 } // comfortable cover
+const HEATMAP_SLATE_DEEP = { s: 25, l: 30, a: 0.72 }  // thin-but-coverable cover
+
+/**
+ * Colour for one availability-heatmap cell. Reserved flat colours apply first
+ * (independent of the roster scale, so a real shortage is never painted
+ * healthy):
+ *  - no demand  → neutral slate
+ *  - short (available < required) or exactly enough (=== required) → RED
+ * Cells with real slack (available > required) get a CONTINUOUS single-hue
+ * (slate) ramp, deepening as the cell's coverage ratio FALLS within the
+ * roster's slack-ratio range (`scale`). Returns a CSS colour string plus a
+ * `category` for tooltips/tests.
+ *
+ * @returns {{ category: 'none'|'short'|'exact'|'slack', color: string }}
+ */
+export function availabilityCellColor(available, required, scale) {
+  if (!required || required <= 0) return { category: 'none', color: 'rgba(226,232,240,0.4)' } // slate-200/40
+  if (available < required) return { category: 'short', color: 'rgba(220,38,38,0.62)' }        // muted red
+  if (available === required) return { category: 'exact', color: 'rgba(220,38,38,0.42)' }      // muted red, lighter
+
+  const { min = 1, max = 1 } = scale || {}
+  const ratio = available / required
+  // Normalized concern in [0,1] across the roster's slack range. The thinnest
+  // still-coverable cell (the roster's slack minimum) is the darkest slate; the
+  // most comfortable cover is the palest.
+  const t = max > min ? 1 - Math.min(1, Math.max(0, (ratio - min) / (max - min))) : 1
+  return { category: 'slack', color: slateRampColor(HEATMAP_SLATE_LIGHT, HEATMAP_SLATE_DEEP, t) }
+}
+
+// Static legend swatch for the heatmap's coverable-cell ramp: deep (low cover)
+// on the left to light (high cover) on the right. The deep end is nudged 2pts
+// darker than the cell ramp so the tiny swatch reads clearly. Built from the
+// shared slate token so the hue is never hardcoded.
+function heatmapLegendGradient() {
+  const deep = slateRampColor({ s: 25, l: 28, a: 0.72 }, { s: 25, l: 28, a: 0.72 }, 0)
+  const light = slateRampColor(HEATMAP_SLATE_LIGHT, HEATMAP_SLATE_LIGHT, 0)
+  return `linear-gradient(to right, ${deep}, ${light})`
 }
 
 /**
@@ -230,8 +271,8 @@ export function BellCurveChart({ sortedDistribution, maxMemberCount, members = [
 /**
  * Availability heatmap: a role × event-date grid whose cell colour encodes how
  * well that role is covered on that date (members available vs. slots required).
- * See `computeAvailabilityByRole` / `availabilityCellColor` and
- * specs/events-ui.md for the data + colour semantics.
+ * See `computeAvailabilityByRole` (benchDepth.js) for the data and
+ * `availabilityCellColor` below for the colour semantics; see specs/events-ui.md.
  *
  * Replaces the earlier multi-line chart, which turned into unreadable spaghetti
  * once several roles tracked each other; a grid keeps every role on its own row
@@ -300,7 +341,7 @@ export function AvailabilityHeatmap({ data }) {
         <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: 'rgba(220,38,38,0.62)' }} /> short / exactly enough</span>
         <span className="flex items-center gap-1">
           <span className="text-slate-400">low</span>
-          <span className="inline-block h-2.5 w-16 rounded-sm" style={{ backgroundImage: 'linear-gradient(to right, hsla(215,25%,28%,0.72), hsla(215,16%,74%,0.72))' }} />
+          <span className="inline-block h-2.5 w-16 rounded-sm" style={{ backgroundImage: heatmapLegendGradient() }} />
           <span className="text-slate-400">high cover</span>
         </span>
         <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: 'rgba(226,232,240,0.6)' }} /> no demand</span>
