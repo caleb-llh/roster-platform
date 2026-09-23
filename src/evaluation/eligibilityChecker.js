@@ -60,9 +60,10 @@ export class EligibilityChecker {
     // Hard constraints via the shared registry (one authority, three consumers).
     // The generator enforces BOTH feasibility and load-cadence kinds, and reads
     // counts from its stateful tracker through the ctx counting interface below.
-    // currentRoster is passed via a per-call override so once-per-event sees the
-    // slots placed so far in this event.
-    this._currentRoster = currentRoster
+    // currentRoster is passed via a per-call ctx (a prototype-linked view of
+    // this checker) so once-per-event sees the slots placed so far in this
+    // event, without stashing per-call state on the shared instance.
+    const ctx = this._ctxFor(currentRoster)
     for (const constraint of [
       getConstraintRule('understudy-before-role'),
       getConstraintRule('availability'),
@@ -77,8 +78,8 @@ export class EligibilityChecker {
       const forceRun =
         constraint.key === 'no-clash' &&
         isConstraintEnabled(this.rosterConstraints, CONSTRAINT_KEYS.ENFORCE_CROSS_TEAM_CLASH)
-      if (!forceRun && !constraint.enabled(this)) continue
-      const violation = constraint.check({ memberId, role, event }, this, CONSTRAINT_MODES.WOULD_PLACE)
+      if (!forceRun && !constraint.enabled(ctx)) continue
+      const violation = constraint.check({ memberId, role, event }, ctx, CONSTRAINT_MODES.WOULD_PLACE)
       if (violation) {
         return { eligible: false, reason: this._reasonFor(violation) }
       }
@@ -87,9 +88,16 @@ export class EligibilityChecker {
     return { eligible: true, reason: null }
   }
 
-  // --- ctx counting interface consumed by the registry descriptors ---
-  currentRoster() {
-    return (this._currentRoster || []).filter(s => s.member_id)
+  // Build the per-call constraint ctx: a prototype-linked view of this checker
+  // that carries the call's currentRoster locally, so the shared counting
+  // interface (weeklyCount/overlappingEvents/…) is inherited unchanged while
+  // ctx.currentRoster() returns THIS call's slots. Prototype linkage keeps the
+  // per-call roster off the shared instance (no set-then-read round-trip).
+  _ctxFor(currentRoster) {
+    const roster = (currentRoster || []).filter(s => s.member_id)
+    const ctx = Object.create(this)
+    ctx.currentRoster = () => roster
+    return ctx
   }
   weeklyCount(memberId, date) {
     const local = this.tracker.getWeeklyAssignmentCount(memberId, date)
