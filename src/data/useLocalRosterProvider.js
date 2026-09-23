@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import yaml from 'js-yaml'
 import { runAllValidators } from '../state/documentValidation'
-import { LOCAL_PERMISSIONS } from './providerContract'
+import { LOCAL_PERMISSIONS, appendActionLog } from './providerContract'
 import { isTenantShape, tenantSelection, resolveTenant, memberTeams, withRosterEvents, deriveExternalAssignments, validateTenantRosters } from '../state/tenantResolver'
 
 /**
@@ -198,11 +198,7 @@ export function useLocalRosterProvider() {
    * Append entries to the generic roster action log. Accepts a single entry or
    * an array of entries. Synchronous (purely a UI log), same in both modes.
    */
-  const logAction = (entryOrEntries) => {
-    const additions = Array.isArray(entryOrEntries) ? entryOrEntries : [entryOrEntries]
-    if (additions.length === 0) return
-    setActionLog(prev => [...prev, ...additions])
-  }
+  const logAction = appendActionLog(setActionLog)
 
   return {
     // State

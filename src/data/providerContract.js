@@ -125,6 +125,21 @@ export const LOCAL_PERMISSIONS = Object.freeze({
 })
 
 /**
+ * Build the provider `logAction` from a provider's `setActionLog` setter. The
+ * action log is a purely-local UI concern (never persisted), so the append is
+ * byte-identical across every provider mode — this factory is the single home
+ * for that logic. Accepts a single entry or an array; a no-op on an empty array.
+ *
+ * @param {(updater: (prev: any[]) => any[]) => void} setActionLog
+ * @returns {(entryOrEntries: any) => void}
+ */
+export const appendActionLog = (setActionLog) => (entryOrEntries) => {
+  const additions = Array.isArray(entryOrEntries) ? entryOrEntries : [entryOrEntries]
+  if (additions.length === 0) return
+  setActionLog(prev => [...prev, ...additions])
+}
+
+/**
  * The exact set of keys every PROVIDER's returned object must expose — the pure
  * CRUD storage surface. A provider owns the committed document and knows how to
  * persist events (`saveEvents`) and swap the non-event document

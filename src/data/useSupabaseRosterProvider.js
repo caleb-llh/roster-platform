@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import yaml from 'js-yaml'
 import { runAllValidators } from '../state/documentValidation'
 import { supabase } from './supabaseClient'
+import { appendActionLog } from './providerContract'
 
 /**
  * Production (Supabase-backed) implementation of the roster data provider
@@ -202,11 +203,7 @@ export function useSupabaseRosterProvider() {
     return { ok: true, errors: [], nextEvents: nextEvents || [] }
   }
 
-  const logAction = (entryOrEntries) => {
-    const additions = Array.isArray(entryOrEntries) ? entryOrEntries : [entryOrEntries]
-    if (additions.length === 0) return
-    setActionLog(prev => [...prev, ...additions])
-  }
+  const logAction = appendActionLog(setActionLog)
 
   // --- Admin (owner-only) actions, backed by SECURITY DEFINER RPCs. ---
 
