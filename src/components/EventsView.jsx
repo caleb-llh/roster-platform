@@ -3,6 +3,7 @@ import { getAvailableMembersForEvent } from '../evaluation/availableMembers'
 import { getCardColorForDay, formatDate } from '../design/colorUtils'
 import { exportToYAML, downloadYAML } from '../lib/yamlExport'
 import { buildExportColumns, buildExportHeader, buildExportRows, toCSV, toTSV } from '../readmodel/rosterTable'
+import { memberNameById } from '../readmodel/memberLookup'
 import { copyText } from '../lib/clipboard'
 import RosterSlotPill from './RosterSlotPill'
 import { IssueSummary } from './glassPrimitives'
@@ -107,10 +108,7 @@ export default function EventsView({ events, members, memberConstraints, roleCol
   }
 
   // Short (name-only) label for the uncommitted-change tooltip.
-  const getMemberName = (memberId) => {
-    if (!memberId) return null
-    return members.find(m => m.id === memberId)?.name || memberId
-  }
+  const getMemberName = (memberId) => memberNameById(members, memberId)
 
   // Map each changed slot (date#roleIndex → change record) so a slot can show
   // its own before→after tooltip on the diff dot.

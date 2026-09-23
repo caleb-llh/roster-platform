@@ -6,6 +6,7 @@ import { generateRoster } from './generation'
 import { toState } from './state/derivedState'
 import { computeRosterDiff } from './readmodel/rosterDiff'
 import { computeAvailabilityByRole } from './readmodel/benchDepth'
+import { memberNameById } from './readmodel/memberLookup'
 import { useRosterData } from './hooks/useRosterData'
 import { getActiveConstraints, getActivePreferences, getConstraintDescription, getPreferenceDescription, MEMBER_PREF_FIELDS } from './schema/rosterSchema'
 import { ErrorDisplay, GlassFab } from './components/glassPrimitives'
@@ -110,7 +111,7 @@ function App({ auth }) {
   const committedEvents = toState(data).events
   const rosterDiff = computeRosterDiff(committedEvents, events)
   // Name-only label for the change-review list (diff stores member_id).
-  const getMemberName = (memberId) => memberId ? (members.find(m => m.id === memberId)?.name || memberId) : null
+  const getMemberName = (memberId) => memberNameById(members, memberId)
 
   const roleColorMap = createRoleColorMap(roles)
   const rosterStats = calculateRosterStats(events, members, rosterPeriod, memberConstraints, rosterConstraints)

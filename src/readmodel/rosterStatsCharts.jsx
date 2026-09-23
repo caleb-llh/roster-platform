@@ -9,6 +9,7 @@ import { glassPopup, glassArrow, tierUnit } from '../design/designSystem'
 import { formatDate } from '../design/colorUtils'
 import { SLATE_HUE, slateRampColor } from '../design/slateRamp'
 import { isMemberIncluded } from '../schema/rosterSchema'
+import { memberNameById } from './memberLookup'
 
 /**
  * Calculate shift distribution from generation result
@@ -207,11 +208,6 @@ export function BellCurveChart({ sortedDistribution, maxMemberCount, members = [
     )
   }
 
-  // Helper to get member name from ID
-  const getMemberName = (memberId) => {
-    const member = members.find(m => m.id === memberId)
-    return member?.name || memberId
-  }
   const minShiftCount = Math.min(...sortedDistribution.map(d => d.shiftCount))
   const maxShiftCount = Math.max(...sortedDistribution.map(d => d.shiftCount))
 
@@ -259,7 +255,7 @@ export function BellCurveChart({ sortedDistribution, maxMemberCount, members = [
                   </div>
                   <div className="space-y-0.5 text-slate-600">
                     {memberIds.map((memberId, idx) => (
-                      <div key={idx}>• {getMemberName(memberId)}</div>
+                      <div key={idx}>• {memberNameById(members, memberId)}</div>
                     ))}
                   </div>
                   {/* Arrow */}
