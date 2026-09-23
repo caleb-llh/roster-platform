@@ -5,6 +5,7 @@ import { exportToYAML, downloadYAML } from '../lib/yamlExport'
 import { buildExportColumns, buildExportHeader, buildExportRows, toCSV, toTSV } from '../readmodel/rosterTable'
 import { memberNameById } from '../readmodel/memberLookup'
 import { copyText } from '../lib/clipboard'
+import { useClickOutside } from '../lib/useClickOutside'
 import RosterSlotPill from './RosterSlotPill'
 import { IssueSummary } from './glassPrimitives'
 import { understudySlotRole, isUnderstudyRole, baseRoleOf } from '../schema/understudyRoles'
@@ -66,23 +67,9 @@ export default function EventsView({ events, members, memberConstraints, roleCol
   const menuRef = useRef(null)
   const addRoleRef = useRef(null)
 
-  useEffect(() => {
-    if (!addRoleFor) return
-    const onDocClick = (e) => {
-      if (addRoleRef.current && !addRoleRef.current.contains(e.target)) setAddRoleFor(null)
-    }
-    document.addEventListener('mousedown', onDocClick)
-    return () => document.removeEventListener('mousedown', onDocClick)
-  }, [addRoleFor])
+  useClickOutside(addRoleRef, () => setAddRoleFor(null), Boolean(addRoleFor))
 
-  useEffect(() => {
-    if (!menuOpen) return
-    const onDocClick = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false)
-    }
-    document.addEventListener('mousedown', onDocClick)
-    return () => document.removeEventListener('mousedown', onDocClick)
-  }, [menuOpen])
+  useClickOutside(menuRef, () => setMenuOpen(false), menuOpen)
 
   // Floating month selector (cards view): track which month is in view and
   // auto-scroll the active chip into view within the selector bar.

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { glassMenu, glassPopup, hoverRow, btnDanger, monoChip, zInCard } from '../design/designSystem'
 import { HoverCard } from './HoverCard'
+import { useClickOutside } from '../lib/useClickOutside'
 
 /**
  * A single roster slot rendered as a pillbox with an inline dropdown picker.
@@ -54,17 +55,7 @@ export default function RosterSlotPill({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, confirming])
 
-  useEffect(() => {
-    if (!open && !confirming) return
-    const onDocClick = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setOpen(false)
-        setConfirming(null)
-      }
-    }
-    document.addEventListener('mousedown', onDocClick)
-    return () => document.removeEventListener('mousedown', onDocClick)
-  }, [open, confirming])
+  useClickOutside(ref, () => { setOpen(false); setConfirming(null) }, open || Boolean(confirming))
 
   // Clear any pending long-press timer on unmount.
   useEffect(() => () => clearTimeout(longPressRef.current), [])
