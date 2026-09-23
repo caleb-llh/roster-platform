@@ -35,6 +35,7 @@
 import { validateEventAssignments } from '../evaluation/assignmentValidator'
 import { explainSwap } from '../evaluation/swapPolicy'
 import { buildBulkClear } from './bulkClear'
+import { dateOfSlotKey } from '../lib/slotKey'
 
 const nameOfIn = (members) => (id) =>
   members.find((m) => m.id === id)?.name || id || '—'
@@ -266,7 +267,7 @@ export const bulkClear = (state, { selectedSlots }) => {
   const { nextEvents, count } = buildBulkClear(events, selectedSlots)
   if (count === 0) return noop
   // Affected dates = the event dates present among the selected keys.
-  const affected = [...new Set([...selectedSlots].map((k) => String(k).split('#')[0]))]
+  const affected = [...new Set([...selectedSlots].map(dateOfSlotKey))]
   return {
     ok: true,
     reason: null,

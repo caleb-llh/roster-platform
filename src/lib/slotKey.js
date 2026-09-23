@@ -11,3 +11,12 @@
 
 /** `date#roleIndex` — the shared roster-slot key. */
 export const slotKey = (date, roleIndex) => `${date}#${roleIndex}`
+
+/**
+ * The `date` half of a slot key. The inverse of `slotKey` for the date
+ * component — used where a consumer only needs the event date a key belongs to
+ * (e.g. bulk-clear computing its affected dates). Kept here, beside `slotKey`,
+ * so the `#`-delimited format lives in exactly one place and readers/writers
+ * cannot drift.
+ */
+export const dateOfSlotKey = (key) => String(key).split('#')[0]
