@@ -45,12 +45,3 @@ export const createRoleColorMap = (roles) => {
 export const getCardColorForDay = (dayOfWeek) => {
   return DAY_CARD_COLORS[dayOfWeek % DAY_CARD_COLORS.length]
 }
-
-// Date formatting utilities
-export const formatDate = (dateString, options = { month: 'short', day: 'numeric' }) => {
-  return new Date(dateString).toLocaleDateString('en-US', options)
-}
-
-export const formatDateRange = (startDate, endDate) => {
-  return `${formatDate(startDate, { month: 'short', day: 'numeric', year: 'numeric' })} - ${formatDate(endDate, { month: 'short', day: 'numeric', year: 'numeric' })}`
-}

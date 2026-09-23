@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { getAvailableMembersForEvent } from '../evaluation/availableMembers'
-import { getCardColorForDay, formatDate } from '../design/colorUtils'
+import { getCardColorForDay } from '../design/colorUtils'
+import { formatDate } from '../lib/calendarUtils'
 import { exportToYAML, downloadYAML } from '../lib/yamlExport'
 import { buildExportColumns, buildExportHeader, buildExportRows, toCSV, toTSV } from '../readmodel/rosterTable'
 import { memberNameById } from '../readmodel/memberLookup'

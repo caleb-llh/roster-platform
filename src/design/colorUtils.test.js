@@ -3,9 +3,7 @@ import {
   COLOR_PALETTE, 
   DAY_CARD_COLORS,
   createRoleColorMap, 
-  getCardColorForDay,
-  formatDate,
-  formatDateRange
+  getCardColorForDay
 } from './colorUtils'
 
 describe('colorUtils', () => {
@@ -68,30 +66,6 @@ describe('colorUtils', () => {
     it('should cycle for days beyond 6', () => {
       expect(getCardColorForDay(7)).toBe(DAY_CARD_COLORS[0])
       expect(getCardColorForDay(14)).toBe(DAY_CARD_COLORS[0])
-    })
-  })
-
-  describe('formatDate', () => {
-    it('should format date with default options', () => {
-      const result = formatDate('2026-02-15')
-      expect(result).toMatch(/Feb\s+15/)
-    })
-
-    it('should accept custom options', () => {
-      const result = formatDate('2026-02-15', { 
-        month: 'long', 
-        day: 'numeric', 
-        year: 'numeric' 
-      })
-      expect(result).toContain('February')
-      expect(result).toContain('2026')
-    })
-  })
-
-  describe('formatDateRange', () => {
-    it('should format date range correctly', () => {
-      const result = formatDateRange('2026-02-01', '2026-04-30')
-      expect(result).toMatch(/Feb\s+1,\s+2026\s+-\s+Apr\s+30,\s+2026/)
     })
   })
 })

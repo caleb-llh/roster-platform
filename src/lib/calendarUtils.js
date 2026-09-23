@@ -94,3 +94,16 @@ export const MONTH_LABEL = (year, month) =>
   new Date(year, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
 export const WEEKDAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+
+// Presentational date formatting (moved here from design/colorUtils in audit
+// B1 -- formatting a date is calendar concern, not colour policy). Note these
+// use `new Date(dateString)` (UTC parse) rather than the local `parseDayKey`
+// above; behaviour is preserved exactly as it was in colorUtils, since these
+// only feed short human-readable labels, not the day-key logic.
+export const formatDate = (dateString, options = { month: 'short', day: 'numeric' }) => {
+  return new Date(dateString).toLocaleDateString('en-US', options)
+}
+
+export const formatDateRange = (startDate, endDate) => {
+  return `${formatDate(startDate, { month: 'short', day: 'numeric', year: 'numeric' })} - ${formatDate(endDate, { month: 'short', day: 'numeric', year: 'numeric' })}`
+}

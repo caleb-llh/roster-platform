@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react'
-import { createRoleColorMap, formatDateRange, formatDate } from './design/colorUtils'
+import { createRoleColorMap } from './design/colorUtils'
+import { formatDate, formatDateRange } from './lib/calendarUtils'
 import { calculateRosterStats } from './readmodel/rosterStats'
 import { validateEventAssignments } from './evaluation/assignmentValidator'
 import { generateRoster } from './generation'

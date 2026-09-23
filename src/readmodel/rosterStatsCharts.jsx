@@ -6,7 +6,7 @@
 // product.
 import { useState } from 'react'
 import { glassPopup, glassArrow, tierUnit } from '../design/designSystem'
-import { formatDate } from '../design/colorUtils'
+import { formatDate } from '../lib/calendarUtils'
 import { SLATE_HUE, slateRampColor } from '../design/slateRamp'
 import { isMemberIncluded } from '../schema/rosterSchema'
 import { memberNameById } from './memberLookup'
