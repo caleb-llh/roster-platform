@@ -10,6 +10,7 @@
  * and stays out of the authenticated data flow. This file is allowlisted by the
  * design-system guardrail test because it renders raw token strings verbatim.
  */
+import { useState } from 'react'
 import * as theme from '../design/designSystem'
 import { COLOR_PALETTE, DAY_CARD_COLORS } from '../design/colorUtils'
 import {
@@ -18,6 +19,7 @@ import {
   IssueSummary,
   ModalHeader,
   ModalCloseButton,
+  ModalShell,
 } from './glassPrimitives'
 
 const {
@@ -74,6 +76,7 @@ function Token({ name, children, note }) {
 }
 
 export default function DesignSystem() {
+  const [shellOpen, setShellOpen] = useState(false)
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 p-4 sm:p-8">
       <div className="mx-auto max-w-4xl space-y-6">
@@ -253,6 +256,27 @@ export default function DesignSystem() {
           </Token>
           <Token name="ModalCloseButton (standalone)">
             <ModalCloseButton onClick={() => {}} />
+          </Token>
+          <Token name="ModalShell" note="Full centered-modal chrome (backdrop + panel + header + body + footer)">
+            <button className={`${btnNeutral} px-3 py-1.5 text-sm`} onClick={() => setShellOpen(true)}>
+              Open ModalShell
+            </button>
+            {shellOpen && (
+              <ModalShell
+                title="Example modal"
+                onClose={() => setShellOpen(false)}
+                footer={
+                  <button className={`${btnNeutral} px-4 py-2 text-sm`} onClick={() => setShellOpen(false)}>
+                    Close
+                  </button>
+                }
+              >
+                <p className="text-sm text-gray-600">
+                  Body content scrolls; the header and footer stay fixed. This is the one
+                  centered-modal shell — modals supply only their title/body/footer.
+                </p>
+              </ModalShell>
+            )}
           </Token>
         </Section>
       </div>

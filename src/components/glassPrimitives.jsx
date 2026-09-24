@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { semanticError, glassMenu, tierSection, glassCard, glassFab, tierLabel, zPopover } from '../design/designSystem'
+import { semanticError, glassMenu, tierSection, glassCard, glassFab, tierLabel, zPopover, modalBackdrop, glassModal, zModal } from '../design/designSystem'
 import { useClickOutside } from '../lib/useClickOutside'
 
 /** Standard modal "×" close button. */
@@ -27,6 +27,32 @@ export const ModalHeader = ({ title, onClose, children }) => (
     {onClose && <ModalCloseButton onClick={onClose} />}
   </div>
 )
+
+/** Standard modal shell: fixed backdrop (click to close) + centered glass panel
+ *  + shared ModalHeader + a scrollable body + an optional footer. This is the
+ *  one centered-modal chrome; modals supply only their title/body/footer and
+ *  never re-roll the backdrop/panel/header. (Drawers -- e.g. YamlDrawer -- are a
+ *  different shell and only share ModalHeader, not this.) `size` picks the panel
+ *  max-width; `titleExtra` renders next to the title (e.g. a status badge). */
+export const ModalShell = ({ title, titleExtra, onClose, footer, size = 'md', children }) => {
+  const maxW = size === 'lg' ? 'max-w-3xl' : 'max-w-md'
+  return (
+    <div className={`fixed inset-0 ${zModal} flex items-center justify-center p-2 sm:p-4`}>
+      <div className={`absolute inset-0 ${modalBackdrop}`} onClick={onClose} />
+      <div className={`relative z-10 flex max-h-[90vh] w-full ${maxW} flex-col overflow-hidden ${glassModal}`}>
+        <ModalHeader title={title} onClose={onClose}>{titleExtra}</ModalHeader>
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-5">
+          {children}
+        </div>
+        {footer && (
+          <div className="border-t border-gray-200 bg-gray-50/80 px-4 sm:px-6 py-3 sm:py-4">
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 /** Glass stat tile: a big number with an uppercase caption below. */
 export const StatTile = ({ value, label, className = '' }) => (

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { modalBackdrop, glassModal, tierSection, semanticError, btnPrimary, monoChip, zModal } from '../design/designSystem'
-import { ModalHeader } from './glassPrimitives'
+import { tierSection, semanticError, btnPrimary, monoChip } from '../design/designSystem'
+import { ModalShell } from './glassPrimitives'
 
 /**
  * Owner-only admin panel: create a roster, invite/manage members by email.
@@ -74,12 +74,8 @@ export default function AdminModal({ open, onClose, roster }) {
   }
 
   return (
-    <div className={`fixed inset-0 ${zModal} flex items-center justify-center p-4`}>
-      <div className={`absolute inset-0 ${modalBackdrop}`} onClick={onClose} />
-      <div className={`relative z-10 flex max-h-[85vh] w-full max-w-md flex-col overflow-hidden ${glassModal}`}>
-        <ModalHeader title="Manage roster" onClose={onClose} />
-
-        <div className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
+    <ModalShell title="Manage roster" onClose={onClose} size="md">
+      <div className="space-y-6">
           {error && (
             <div className={`rounded px-3 py-2 text-sm ${semanticError}`}>{error}</div>
           )}
@@ -194,8 +190,7 @@ export default function AdminModal({ open, onClose, roster }) {
               </ul>
             </section>
           )}
-        </div>
       </div>
-    </div>
+    </ModalShell>
   )
 }
