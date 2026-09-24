@@ -14,6 +14,7 @@ src/generation/
 ├── understudySeeding.js     # Phase 0: promotion-aware understudy seeding
 ├── promotionPlanning.js     # Phase 0.5: backtracking promotion planner (maximise promotions)
 ├── scoringEngine.js         # Thin adapter that ranks candidates via ../rules/scorers.js
+├── scoreRoster.js           # Whole-roster quality OBJECTIVE (Phase 2 + final report)
 ├── localSearch.js           # Hill-climbing optimizer (swaps + fill-empty, skips locked)
 ├── rng.js                   # Seeded PRNG (deterministic randomization)
 ├── actionLog.js             # Verbose action logger (result.log / logEntries)
@@ -102,6 +103,16 @@ Reversible move layer pairing the events (source of truth) with the tracker
 - `applyMove` / `revertMove` — set/clear a slot's occupant; revert restores exactly
 - `applySwap` / `revertSwap` — exchange two slots' occupants
 - `allSlots`, `getOccupant` — enumeration/inspection for the search loop
+
+### scoreRoster
+The whole-roster quality **objective** (`scoreRoster(state, memberPreferences,
+rosterPreferences)` → negative cost, higher = better). Extracted from `index.js`
+(audit B4) once it earned a second reader: it is the objective the Phase-2 local
+search hill-climbs AND the final `calculateRosterQuality` report. Distinct from
+`ScoringEngine` (the *per-candidate* greedy scorer) and from orchestration — but
+deliberately reuses the same `SCORING_WEIGHTS` so quality selection stays aligned
+with greedy construction. Owns `countConsecutiveWeekendViolations` (a whole-roster
+scan, so a Phase-2 swap can't re-introduce a pairing the objective was blind to).
 
 ### localSearch
 Hill-climbing optimizer over `WorkingRoster`. Enumerates candidate swaps and
