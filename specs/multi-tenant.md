@@ -1,12 +1,16 @@
-# Multi-tenant, teams & cross-team members — design plan (not yet built)
+# Multi-tenant, teams & cross-team members
 
-> **Status: PLANNING.** This file is the agreed target design and impact
-> analysis for introducing a **tenant → team → roster** hierarchy with a
-> **tenant-level member registry** and **cross-team-aware constraints**. Nothing
-> here is implemented yet. It is binding *as a plan*: when a phase lands, move
-> its decisions into the relevant spec ([architecture](architecture.md),
-> [data-layer](data-layer.md), [generation](generation.md)) and update this file's
-> status. Sequencing is deliberate — see [Phased delivery](#phased-delivery).
+> **Status: Phases 0–2 built; Phase 3 (Supabase persistence) planned.** This
+> file is the agreed target design and impact analysis for a **tenant → team →
+> roster** hierarchy with a **tenant-level member registry** and
+> **cross-team-aware constraints**. Phases 0–2 (schema shape, tenant resolution,
+> cross-team-aware enforcement over a local/YAML document) have landed — see
+> [Phased delivery](#phased-delivery) for the per-phase ✅ status. Phase 3
+> (persisting the nested shape in Supabase) is still planned. It is binding *as a
+> plan* for the unbuilt phases: when a phase lands, move its decisions into the
+> relevant spec ([architecture](architecture.md), [data-layer](data-layer.md),
+> [generation](generation.md)) and update this file's status. Sequencing is
+> deliberate — see [Phased delivery](#phased-delivery).
 
 ## Why this change
 
@@ -197,8 +201,9 @@ preserved, assignments survive the hoist.
 
 ## Compatibility seam (how we avoid rewriting the engine)
 
-The generator, eligibility checker, validators, stats, diff and the whole
-`utils/` layer currently consume a **derived state** from one document
+The generator, eligibility checker, validators, stats and diff — the whole
+domain core (`generation/`, `evaluation/`, `readmodel/`, `state/`) — currently
+consume a **derived state** from one document
 (`toState` → `{ members, events, roles, memberConstraints, … }`). We
 keep that contract. The change is *where the pieces come from*:
 
@@ -441,7 +446,7 @@ keeps `npx vitest run` + `npm run build` green.
     mode, so single-team behaviour is byte-for-byte unchanged (locked by tests).
     - The fold helpers `externalEventsFor` / `externalWeeklyCount` /
       `externalMonthlyCount` live in
-      [`constraintPrimitives.js`](../src/utils/constraintPrimitives.js) and derive
+      [`constraintPrimitives.js`](../src/rules/constraintPrimitives.js) and derive
       every cross-team figure from the assignments snapshot (never a stored,
       drift-prone load). The `no-clash` descriptor now emits `params.external`
       so consumers can word a cross-team clash distinctly.

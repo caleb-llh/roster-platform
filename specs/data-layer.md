@@ -18,7 +18,7 @@ to `[start, end)` in epoch ms. The fields are **additive and lossless**: an even
 may carry explicit `start`/`end` datetime strings, but a bare `event.date`
 (`YYYY-MM-DD`) is the whole-day range `[date 00:00, date+1 00:00)`. Parsing is
 local-midnight (never `new Date('YYYY-MM-DD')`, which is UTC), matching the
-`parseDayKey` invariant in [`calendarUtils.js`](../src/utils/calendarUtils.js) so
+`parseDayKey` invariant in [`calendarUtils.js`](../src/lib/calendarUtils.js) so
 a day can't slip a timezone. Member unavailability remains a set of **day keys**
 (`expandUnavailableDays`, which already supports a whole-day `{ start, end }`).
 
