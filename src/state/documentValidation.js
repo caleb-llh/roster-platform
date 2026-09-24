@@ -1,5 +1,13 @@
 /**
- * Validation Builder for extensible validation rules
+ * Validation Builder for extensible validation rules.
+ *
+ * This is ONE of the document's two validation halves: `runAllValidators` here
+ * checks the FLAT document (members/roles/events/dates/constraints). The nested
+ * TENANT shape's own invariant — a team's rosters must not overlap in time —
+ * lives beside the tenant transform in `tenantResolver.validateTenantRosters`.
+ * The provider load path runs BOTH and merges their warnings (see
+ * `useLocalRosterProvider`), so a reader chasing "where is X validated" should
+ * check both halves.
  */
 
 import { normalizeMemberRoles, understudySlotRole, isUnderstudyRole, baseRoleOf } from '../schema/understudyRoles'

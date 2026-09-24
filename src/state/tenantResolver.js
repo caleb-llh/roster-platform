@@ -180,6 +180,11 @@ export function deriveExternalAssignments(document, { teamId: selTeamId } = {}) 
  * tenants. Rosters without both `start_date` and `end_date` are skipped (a
  * missing period can't be checked). Overlap is inclusive on calendar days: two
  * rosters that merely share a boundary day are considered overlapping.
+ *
+ * This is the TENANT-shape half of document validation; the FLAT-shape checks
+ * (members/roles/events/dates/constraints) live in
+ * `documentValidation.runAllValidators`. The provider load path runs both and
+ * merges their warnings.
  */
 export function validateTenantRosters(document) {
   if (!isTenantShape(document)) return []
