@@ -30,18 +30,23 @@ If **both** `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are present → `pr
 
 Components never check the mode. They depend only on the **`RosterProvider`
 contract** ([`src/data/providerContract.js`](../src/data/providerContract.js))
-and gate behaviour on `permissions`. A single dispatcher hook picks the
-implementation and lifts it into the full surface via the Session layer
-([`src/hooks/useRosterData.js`](../src/hooks/useRosterData.js)):
+and gate behaviour on `permissions`. The composition root
+([`src/App.jsx`](../src/App.jsx)) renders one of two tiny mode-specific
+wrappers (`LocalApp` / `ProductionApp`); each unconditionally calls exactly one
+provider hook and lifts it into the full surface via the Session layer:
 
 ```js
-const local = mode === 'local' ? useLocalRosterProvider() : null
-const production = mode === 'production' ? useSupabaseRosterProvider() : null
-return useSession(local ?? production)
+// ProductionApp
+const roster = useSession(useSupabaseRosterProvider())
+// LocalApp
+const roster = useSession(useLocalRosterProvider())
 ```
 
-(Mode is constant, so calling one provider hook per render — plus `useSession`
-unconditionally — is Rules-of-Hooks-safe.)
+(Splitting by component — rather than a `mode ? useLocal() : useSupabase()`
+dispatcher — means no provider hook is ever called conditionally, and the
+unused provider's mount effects, e.g. Supabase's network RPCs, never run. Mode
+is a build-time constant, so the wrapper selection is stable for the app's
+lifetime.)
 
 The surface is **composed in two layers**:
 
@@ -129,7 +134,7 @@ Server-side (Supabase dashboard, `config.toml` only, never shipped): `SUPABASE_A
 | `src/components/` | React UI (views, panels, modals, shared primitives incl. `HoverCard`, `DesignSystem`). |
 | `src/data/` | Dual-mode data layer: mode detection, provider contract (`PROVIDER_KEYS`/`SESSION_KEYS`/`ROSTER_PROVIDER_KEYS` conformance), Supabase client, and the two **pure-CRUD** providers. |
 | `src/session/` | Session layer (the "time" layer, above the provider): the pure per-action command surface (`commands.js` + its `bulkClear` helper — see [session.md](session.md)), `useSession` (wraps a CRUD provider — owns the draft/commit + undo/redo overlay and the `stageEvents`/`stageDocument` command surface) and `useDraftHistory` (draft/commit + undo/redo pure transitions). |
-| `src/hooks/` | `useAuth` (Google OAuth/session) and `useRosterData` (the dual-mode dispatcher). |
+| `src/hooks/` | `useAuth` (Google OAuth/session). The dual-mode provider is composed in App's mode-specific wrappers (see "The provider contract is the seam"), not a dispatcher hook here. |
 | `src/schema/` | `rosterSchema.js` — schema constants (also used as test-data constants). |
 | `src/design/` | Presentation vocabulary: `designSystem.js` (the Tailwind glass token module — see [design-system.md](design-system.md)), `colorUtils` (functional role/day colour palette), and `slateRamp` (the shared concern→slate-HSL ramp token reused by every roster-stats visual). |
 | `src/lib/` | Genuinely generic, domain-free helpers: `calendarUtils` (date math + `formatDate`/`formatDateRange` presentational formatting), `yamlExport` (YAML export/download), `clipboard` (`copyText` — the async-Clipboard-with-legacy-fallback boundary), `slotKey` (the shared `date#roleIndex` roster-slot key used by the UI, the diff, and the bulk-clear command). |

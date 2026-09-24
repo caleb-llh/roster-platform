@@ -82,7 +82,7 @@ directory. The short version:
 - `src/components/` — React UI.
 - `src/data/` — the dual-mode data layer (mode detection, provider contract, the
   two providers, draft/undo/redo transitions).
-- `src/hooks/` — `useAuth` and the `useRosterData` dispatcher.
+- `src/hooks/` — `useAuth` (the dual-mode provider is composed in App's mode wrappers, not a dispatcher hook here).
 - `src/schema/` — `rosterSchema.js`, the single source of truth for field/config
   key names.
 - `src/utils/` — framework-agnostic business logic (validators, diffing, stats,

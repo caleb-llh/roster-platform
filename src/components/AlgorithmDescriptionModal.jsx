@@ -1,29 +1,9 @@
 import { modalBackdrop, glassModal, headingModal, glassCard, btnNeutral, zModal } from '../design/designSystem'
 
 export default function AlgorithmDescriptionModal({ description, onClose }) {
-  // Parse the description to extract sections
-  const lines = description.split('\n')
-  const introLine = lines[0]
-  const sections = []
-  let currentSection = null
-  
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim()
-    if (!line) continue
-    
-    if (line.startsWith('✓') || line.startsWith('⚖️') || line.startsWith('👥')) {
-      if (currentSection) sections.push(currentSection)
-      const [icon, ...titleParts] = line.split(' ')
-      currentSection = {
-        icon: icon,
-        title: titleParts.join(' ').replace(':', ''),
-        items: []
-      }
-    } else if (line.startsWith('•') && currentSection) {
-      currentSection.items.push(line.substring(1).trim())
-    }
-  }
-  if (currentSection) sections.push(currentSection)
+  // `description` is the structured `{ intro, sections }` produced by App's
+  // getAlgorithmDescription -- consumed directly, not parsed from prose.
+  const { intro, sections } = description
 
   return (
     <div className={`fixed inset-0 ${modalBackdrop} flex items-center justify-center ${zModal} p-2 sm:p-4`}>
@@ -35,7 +15,7 @@ export default function AlgorithmDescriptionModal({ description, onClose }) {
               <h2 className={`${headingModal} text-lg sm:text-2xl flex items-center gap-2`}>
                 <span className="leading-tight">How the Roster Generator Works</span>
               </h2>
-              <p className="text-xs sm:text-sm text-gray-600 mt-1">{introLine}</p>
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">{intro}</p>
             </div>
             <button
               onClick={onClose}

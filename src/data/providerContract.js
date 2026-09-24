@@ -169,7 +169,8 @@ export const PROVIDER_KEYS = Object.freeze([
  * The keys the SESSION layer (`useSession`) adds on top of a provider: the
  * draft/commit + undo/redo overlay and the edit command surface. Together with
  * `PROVIDER_KEYS` these form the full composed surface (`ROSTER_PROVIDER_KEYS`)
- * that the UI consumes via `useRosterData`.
+ * that the UI consumes (composed in App's mode-specific wrappers as
+ * `useSession(provider)`).
  *
  * @type {readonly string[]}
  */
@@ -184,8 +185,9 @@ export const SESSION_KEYS = Object.freeze([
 ])
 
 /**
- * The full composed surface returned by `useRosterData` (provider + Session).
- * This is the machine-checkable form of the `RosterProvider` typedef above and
+ * The full composed surface handed to AppInner (provider + Session), built by
+ * App's mode-specific wrappers as `useSession(provider)`. This is the
+ * machine-checkable form of the `RosterProvider` typedef above and
  * is what components depend on. The conformance test asserts that
  * `useSession(provider)` returns exactly these keys.
  *

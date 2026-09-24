@@ -36,12 +36,16 @@ const SPACING_DOT_BORDER_DEEP = { s: 25, l: 44, a: 0.72 }
 
 /**
  * Shared component for displaying quality metrics (shift balance, time spacing, role rotation)
- * Used by RosterStatsPanel (compact and full views)
+ * Used by RosterStatsPanel (compact and full views). Reads its fairness numbers
+ * off the live `stats` object (`stats.fairnessMetrics` + `stats.assignedRoles`),
+ * so callers pass the roster stats directly -- there is no separate
+ * generation-result envelope.
  */
-export default function QualityMetrics({ generationResult, members, stats, showRoleDiversity = true, compact = false }) {
-  if (!generationResult) return null
+export default function QualityMetrics({ members, stats, showRoleDiversity = true, compact = false }) {
+  const fairnessMetrics = stats?.fairnessMetrics
+  if (!fairnessMetrics) return null
 
-  const { sortedDistribution, maxMemberCount, averageShifts } = calculateDistribution(generationResult, members)
+  const { sortedDistribution, maxMemberCount, averageShifts } = calculateDistribution(fairnessMetrics, stats.assignedRoles, members)
 
   if (compact) {
     // Compact view for RosterStatsPanel
@@ -199,14 +203,14 @@ export default function QualityMetrics({ generationResult, members, stats, showR
               <p className="text-xs text-gray-500 mt-0.5">Are shifts distributed fairly?</p>
             </div>
             <span className="text-xl font-bold text-gray-900">
-              {generationResult.fairnessMetrics.assignmentStdDev.toFixed(2)}
+              {fairnessMetrics.assignmentStdDev.toFixed(2)}
             </span>
           </div>
           <div className="relative h-2 bg-slate-200 rounded-full overflow-hidden">
             <div 
               className="absolute top-0 bottom-0 w-1 bg-slate-600 rounded-full"
               style={{ 
-                left: `${Math.min(100, (generationResult.fairnessMetrics.assignmentStdDev / 3) * 100)}%`,
+                left: `${Math.min(100, (fairnessMetrics.assignmentStdDev / 3) * 100)}%`,
                 transform: 'translateX(-50%)'
               }}
             ></div>
@@ -217,9 +221,9 @@ export default function QualityMetrics({ generationResult, members, stats, showR
             <span>Unbalanced</span>
           </div>
           <p className="text-xs text-gray-500 italic mt-3">
-            {generationResult.fairnessMetrics.assignmentStdDev < 1.0 
+            {fairnessMetrics.assignmentStdDev < 1.0 
               ? "Everyone has a similar number of assignments"
-              : generationResult.fairnessMetrics.assignmentStdDev < 2.0
+              : fairnessMetrics.assignmentStdDev < 2.0
               ? "Assignments are fairly distributed"
               : "Some members have significantly more assignments than others"}
           </p>
@@ -250,14 +254,14 @@ export default function QualityMetrics({ generationResult, members, stats, showR
               <p className="text-xs text-gray-500 mt-0.5">Are shifts spread over time?</p>
             </div>
             <span className="text-xl font-bold text-gray-900">
-              {generationResult.fairnessMetrics.spreadStdDev.toFixed(2)}
+              {fairnessMetrics.spreadStdDev.toFixed(2)}
             </span>
           </div>
           <div className="relative h-2 bg-slate-200 rounded-full overflow-hidden">
             <div 
               className="absolute top-0 bottom-0 w-1 bg-slate-600 rounded-full"
               style={{ 
-                left: `${Math.min(100, (generationResult.fairnessMetrics.spreadStdDev / 15) * 100)}%`,
+                left: `${Math.min(100, (fairnessMetrics.spreadStdDev / 15) * 100)}%`,
                 transform: 'translateX(-50%)'
               }}
             ></div>
@@ -268,9 +272,9 @@ export default function QualityMetrics({ generationResult, members, stats, showR
             <span>Clustered</span>
           </div>
           <p className="text-xs text-gray-500 italic mt-3">
-            {generationResult.fairnessMetrics.spreadStdDev < 5.0
+            {fairnessMetrics.spreadStdDev < 5.0
               ? "Assignments are well-spaced throughout the period"
-              : generationResult.fairnessMetrics.spreadStdDev < 10.0
+              : fairnessMetrics.spreadStdDev < 10.0
               ? "Assignments have reasonable spacing"
               : "Some members may have clustered assignments"}
           </p>

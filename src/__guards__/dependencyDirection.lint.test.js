@@ -56,7 +56,7 @@ const ALLOWED = {
   readmodel: ['state', 'evaluation', 'rules', 'schema', 'design', 'lib'], // live views read the core; chart views use design tokens; rosterDiff uses the shared slotKey primitive
   session: ['state', 'evaluation', 'lib'], // the "time" layer above the provider; bulkClear uses the shared slotKey primitive
   data: ['state'], // pure-CRUD providers use the adapter (documentValidation/tenantResolver)
-  hooks: ['data', 'session'], // dual-mode dispatcher composes them
+  hooks: ['data'], // useAuth reads the Supabase client + mode; App (root) now composes data+session directly
   components: ['readmodel', 'evaluation', 'generation', 'rules', 'schema', 'design', 'lib'], // evaluation: the picker UI reads the availability judge (availableMembers)
 
   // Domain-free leaves

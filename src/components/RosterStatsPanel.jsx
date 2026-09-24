@@ -88,8 +88,8 @@ export default function RosterStatsPanel({ stats, members, actionLog = [], avail
 
       {/* Detailed Stats — everything here is computed from the CURRENT roster
           state (`stats`) so quality metrics and the unassignable-roles warning
-          above stay real-time. QualityMetrics is fed a `generationResult`-shaped
-          object built from the live stats purely to match its prop contract. */}
+          above stay real-time. QualityMetrics reads its fairness numbers
+          straight off `stats`. */}
       {showDetails && (
         <div className="border-t border-gray-200 pt-3">
           {/* Members-available vs. required per role over time. Cell colour =
@@ -105,10 +105,6 @@ export default function RosterStatsPanel({ stats, members, actionLog = [], avail
           )}
 
           <QualityMetrics
-            generationResult={{
-              fairnessMetrics: stats.fairnessMetrics,
-              stats: { assignedRoles: stats.assignedRoles }
-            }}
             members={members}
             stats={stats}
             showRoleDiversity={true}

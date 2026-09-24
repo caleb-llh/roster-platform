@@ -12,13 +12,14 @@ import { isMemberIncluded } from '../schema/rosterSchema'
 import { memberNameById } from './memberLookup'
 
 /**
- * Calculate shift distribution from generation result
- * @param {Object} generationResult - The result from roster generation
+ * Calculate shift distribution from roster fairness metrics.
+ * @param {Object} fairnessMetrics - `{ assignmentsByMember, ... }` (from rosterStats or a generation result)
+ * @param {number} assignedRoles - total filled slots for active members (drives the average)
  * @param {Array} members - Array of member objects
  * @returns {Object} Distribution data with sortedDistribution, maxMemberCount, averageShifts
  */
-export function calculateDistribution(generationResult, members) {
-  if (!generationResult) {
+export function calculateDistribution(fairnessMetrics, assignedRoles, members) {
+  if (!fairnessMetrics) {
     return {
       sortedDistribution: [],
       maxMemberCount: 1,
@@ -26,7 +27,7 @@ export function calculateDistribution(generationResult, members) {
     }
   }
 
-  const assignmentsByMember = generationResult.fairnessMetrics.assignmentsByMember || {}
+  const assignmentsByMember = fairnessMetrics.assignmentsByMember || {}
   const distribution = {}
   
   if (typeof assignmentsByMember === 'object') {
@@ -66,7 +67,7 @@ export function calculateDistribution(generationResult, members) {
     
   const activeMembers = members?.filter(isMemberIncluded) || []
   const averageShifts = activeMembers.length > 0 
-    ? (generationResult.stats.assignedRoles / activeMembers.length).toFixed(1)
+    ? (assignedRoles / activeMembers.length).toFixed(1)
     : '0.0'
 
   return {

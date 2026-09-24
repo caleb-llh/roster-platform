@@ -8,7 +8,10 @@ import { toState } from './state/derivedState'
 import { computeRosterDiff } from './readmodel/rosterDiff'
 import { computeAvailabilityByRole } from './readmodel/benchDepth'
 import { memberNameById } from './readmodel/memberLookup'
-import { useRosterData } from './hooks/useRosterData'
+import { detectMode } from './data/mode'
+import { useLocalRosterProvider } from './data/useLocalRosterProvider'
+import { useSupabaseRosterProvider } from './data/useSupabaseRosterProvider'
+import { useSession } from './session/useSession'
 import { getActiveConstraints, getActivePreferences, getConstraintDescription, getPreferenceDescription, MEMBER_PREF_FIELDS } from './schema/rosterSchema'
 import { ErrorDisplay, GlassFab } from './components/glassPrimitives'
 import { HoverCard } from './components/HoverCard'
@@ -21,7 +24,7 @@ import YamlDrawer from './components/YamlDrawer'
 import AdminModal from './components/AdminModal'
 import { headingPage, headingModal, glassModal, glassCard, modalBackdrop, btnDanger, btnPrimary, tabActive, tabInactive, monoChip, semanticError, semanticWarning, glassPanel, draftBar, tierSection, zSticky, zPopover, zToast, zModal } from './design/designSystem'
 
-function App({ auth }) {
+function AppInner({ auth, roster }) {
   // UI State
   const [searchQuery, setSearchQuery] = useState('')
   const [showDrawer, setShowDrawer] = useState(false)
@@ -49,9 +52,10 @@ function App({ auth }) {
   const [selectedSlots, setSelectedSlots] = useState(() => new Set()) // set of `date#roleIndex` keys
   const [pendingBulkClear, setPendingBulkClear] = useState(null) // { nextEvents, count, prompt, message } awaiting confirmation
 
-  // Custom hook for all data management (consolidated state)
-  const roster = useRosterData()
-  const { 
+  // All data management (provider + Session) is supplied by the mode-specific
+  // wrapper below, so this component never branches on mode and calls no
+  // provider hook conditionally.
+  const {
     data, 
     error, 
     loading, 
@@ -133,27 +137,33 @@ function App({ auth }) {
   )
 
   // Generate dynamic algorithm description based on configuration
+  // Build a STRUCTURED description of what generation will optimize for, from
+  // the currently-active constraints/preferences. Returns `{ intro, sections }`
+  // where each section is `{ icon, title, items[] }`. Both consumers read this
+  // structure directly (the modal renders the sections; the hover card
+  // flattens them to prose via `algorithmDescriptionText`), so there is no
+  // string round-trip -- the shape is never serialized and re-parsed.
   const getAlgorithmDescription = () => {
     const sections = []
-    
+
     // Constraints section
     const activeConstraintKeys = getActiveConstraints(rosterConstraints)
     if (activeConstraintKeys.length > 0) {
-      const descriptions = activeConstraintKeys
+      const items = activeConstraintKeys
         .map(key => getConstraintDescription(key, rosterConstraints))
         .filter(Boolean)
-      sections.push('✓ Rules that must be followed:\n• ' + descriptions.join('\n• '))
+      sections.push({ icon: '✓', title: 'Rules that must be followed', items })
     }
-    
+
     // Preferences section
     const activePreferenceKeys = getActivePreferences(rosterPreferences)
     if (activePreferenceKeys.length > 0) {
-      const descriptions = activePreferenceKeys
+      const items = activePreferenceKeys
         .map(key => getPreferenceDescription(key))
         .filter(Boolean)
-      sections.push('⚖️ Goals to optimize for:\n• ' + descriptions.join('\n• '))
+      sections.push({ icon: '⚖️', title: 'Goals to optimize for', items })
     }
-    
+
     // Member day preferences
     if (memberPreferences && Object.keys(memberPreferences).length > 0) {
       const dayPrefs = {}
@@ -163,22 +173,43 @@ function App({ auth }) {
           dayPrefs[day] = (dayPrefs[day] || 0) + 1
         }
       })
-      
+
       if (Object.keys(dayPrefs).length > 0) {
         const prefSummary = Object.entries(dayPrefs)
           .map(([day, count]) => `${count} member${count > 1 ? 's' : ''} prefer ${day}`)
           .join(', ')
-        sections.push('👥 Individual preferences:\n• The system will try to match members with their preferred days (' + prefSummary + ')')
+        sections.push({
+          icon: '👥',
+          title: 'Individual preferences',
+          items: [`The system will try to match members with their preferred days (${prefSummary})`],
+        })
       }
     }
-    
+
     // Default message if no configuration
     if (sections.length === 0) {
-      return 'The system will automatically assign members to open slots, making sure everyone gets a fair share and respecting any preferences you\'ve set up.'
+      return {
+        intro: 'The system will automatically assign members to open slots, making sure everyone gets a fair share and respecting any preferences you\'ve set up.',
+        sections: [],
+      }
     }
-    
-    return 'The system will automatically create assignments based on:\n\n' + sections.join('\n\n')
+
+    return { intro: 'The system will automatically create assignments based on:', sections }
   }
+
+  // Flatten the structured description into the pre-line prose the hover card
+  // shows. Mirrors the old string format (icon title + bulleted items) so the
+  // blurb is unchanged, but the structure -- not a parsed string -- is the
+  // source of truth.
+  const algorithmDescriptionText = () => {
+    const { intro, sections } = getAlgorithmDescription()
+    if (sections.length === 0) return intro
+    const blocks = sections.map(
+      s => `${s.icon} ${s.title}:\n` + s.items.map(item => `• ${item}`).join('\n')
+    )
+    return `${intro}\n\n` + blocks.join('\n\n')
+  }
+
 
   // Handle YAML import from the drawer (fresh session).
   const handleImport = async (yamlText) => {
@@ -784,7 +815,7 @@ function App({ auth }) {
               }
             >
               <div className={`mb-1 ${tierSection}`}>How generation works</div>
-              <p className="whitespace-pre-line">{getAlgorithmDescription()}</p>
+              <p className="whitespace-pre-line">{algorithmDescriptionText()}</p>
               <div className="mt-2 text-[11px] font-medium text-gray-500">Click for full details · generation is undoable</div>
             </HoverCard>
           )}
@@ -1006,6 +1037,31 @@ function App({ auth }) {
       )}
     </div>
   )
+}
+
+// Mode-specific wrappers. Each calls exactly ONE provider hook -- always, and
+// never conditionally -- then composes the Session layer on top and hands the
+// combined provider surface to AppInner. Splitting by component (rather than a
+// `mode ? useLocal() : useSupabase()` dispatcher) keeps the Rules of Hooks
+// satisfied without ever mounting the unused provider: only the selected
+// wrapper is rendered, so the other provider's hook (and its mount effects,
+// e.g. Supabase's network RPCs) never runs.
+function LocalApp({ auth }) {
+  const roster = useSession(useLocalRosterProvider())
+  return <AppInner auth={auth} roster={roster} />
+}
+
+function ProductionApp({ auth }) {
+  const roster = useSession(useSupabaseRosterProvider())
+  return <AppInner auth={auth} roster={roster} />
+}
+
+// Mode is a build-time constant (see detectMode), so this selection is stable
+// for the life of the app; React sees a single, consistent wrapper component.
+function App({ auth }) {
+  return detectMode() === 'production'
+    ? <ProductionApp auth={auth} />
+    : <LocalApp auth={auth} />
 }
 
 export default App
