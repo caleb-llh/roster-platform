@@ -59,9 +59,9 @@ holds: understudy is split by kind — vocabulary
 now imports only Schema, and consumers depend on `rules/` and never the reverse.
 
 **Design Decision — both registries share a `rules/` home and a descriptor
-factory.** `SCORERS` was moved from `rosterGenerator/scorers.js` to
-[`src/rules/scorers.js`](../src/rules/scorers.js), next to `CONSTRAINTS` (overhaul
-step 2). Both registries are now constructed through
+factory.** `SCORERS` lives in
+[`src/rules/scorers.js`](../src/rules/scorers.js), next to `CONSTRAINTS`. Both
+registries are constructed through
 [`defineRule` / `defineScorer`](../src/rules/defineRule.js) — thin, explicit
 descriptor constructors that make the required shape self-documenting
 (`{ key, kind, enabled, check }` for a constraint; `{ key, enabled, score }` +

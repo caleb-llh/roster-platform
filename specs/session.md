@@ -45,8 +45,8 @@ it checks edit permission, runs the pure function against the current
 `commandState()`, applies `nextEvents` to the draft, and returns the
 verdict/logEntry/preview to the caller. **Why pure command + thin wrapper:** it
 puts the one gate on a *named* action, so a UI click and an inbound bot command
-are true peers through one surface — the reason C ("per-action commands") was
-pulled into the overhaul rather than left as a generic `stageEvents` escape hatch.
+are true peers through one surface — which is why per-action commands exist
+rather than a generic `stageEvents` escape hatch.
 
 The current commands are `assign`, `addSlot`, `removeSlot`, `swap`,
 `clearGenerated`, and `bulkClear` (the last delegates to the `buildBulkClear`
@@ -59,23 +59,20 @@ from the YAML editor.
 
 ## Gate policy — warn-still-apply, except swap
 
-This is the one deliberate **behaviour change** of the overhaul (step 11). Before
-it, the domain mutations lived in `App.jsx` handlers that funnelled through the
-generic `stageEvents`, and **only `swap` carried an Evaluation gate**; the other
-edits were silent.
+The gate policy is **asymmetric by design**: most edits warn-still-apply, and
+only `swap` hard-rejects.
 
-- **Warn-still-apply** for the actions that had no gate before (`assign`,
-  `addSlot`, `removeSlot`, `clearGenerated`, `bulkClear`): the command **always**
+- **Warn-still-apply** for `assign`, `addSlot`, `removeSlot`, `clearGenerated`,
+  and `bulkClear`: the command **always**
   produces `nextEvents`, and attaches any rule violations on the **affected
   events** as `verdict.warnings`. The edit still applies; the UI surfaces the
   warnings as a notice. **Why not block:** a coordinator may knowingly place an
-  unavailable member — that intentional manual-override freedom predates this
-  step and must be preserved. Making the verdict *visible* is the improvement;
-  taking away the override is not. This is a real behaviour change: those edits
-  now emit a warning where before they were silent.
-- **`swap` keeps its pre-existing HARD reject** ([`explainSwap`](../src/evaluation/swapPolicy.js)):
-  an infeasible swap is blocked (`ok: false`, `reason`), exactly as before — not
-  downgraded to a warning, because users already rely on that block.
+  unavailable member — that intentional manual-override freedom must be
+  preserved. The value is that the verdict is *visible* as a warning, not that
+  the override is taken away.
+- **`swap` is a HARD reject** ([`explainSwap`](../src/evaluation/swapPolicy.js)):
+  an infeasible swap is blocked (`ok: false`, `reason`) — not downgraded to a
+  warning, because users rely on that block to catch impossible swaps.
 
 **The verdict reuses the one validation authority.** `verdictFor` runs
 [`validateEventAssignments`](../src/evaluation/assignmentValidator.js) — the same
