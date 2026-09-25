@@ -14,6 +14,22 @@ of them — reconcile it, don't ignore it. Before changing generation,
 eligibility, scoring, the data structure, the draft/commit model, or the
 understudy feature, re-read the relevant file below.
 
+## Binding specs are timeless — status lives in plans
+
+A binding spec (every file here that is **not** a `*.plan.md`) describes the
+system in **present tense, as it is**. It carries no status framing — no
+"Phase 2 ✅ landed", no "not yet built", no "IN PROGRESS", no status blockquote.
+That framing rots the moment work moves and reads as a migration narrative
+rather than a description of the system.
+
+- **Unbuilt / sequenced work** lives in a `*.plan.md` (that is what plan docs are
+  for; status belongs there).
+- **Completed migration records** live in `specs/history/` — kept for the *why*,
+  clearly labelled non-binding.
+- **When a phase or plan lands**, fold its decisions into the owning spec as
+  plain present-tense behaviour and let the sequencing drop away. A plan doc
+  retires by folding its durable parts into the owning spec and deleting itself.
+
 ## Map
 
 | File | Covers |
@@ -26,26 +42,11 @@ understudy feature, re-read the relevant file below.
 | [understudy.md](understudy.md) | The understudy/promotion feature end-to-end: the model, the two role-capability rules that must not be conflated, the understudy hard-constraint *domain rules* (min-sessions, cap=1, two-sided gate — enforced via the shared `CONSTRAINTS` registry, see generation.md), and the promotion-aware seeding and backtracking-planner phases. |
 | [design-system.md](design-system.md) | The look-and-feel spec: the `designSystem.js` token module, the named z-index scale, the `HoverCard` popup primitive, sticky-chrome stacking, the colour policy, the no-emoji rule, and the UI's calibrated typographic decisions. |
 | [events-ui.md](events-ui.md) | Events-view interaction spec: bulk-clear semantics + how select mode is entered, the three selection scales, why there's no drag-marquee, export column order, manual swap validation, and why generation runs immediately with no confirm gate/result modal. |
+| [integrations.md](integrations.md) | The **read-vs-write integrations split**: read (outbound) integrations consume a committed roster at the periphery and never touch the core; write (inbound) integrations are actors that must issue domain commands through the [session.md](session.md) command surface, as peers of the UI. Telegram theme/viewport mirroring is today's read-only integration. |
 | [multi-tenant.md](multi-tenant.md) | **Phases 0–2 built; Phase 3 (Supabase persistence) planned.** The tenant → team → roster hierarchy, tenant-level member registry, cross-team-aware constraints (global unavailability, cross-team caps, clash detection, per-team overrides), the compatibility seam that keeps the generation engine unchanged, a feature-by-feature impact analysis, and the phased delivery plan. (Its RBAC half lives in permissions.md.) |
 | [members-editing.plan.md](members-editing.plan.md) | **PLANNING (not built).** Feature plan for inline-editable member cards (mirroring EventsView), and the constraints it must respect. Defers scope/storage to multi-tenant.md and authorization to permissions.md. |
 | [architecture-overhaul.plan.md](architecture-overhaul.plan.md) | **COMPLETE (steps 1–11 + the full N/B/C/A readability backlog landed; the layer graph is CI-enforced).** Being retired — its durable architecture is authoritative in [architecture.md](architecture.md); the migration record is scheduled to move to a history archive (see [specs-cleanup.plan.md](specs-cleanup.plan.md)). Until then it still carries: the target layer model, the rule-engine framing (Schema vocabulary; Rules ⋈ State → Evaluation; Generation mutates State), why Schema is orthogonal to both Rules and State, the `ctx` Rules↔Evaluation seam, the naming mandate, and the **Migration progress log** (each step's commit + residual debt). Links to the owning behaviour specs rather than restating them. |
 | [specs-cleanup.plan.md](specs-cleanup.plan.md) | **PLANNING (not started).** The post-overhaul specs/code cleanup plan (todo.md#L3-5): fixes spec↔code path drift, resolves status self-contradictions, creates `integrations.md`, and retires `architecture-overhaul.plan.md`. Retires itself when done. |
-
-### Planned specs (not yet created)
-
-The [architecture-overhaul.plan.md](architecture-overhaul.plan.md) refactor will,
-as it lands, introduce one further new spec file that this map does not yet list
-because it does not yet exist:
-
-- **`integrations.md`** — will own the read-model bright line and the read-vs-write
-  integrations split (created at overhaul step 8).
-
-(`session.md` was foreshadowed here too; it now exists and is listed in the map
-above.)
-
-When either file is created, add it to the map above and remove it from this list.
-When the overhaul completes, `architecture-overhaul.plan.md` folds into
-[architecture.md](architecture.md) and is deleted, per the plan-doc convention.
 
 ## How to read a Design Decision
 
