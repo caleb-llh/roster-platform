@@ -176,12 +176,12 @@ domain word — `rosterConstraints`, `CONSTRAINT_KEYS`):
   score (the soft half). Do **not** merge them — conflating a hard reject with a
   soft penalty is the mistake the removed `availability` scorer made (above).
 - **Two-sided understudy gate.** The `understudy-before-role` descriptor encodes
-  both halves: a trainee entering the *real* role needs ≥ `UNDERSTUDY_MIN_SESSIONS`
-  prior understudy sessions (`understudy-before-role` code), and a qualified
-  trainee re-entering the *understudy* slot is blocked (`understudy-complete`
-  code). The second half is a generator-only placement guard (there is no
-  "over-understudied" defect to diagnose on a finished roster), so it is emitted
-  only in `would-place` mode and the validator ignores it.
+  a two-sided rule (a trainee must shadow before performing, and a qualified
+  trainee is then blocked from re-entering the understudy slot) — the domain rule
+  is owned by [understudy.md](understudy.md). The generation-relevant detail: the
+  second half is a generator-only placement guard (there is no "over-understudied"
+  defect to diagnose on a finished roster), so it is emitted only in `would-place`
+  mode and the validator ignores it.
 
 ## Determinism
 
