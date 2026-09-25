@@ -2,8 +2,7 @@
 
 The system supports **understudies**: members training to perform a role, who must shadow it before performing it for real. This is the most intricate part of the generator; see also [generation.md](generation.md) for the surrounding pipeline and [`../src/generation/README.md`](../src/generation/README.md) for the scoring internals.
 
-**Model — split by kind across two layers** (overhaul step 5; see
-[architecture-overhaul.plan.md](architecture-overhaul.plan.md)):
+**Model — split by kind across two layers:**
 - **Vocabulary** ([`src/schema/understudyRoles.js`](../src/schema/understudyRoles.js)) — the
   *definitional* half: role naming and member-role shape, with zero dependencies.
 - **Policy** ([`src/rules/understudyPolicy.js`](../src/rules/understudyPolicy.js)) — the

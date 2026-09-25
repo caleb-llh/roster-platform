@@ -5,6 +5,98 @@ alone** (Supabase project setup, OAuth, deployment). Behaviour-level decisions
 live in the sibling spec files; this file explains *how the pieces fit and where
 the off-repo dependencies are*.
 
+## The mental model: a rule engine over shared state
+
+Strip away UI, storage, and integrations and what remains is a **rule engine**:
+
+- a **vocabulary** everything is written in — **Schema** (field/enum names +
+  *definitional* predicates like `isMemberIncluded`; zero imports);
+- a body of **facts** — the current roster + derived counts (**State**, produced
+  from a document by the adapter);
+- a **rule base** — what's legal (the `CONSTRAINTS` registry) and what's good
+  (the `SCORERS` registry), both living in **`rules/`** (see [generation.md](generation.md));
+- an **inference step** that applies the rules to the facts (**Evaluation**);
+- an **agent** that mutates the facts searching for a high-scoring, legal set
+  (**Generation**).
+
+That is the whole domain core. Everything else (Presentation, Storage,
+Integrations, Authorization) is *periphery* that feeds it, persists it, or shows
+it.
+
+```
+                         ┌───────────────────────┐
+                         │        SCHEMA         │   the vocabulary
+                         │  field/enum names +   │   (definitional; 0 imports)
+                         │  definitional preds   │
+                         └───────────┬───────────┘
+                     both written in │ its terms
+              ┌────────────────┬─────┴─────┬────────────────┐
+              ▼                            ▼
+      ┌───────────────┐            ┌───────────────┐
+      │     RULES     │            │     STATE     │   the facts / working memory
+      │ constraints   │            │ current roster│   (produced from a document
+      │  (veto)       │            │ + derived     │    by the ADAPTER)
+      │ scorers       │            │ counts        │
+      │  (gradient)   │            └───────┬───────┘
+      └───────┬───────┘                    │
+              │   ┌────────────────────────┴──────┐
+              └──▶│         EVALUATION            │  apply RULES to STATE
+                  │   verdict = Rules ⋈ State     │  → { violations, score }
+                  │   (pure; owns neither input)  │  ▲
+                  └───────────────┬───────────────┘  │ queries
+                                  └───────────▶┌──────┴───────────┐
+                                               │    GENERATION    │  the agent:
+                                               │  mutate STATE →  │  propose → apply
+                                               │  Evaluate → keep │  → evaluate →
+                                               │  or revert       │  keep/revert
+                                               └──────────────────┘
+```
+
+The crux: **Generation manipulates State; Evaluation reads (Rules, State); Rules
+and State both speak Schema.** Nobody points "up."
+
+**Schema is orthogonal, not the floor of a stack.** Schema is not a layer *below*
+Rules with State on top — it is the shared vocabulary Rules *and* State are both
+written in, a foundation both stand on side by side (a T-shape, not a tower).
+Rules and State each depend on Schema independently; neither depends on the
+other. That independence is *why* the same rule can judge state built two
+different ways — the generator's live tracker and the whole-roster validator.
+Schema holds **definitional** facts (what the data *is*); a togglable judgement
+about what's *allowed/good* is a **Rule**, not Schema.
+
+**The core is a pure function of a single State snapshot.** Everything it does is
+`f(Rules, State) → verdict` or `g(State, seed) → State'`. It has **no notion of**
+*time* (draft-vs-committed, undo), *persistence* (documents, backends), or *who
+is asking* (UI, bot, cron). Those three concerns live **outside** the core: time
+→ the [Session](session.md) layer; persistence → the Provider layer (below);
+callers → the command surface (UI and [integrations](integrations.md) are
+peers). The one exception that belongs *to* the core is the **adapter**, because
+it *defines* what a valid State is: it is the core's inbound port (the
+anti-corruption boundary that turns any valid document *shape* into State). See
+[data-layer.md](data-layer.md) for the document/adapter/State distinction and why
+there is exactly one shared adapter.
+
+### Naming mandate: folders reflect layers; symbols reflect vocabulary
+
+Two rules, enforced per-change (they extend [`../AGENTS.md`](../AGENTS.md)'s
+isolated-vs-shared check), keep the layer graph legible:
+
+1. **Folders and filenames reflect the layer a module belongs to.** A file's
+   path announces its layer: rules in `rules/`, the judge in `evaluation/`, the
+   agent in `generation/`, persistence in `data/`, the time layer in `session/`.
+   There is no `utils/` grab-bag — if you can't name the layer a file belongs to,
+   that is a smell to resolve, not a file to drop in `utils/`.
+2. **Function and variable names reflect the layer's vocabulary.** The vocabulary
+   is more CRUD-like closer to storage and more command-like closer to the
+   domain, because storage *is* plain resource CRUD while the domain is
+   *behaviour that carries verdicts*: a provider method is CRUD (`saveEvents`,
+   `replaceDocument`), a session op is a command/query that can be **rejected**
+   (`stageEvents`, `generateDraft`, `commitDraft`), an adapter fn is a transform
+   (`toState` and the reverse `withRosterEvents`), a rule is a descriptor
+   (`{ key, kind, check }`). Avoid cross-vocabulary names — a session command
+   named `saveEvents` is CRUD leaking up; a provider named `applySwap` is a
+   command leaking down. The name should tell you which layer you're in.
+
 ## One app, two data modes
 
 Roster Platform is a single React + Vite SPA that runs in one of two modes,
@@ -138,7 +230,7 @@ Server-side (Supabase dashboard, `config.toml` only, never shipped): `SUPABASE_A
 | `src/schema/` | `rosterSchema.js` — schema constants (also used as test-data constants). |
 | `src/design/` | Presentation vocabulary: `designSystem.js` (the Tailwind glass token module — see [design-system.md](design-system.md)), `colorUtils` (functional role/day colour palette), and `slateRamp` (the shared concern→slate-HSL ramp token reused by every roster-stats visual). |
 | `src/lib/` | Genuinely generic, domain-free helpers: `calendarUtils` (date math + `formatDate`/`formatDateRange` presentational formatting), `yamlExport` (YAML export/download), `clipboard` (`copyText` — the async-Clipboard-with-legacy-fallback boundary), `slotKey` (the shared `date#roleIndex` roster-slot key used by the UI, the diff, and the bulk-clear command). |
-| `src/integrations/` | External-platform glue. Today: `telegram.js` (Telegram Mini App — read-only viewport/theme mirroring, no-op outside Telegram). A future bot **write** path (commands as actors on the session command surface) is foreshadowed — see [architecture-overhaul.plan.md](architecture-overhaul.plan.md). |
+| `src/integrations/` | External-platform glue. Today: `telegram.js` (Telegram Mini App — read-only viewport/theme mirroring, no-op outside Telegram). A future bot **write** path (commands as actors on the session command surface) is foreshadowed — see [integrations.md](integrations.md). |
 | `src/readmodel/` | Live aggregate *views* of State — `rosterStats`, `benchDepth` (availability bench depth), `rosterStatsCharts` (the roster-stats charts + their helpers + the availability-heatmap cell colour), `rosterDiff` (committed-vs-draft diff), `rosterTable` (the CSV/clipboard export projection — columns + rows; the browser download/write glue stays in the view). Read-only; share counting primitives with `rules/` but do **not** route through the placement registry. |
 | `src/generation/` | The generation engine (seeding, promotion planning, scoring, local search, RNG) + its own `README.md`. Imports the judge from `src/evaluation/`. See [generation.md](generation.md) and [understudy.md](understudy.md). |
 | `supabase/` | `migrations/*.sql` (schema, RLS, RPCs, invites) and `config.toml` (local stack + Google provider). |
@@ -176,6 +268,31 @@ a dependency-free Vitest lint (the same pattern as the design-system guard) that
 scans every source file's cross-layer imports and fails CI on any arrow not in
 the allow-list above. Adding a new cross-layer arrow is therefore a deliberate
 act: whitelist it in the guard **and** justify it here.
+
+## Testing conventions
+
+The test layout is itself load-bearing and follows a few deliberate rules:
+
+- **Tests are co-located with their source.** A module's `*.test` sits beside it,
+  and when a module moves folders its test moves with it in the same change, with
+  import paths updated. This keeps the layer a test belongs to obvious and keeps
+  every refactor step green.
+- **Guard tests live under [`src/__guards__/`](../src/__guards__/), visibly
+  distinct from behaviour tests.** These are *architectural* checks, not unit
+  tests: the dependency-direction lint (above) and the design-system token lint.
+  Grouping them under `__guards__/` signals "this asserts a structural invariant,
+  not a feature."
+- **A cross-cutting test with no single source file homes with the layer it most
+  asserts.** `crossTeam.test.js` spans the adapter + rules but chiefly exercises
+  `EligibilityChecker` / `validateEventAssignments` / `explainSwap`, so it lives
+  in `evaluation/` rather than a separate `__integration__/` folder — a single
+  cross-cutting test does not justify its own layer.
+- **The Vitest harness is fixed.** `src/test/setup.js` is referenced by
+  `vitest.config.js`'s `setupFiles`; it must not move without updating that
+  config in the same change.
+- **Test data uses schema constants.** Fixtures build on `rosterSchema.js`
+  constants (per [`../AGENTS.md`](../AGENTS.md)) rather than hard-coded field
+  names, so a schema change can't silently rot the fixtures.
 
 ## Generation pipeline overview
 

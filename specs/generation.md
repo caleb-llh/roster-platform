@@ -50,11 +50,10 @@ That difference is a single line inside one `check`, selected by `mode`.
 **Design Decision — the rules live in [`src/rules/`](../src/rules/).** The
 registry ([`constraints.js`](../src/rules/constraints.js)) and the leaf predicates
 it composes ([`constraintPrimitives.js`](../src/rules/constraintPrimitives.js))
-were moved out of `src/utils/` into a dedicated `rules/` layer (overhaul step 1;
-see [architecture-overhaul.plan.md](architecture-overhaul.plan.md)). This is a
-pure move — the descriptors, `ctx` contract, and `mode` semantics are unchanged.
-The target boundary is *"`rules/` imports only Schema"*, and as of overhaul
-step 5 that holds: understudy is split by kind — vocabulary
+form a dedicated `rules/` layer that **imports only Schema** — the domain heart,
+not a dependency sink (see [architecture.md](architecture.md)). The descriptors,
+`ctx` contract, and `mode` semantics are a pure declarative surface. The boundary
+holds: understudy is split by kind — vocabulary
 ([`schema/understudyRoles.js`](../src/schema/understudyRoles.js)) vs. policy
 ([`rules/understudyPolicy.js`](../src/rules/understudyPolicy.js)) — so `rules/`
 now imports only Schema, and consumers depend on `rules/` and never the reverse.
