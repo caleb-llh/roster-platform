@@ -6,7 +6,7 @@
  * transform, a different concept. This is the engine's mutable working memory.)
  *
  * Wraps the cloned `events` (the source of truth for who is assigned where) and
- * the AssignmentTracker (the derived counters used for scoring/eligibility), and
+ * the AssignmentCounters (the derived counters used for scoring/eligibility), and
  * keeps them in lock-step. It exposes atomic, reversible operations so a search
  * loop can try a move, measure its effect, and cleanly undo it.
  *
@@ -21,7 +21,7 @@
 export class WorkingRoster {
   /**
    * @param {Array} events  cloned events (will be mutated in place)
-   * @param {AssignmentTracker} tracker  tracker already seeded from these events
+   * @param {AssignmentCounters} tracker  tracker already seeded from these events
    */
   constructor(events, tracker) {
     this.events = events
@@ -30,7 +30,7 @@ export class WorkingRoster {
 
   /** The role assignment object for a slot. */
   getSlot({ eventIndex, roleIndex }) {
-    return this.events[eventIndex]?.roster?.[roleIndex] ?? null
+    return this.events[eventIndex]?.slots?.[roleIndex] ?? null
   }
 
   /** The member currently occupying a slot (or null). */
@@ -62,7 +62,7 @@ export class WorkingRoster {
   allSlots() {
     const slots = []
     this.events.forEach((event, eventIndex) => {
-      event.roster?.forEach((_, roleIndex) => {
+      event.slots?.forEach((_, roleIndex) => {
         slots.push({ eventIndex, roleIndex })
       })
     })
@@ -75,7 +75,7 @@ export class WorkingRoster {
    */
   applyMove({ slot, memberId }) {
     const event = this.events[slot.eventIndex]
-    const roleAssignment = event.roster[slot.roleIndex]
+    const roleAssignment = event.slots[slot.roleIndex]
     const previousMemberId = roleAssignment.member_id ?? null
     const previousGenerated = roleAssignment.isGenerated ?? false
 

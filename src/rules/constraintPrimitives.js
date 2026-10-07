@@ -157,7 +157,7 @@ export const countMonthlyAssignments = (memberId, targetDate, allEvents) => {
     const eventDate = new Date(event.date)
     return eventDate.getMonth() === targetMonth &&
            eventDate.getFullYear() === targetYear &&
-           event.roster?.some(r => r.member_id === memberId)
+           event.slots?.some(r => r.member_id === memberId)
   }).length
 }
 
@@ -171,7 +171,7 @@ export const getWeekAssignments = (memberId, targetDate, allEvents) => {
   return allEvents.filter(event => {
     const eventWeekKey = getWeekKey(event.date)
     return eventWeekKey && eventWeekKey === targetWeekKey && 
-           event.roster?.some(r => r.member_id === memberId)
+           event.slots?.some(r => r.member_id === memberId)
   })
 }
 
@@ -251,18 +251,18 @@ const externalEntryToEvent = (entry) => {
 
 /**
  * A member's external assignments as event-like objects (for clash checks).
- * Each carries a one-slot `roster` naming the member so the shared `no-clash`
- * descriptor — which asks `other.roster.some(s => s.member_id === …)` — matches
- * unchanged; and a `_external: true` marker so consumers can word the message
- * as a cross-team clash. `date` is set (falling back from an explicit start) so
- * the descriptor's `params.otherDate` is always populated.
+ * Each carries a one-slot `slots` array naming the member so the shared
+ * `no-clash` descriptor — which asks `other.slots.some(s => s.member_id === …)`
+ * — matches unchanged; and a `_external: true` marker so consumers can word the
+ * message as a cross-team clash. `date` is set (falling back from an explicit
+ * start) so the descriptor's `params.otherDate` is always populated.
  */
 export const externalEventsFor = (memberId, externalAssignments) => {
   const entries = (externalAssignments && externalAssignments[memberId]) || []
   return entries
     .map(externalEntryToEvent)
     .filter(Boolean)
-    .map(e => ({ ...e, date: e.date || e.start, _external: true, roster: [{ member_id: memberId }] }))
+    .map(e => ({ ...e, date: e.date || e.start, _external: true, slots: [{ member_id: memberId }] }))
 }
 
 /** Count a member's external assignments falling in the SAME week as `date`. */

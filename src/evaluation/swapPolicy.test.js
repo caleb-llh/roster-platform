@@ -9,7 +9,7 @@ describe('canSwapRosterSlots', () => {
     { id: 'bob', name: 'Bob', include: false, roles: ['vm', 'cam-1'] },
   ]
 
-  const makeEvent = (date, roster) => ({ date, roster })
+  const makeEvent = (date, roster) => ({ date, slots: roster })
 
   it('allows a same-event, different-role swap of the SAME member with an empty slot', () => {
     // John is in vm (index 0); cam-1 (index 1) is empty. Moving John from vm
@@ -23,7 +23,7 @@ describe('canSwapRosterSlots', () => {
       memberA: 'john', memberB: null,
       eventA: event, eventB: event,
       sourceIndex: 0, targetIndex: 1,
-      slotA: event.roster[0], slotB: event.roster[1],
+      slotA: event.slots[0], slotB: event.slots[1],
       members, memberConstraints: [], allEvents: [event],
     })
     expect(ok).toBe(true)
@@ -38,7 +38,7 @@ describe('canSwapRosterSlots', () => {
       memberA: 'john', memberB: 'jane',
       eventA: event, eventB: event,
       sourceIndex: 0, targetIndex: 1,
-      slotA: event.roster[0], slotB: event.roster[1],
+      slotA: event.slots[0], slotB: event.slots[1],
       members, memberConstraints: [], allEvents: [event],
     })
     expect(ok).toBe(true)
@@ -54,7 +54,7 @@ describe('canSwapRosterSlots', () => {
       memberA: 'john', memberB: 'alice',
       eventA: event, eventB: event,
       sourceIndex: 0, targetIndex: 1,
-      slotA: event.roster[0], slotB: event.roster[1],
+      slotA: event.slots[0], slotB: event.slots[1],
       members, memberConstraints: [], allEvents: [event],
     })
     expect(ok).toBe(false)
@@ -68,7 +68,7 @@ describe('canSwapRosterSlots', () => {
       memberA: 'john', memberB: null,
       eventA, eventB,
       sourceIndex: 0, targetIndex: 0,
-      slotA: eventA.roster[0], slotB: eventB.roster[0],
+      slotA: eventA.slots[0], slotB: eventB.slots[0],
       members, memberConstraints: constraints, allEvents: [eventA, eventB],
     })
     expect(ok).toBe(false)
@@ -86,7 +86,7 @@ describe('canSwapRosterSlots', () => {
       memberA: 'john', memberB: 'jane',
       eventA, eventB,
       sourceIndex: 0, targetIndex: 0,
-      slotA: eventA.roster[0], slotB: eventB.roster[0],
+      slotA: eventA.slots[0], slotB: eventB.slots[0],
       members, memberConstraints: [], allEvents: [eventA, eventB],
     })
     expect(ok).toBe(false)
@@ -101,7 +101,7 @@ describe('canSwapRosterSlots', () => {
       memberA: 'bob', memberB: null,
       eventA: event, eventB: event,
       sourceIndex: 0, targetIndex: 1,
-      slotA: event.roster[0], slotB: event.roster[1],
+      slotA: event.slots[0], slotB: event.slots[1],
       members, memberConstraints: [], allEvents: [event],
     })
     expect(ok).toBe(false)
@@ -115,7 +115,7 @@ describe('explainSwap (rejection reasons)', () => {
     { id: 'alice', name: 'Alice', include: true, roles: ['cam-1'] },
     { id: 'bob', name: 'Bob', include: false, roles: ['vm', 'cam-1'] },
   ]
-  const makeEvent = (date, roster) => ({ date, roster })
+  const makeEvent = (date, roster) => ({ date, slots: roster })
 
   it('returns ok with no reason for a valid swap', () => {
     const event = makeEvent('2026-02-08', [
@@ -125,7 +125,7 @@ describe('explainSwap (rejection reasons)', () => {
     const res = explainSwap({
       memberA: 'john', memberB: 'jane', eventA: event, eventB: event,
       sourceIndex: 0, targetIndex: 1,
-      slotA: event.roster[0], slotB: event.roster[1],
+      slotA: event.slots[0], slotB: event.slots[1],
       members, memberConstraints: [], allEvents: [event],
     })
     expect(res.ok).toBe(true)
@@ -140,7 +140,7 @@ describe('explainSwap (rejection reasons)', () => {
     const res = explainSwap({
       memberA: 'john', memberB: 'alice', eventA: event, eventB: event,
       sourceIndex: 0, targetIndex: 1,
-      slotA: event.roster[0], slotB: event.roster[1],
+      slotA: event.slots[0], slotB: event.slots[1],
       members, memberConstraints: [], allEvents: [event],
     })
     expect(res.ok).toBe(false)
@@ -155,7 +155,7 @@ describe('explainSwap (rejection reasons)', () => {
     const res = explainSwap({
       memberA: 'john', memberB: null, eventA, eventB,
       sourceIndex: 0, targetIndex: 0,
-      slotA: eventA.roster[0], slotB: eventB.roster[0],
+      slotA: eventA.slots[0], slotB: eventB.slots[0],
       members, memberConstraints: constraints, allEvents: [eventA, eventB],
     })
     expect(res.ok).toBe(false)
@@ -172,7 +172,7 @@ describe('explainSwap (rejection reasons)', () => {
     const res = explainSwap({
       memberA: 'john', memberB: 'jane', eventA, eventB,
       sourceIndex: 0, targetIndex: 0,
-      slotA: eventA.roster[0], slotB: eventB.roster[0],
+      slotA: eventA.slots[0], slotB: eventB.slots[0],
       members, memberConstraints: [], allEvents: [eventA, eventB],
     })
     expect(res.ok).toBe(false)
@@ -188,7 +188,7 @@ describe('explainSwap (rejection reasons)', () => {
     const res = explainSwap({
       memberA: 'bob', memberB: null, eventA: event, eventB: event,
       sourceIndex: 0, targetIndex: 1,
-      slotA: event.roster[0], slotB: event.roster[1],
+      slotA: event.slots[0], slotB: event.slots[1],
       members, memberConstraints: [], allEvents: [event],
     })
     expect(res.ok).toBe(false)

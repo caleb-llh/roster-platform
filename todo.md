@@ -1,5 +1,4 @@
 ### outstanding
-- architecture-overhaul.plan.md
 
 ### backlog
 **scalable harness**
@@ -42,6 +41,7 @@
 - [ ] tables: users, roster, teams, events, members, member_preferences, member_constraints - did i miss any?
 - [ ] draw the relations. is this scalable?
 - [ ] multi-version support integrated into the draft and save concept? what would be the workflow and how will the underlying data structure change?
+- [ ] concurrency control?
 
 
 **roster management**
@@ -53,11 +53,15 @@
 - [x] calendar view for member availability
 - [x] When a swap fails, does the existing logic support a more descriptive error message on the toast? instead of just a generic invalid statement.
 - [ ] everything about the members should be editable. make sure the design style is consistent with the rest of the UI. take inspiration from how its done in the events view. clarify if needed.
-- [ ] how to bulk add members and events in production - should yaml still be used in production? how to make it easy for AI to help with the process?
+- [ ] how to bulk add members and events in production - should yaml still be used in production? similar to code/visual editor in AWS IAM policies? how to make it easy for AI to help with the process? 
+- [ ] Roster clone or templating to help with quick roster setup?
+- [ ] swap suggestions - show the possible swaps and let the user choose which one to apply.
 
 **roster validation/algorithm**
 - [x] clean up roster generation info modal "how roster generation works", clicking the generate button should trigger the generation process immediately since we can undo it. generation results modal can be removed if the roster statistics already does the job.
 - [x] understudy concept and dependencies
+- [ ] would it simplify the model if we make understudy assignment/generation a manual human step instead of an automated one, and just validate the roster afterwards?
+- [ ] N-way swaps? 
 
 **roster analytics**
 - [x] declutter roster statistics panel, remove the unnecessary info

@@ -4,7 +4,7 @@
 > single home for the RBAC/authorization model — the governing principle, the
 > role definitions, the action matrix, and the two-layer (DB vs. UI) enforcement
 > invariant. The **data/entity model** it acts on lives in
-> [architecture.md](architecture.md#data-model) (current) and
+> [architecture.md](architecture.md#data-model-supabase-production-only) (current) and
 > [multi-tenant.md](multi-tenant.md) (target hierarchy); the **members-editing
 > feature** that consumes these checks lives in its own feature plan. Those
 > files link here rather than restating permissions, so the model is defined
@@ -44,7 +44,7 @@ rights) is a bug.
 
 ---
 
-## Current model (implemented, roster-scoped)
+## Current model (roster-scoped)
 
 Three per-roster permission-roles form the RBAC (`public.roster_role` enum):
 **owner**, **editor**, **viewer**. Role is stored per `(roster_id, user_id)` in
@@ -67,7 +67,7 @@ exist yet.
 
 **Client flags** (`RosterPermissions` in
 [`providerContract.js`](../src/data/providerContract.js)) derived from role in
-[`useSupabaseRosterProvider.js`](../src/data/useSupabaseRosterProvider.js):
+[`useSupabaseProvider.js`](../src/data/useSupabaseProvider.js):
 
 | Flag | Grants | owner | editor | viewer |
 | --- | --- | :-: | :-: | :-: |
@@ -102,13 +102,32 @@ without infinite recursion, all role checks go through the `SECURITY DEFINER`
 helpers `is_roster_member` / `roster_role_of` (RLS bypassed inside them), which
 are the single source of truth the policies call.
 
+### Decomposing the `document` fans RLS out per table
+
+A roster is stored as **one `document jsonb` column**, so one policy pair
+(`rosters_select_members` / `rosters_update_editors`) authorizes the *entire*
+roster in a single row check. The client-side vocabulary does not care how the
+bytes are stored (see
+[architecture.md](architecture.md#the-vocabulary-split-document-is-persisted-state-is-derived)),
+but authorization does: **if that column is ever split into `events` / `members`
+/ `constraints` tables, the one "update the document" capability fans out into
+one RLS policy per table.** The load-bearing invariant is that **every one of
+those policies must resolve the same role** (via the same `roster_role_of` /
+`tenant_role_of` helper) — a decomposed layout where `events` rows are editor-
+writable but a sibling `constraints` table is left unprotected is an
+authorization gap, not a serialization detail. This is why decomposition is a
+*permissions* change even though it is vocabulary-neutral, and why the planned
+tenant model (which normalizes the *surrounding* entities but keeps the roster
+schedule as `document jsonb`) still RLS-scopes **every** normalized table to the
+tenant — see [multi-tenant.md](multi-tenant.md#supabase-data-model).
+
 ---
 
-## Target model (planned, tenant-scoped) — not yet built
+## Target model (tenant-scoped)
 
-When the [multi-tenant hierarchy](multi-tenant.md) lands, governance moves **up
-to the tenant** and gains a `self` relation for member self-service. This section
-is the RBAC half of that plan (the entity/storage half stays in
+Under the [multi-tenant hierarchy](multi-tenant.md), governance moves **up to the
+tenant** and gains a `self` relation for member self-service. This section is the
+RBAC half of that model (the entity/storage half stays in
 [multi-tenant.md](multi-tenant.md)).
 
 The model has **two orthogonal axes**, and they must not be flattened into one
@@ -216,8 +235,8 @@ Notes on the encoding (decisions ratified in review):
 `can()` is UI-only. The tenant-scoped tables get RLS keyed on `tenant_users.role`
 via `SECURITY DEFINER` helpers (`is_tenant_member(tenant)` /
 `tenant_role_of(tenant)`), plus the `self` check
-(`members.claimed_user_id = auth.uid()`). Migration details are in
-[multi-tenant.md](multi-tenant.md#data-model-changes-supabase-phase-3).
+(`members.claimed_user_id = auth.uid()`). Storage/migration details are in
+[multi-tenant.md](multi-tenant.md#supabase-data-model).
 
 ### Testing (two levels, mirroring the two-layer authority)
 
@@ -257,10 +276,7 @@ mistaken for the other (the load-bearing invariant above):
     own-record writes and nothing else.
 
   Prefer **pgTAP** (Supabase's supported in-DB test framework) so assertions run
-  where the policies do. This DB layer has **no coverage today** — writing it is
-  part of the Phase-3 migration work
-  ([multi-tenant.md](multi-tenant.md#phased-delivery)), and until it exists the
-  RLS gap is called out here rather than left silent.
+  where the policies do.
 
 ### Configurable defaults (future)
 
@@ -274,8 +290,8 @@ not a code change. Until that page exists, the defaults are the policy.
 
 ### Resolved decisions (review)
 
-1. **`editor` role dropped.** Replaced by two axes: governance (`owner`/`admin`)
-   + the automatic orthogonal `self` relation. No unproven team-wide-curator tier.
+1. **`editor` role dropped** in favour of the two-axis model (governance +
+   automatic `self`) — rationale under "Why only two granted roles" above.
 2. **`self` is automatic for claimed members and orthogonal to roles** — even a
    `viewer`-roled member manages their own record.
 3. **Members can self-assign** (`roster:assign-self`), eligibility-gated — the

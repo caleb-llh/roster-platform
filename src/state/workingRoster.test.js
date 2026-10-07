@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { WorkingRoster } from './workingRoster'
-import { AssignmentTracker } from './assignmentTracker'
+import { AssignmentCounters } from './assignmentCounters'
 
 const members = [
   { id: 'alice', name: 'Alice', include: true },
@@ -12,14 +12,14 @@ function makeEvents() {
   return [
     {
       name: 'Service 1', date: '2026-02-01', day_of_week: 'Sunday',
-      roster: [
+      slots: [
         { role: 'vm', member_id: 'alice', isGenerated: true },
         { role: 'cam-1', member_id: null },
       ],
     },
     {
       name: 'Service 2', date: '2026-02-08', day_of_week: 'Sunday',
-      roster: [
+      slots: [
         { role: 'vm', member_id: 'bob', isGenerated: true },
       ],
     },
@@ -36,7 +36,7 @@ function snapshot(tracker) {
 describe('WorkingRoster reversible moves', () => {
   it('applyMove then revertMove restores events and tracker exactly', () => {
     const events = makeEvents()
-    const tracker = new AssignmentTracker(members, events)
+    const tracker = new AssignmentCounters(members, events)
     const state = new WorkingRoster(events, tracker)
 
     const before = snapshot(tracker)
@@ -57,7 +57,7 @@ describe('WorkingRoster reversible moves', () => {
 
   it('reassigning an occupied slot and reverting restores exactly', () => {
     const events = makeEvents()
-    const tracker = new AssignmentTracker(members, events)
+    const tracker = new AssignmentCounters(members, events)
     const state = new WorkingRoster(events, tracker)
 
     const before = snapshot(tracker)
@@ -77,7 +77,7 @@ describe('WorkingRoster reversible moves', () => {
 
   it('applySwap then revertSwap restores exactly', () => {
     const events = makeEvents()
-    const tracker = new AssignmentTracker(members, events)
+    const tracker = new AssignmentCounters(members, events)
     const state = new WorkingRoster(events, tracker)
 
     const before = snapshot(tracker)
@@ -98,7 +98,7 @@ describe('WorkingRoster reversible moves', () => {
 
   it('allSlots enumerates every role slot', () => {
     const events = makeEvents()
-    const tracker = new AssignmentTracker(members, events)
+    const tracker = new AssignmentCounters(members, events)
     const state = new WorkingRoster(events, tracker)
     expect(state.allSlots()).toHaveLength(3)
   })

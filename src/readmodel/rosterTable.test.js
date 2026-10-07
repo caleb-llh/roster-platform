@@ -13,7 +13,7 @@ describe('rosterTable', () => {
   describe('buildExportColumns', () => {
     it('orders all real roles first, then understudy columns', () => {
       const events = [
-        { roster: [{ role: 'vm' }, { role: 'cam' }, { role: 'vm-understudy' }] },
+        { slots: [{ role: 'vm' }, { role: 'cam' }, { role: 'vm-understudy' }] },
       ]
       const { columns } = buildExportColumns(events, roles)
       expect(columns.map(c => c.label)).toEqual(['vm', 'cam', 'vm-understudy'])
@@ -21,8 +21,8 @@ describe('rosterTable', () => {
 
     it('widens to the MAX count of a duplicated role, with numbered labels', () => {
       const events = [
-        { roster: [{ role: 'cam' }, { role: 'cam' }] }, // two cams
-        { roster: [{ role: 'cam' }] },
+        { slots: [{ role: 'cam' }, { role: 'cam' }] }, // two cams
+        { slots: [{ role: 'cam' }] },
       ]
       const { columns, maxCount } = buildExportColumns(events, roles)
       expect(maxCount.cam).toBe(2)
@@ -33,7 +33,7 @@ describe('rosterTable', () => {
 
     it('appends roles present in data but absent from the catalog (real, then understudy last)', () => {
       const events = [
-        { roster: [{ role: 'extra' }, { role: 'extra-understudy' }, { role: 'vm' }] },
+        { slots: [{ role: 'extra' }, { role: 'extra-understudy' }, { role: 'vm' }] },
       ]
       const { columns } = buildExportColumns(events, roles)
       const labels = columns.map(c => c.label)
@@ -50,7 +50,7 @@ describe('rosterTable', () => {
 
   describe('buildExportHeader', () => {
     it('brackets the role columns with fixed metadata + issue columns', () => {
-      const { columns } = buildExportColumns([{ roster: [{ role: 'vm' }] }], roles)
+      const { columns } = buildExportColumns([{ slots: [{ role: 'vm' }] }], roles)
       expect(buildExportHeader(columns)).toEqual([
         'Date', 'Day', 'Reporting Time', 'Event Name', 'vm', 'Errors', 'Warnings',
       ])
@@ -64,7 +64,7 @@ describe('rosterTable', () => {
       const events = [
         {
           date: '2026-02-07', day_of_week: 'Sat', reporting_time: '9am', name: 'Service',
-          roster: [{ role: 'vm', member_id: 'john' }],
+          slots: [{ role: 'vm', member_id: 'john' }],
         },
       ]
       const { columns } = buildExportColumns(events, roles)
@@ -77,7 +77,7 @@ describe('rosterTable', () => {
       const events = [
         {
           date: '2026-02-07', day_of_week: 'Sat', reporting_time: '9am', name: 'Service',
-          roster: [{ role: 'cam', member_id: 'john' }, { role: 'cam', member_id: 'jane' }],
+          slots: [{ role: 'cam', member_id: 'john' }, { role: 'cam', member_id: 'jane' }],
         },
       ]
       const { columns } = buildExportColumns(events, roles)
@@ -88,7 +88,7 @@ describe('rosterTable', () => {
 
     it('joins validation errors/warnings into the trailing columns', () => {
       const events = [
-        { date: '2026-02-07', day_of_week: 'Sat', reporting_time: '9am', name: 'Service', roster: [] },
+        { date: '2026-02-07', day_of_week: 'Sat', reporting_time: '9am', name: 'Service', slots: [] },
       ]
       const { columns } = buildExportColumns(events, roles)
       const validationResults = {

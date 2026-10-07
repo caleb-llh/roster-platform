@@ -13,8 +13,8 @@ const memberConstraints = [
   { member_id: 'm1', unavailable_dates: ['2026-01-10'] },
 ]
 const enabled = { [CONSTRAINT_KEYS.ENFORCE_MEMBER_AVAILABILITY]: true }
-const event = { date: '2026-01-10', roster: [] }
-const freeEvent = { date: '2026-01-11', roster: [] }
+const event = { date: '2026-01-10', slots: [] }
+const freeEvent = { date: '2026-01-11', slots: [] }
 
 describe('availability constraint descriptor', () => {
   const availability = getConstraintRule('availability')
@@ -166,9 +166,9 @@ describe('once-per-event descriptor', () => {
 
 describe('no-clash descriptor', () => {
   const rule = getConstraintRule('no-clash')
-  const target = { date: '2026-04-01', roster: [] }
+  const target = { date: '2026-04-01', slots: [] }
   // Same-day event the member is already in → overlaps (bare dates are whole days).
-  const otherSameDay = { date: '2026-04-01', roster: [{ role: 'lead', member_id: 'm1' }] }
+  const otherSameDay = { date: '2026-04-01', slots: [{ role: 'lead', member_id: 'm1' }] }
   const ctx = (clashers) => ({
     rosterConstraints: { ENFORCE_NO_CLASH: true },
     overlappingEvents: () => clashers,
@@ -184,7 +184,7 @@ describe('no-clash descriptor', () => {
   })
 
   it('ignores overlapping events the member is not in', () => {
-    const otherWithoutMember = { date: '2026-04-01', roster: [{ role: 'lead', member_id: 'm2' }] }
+    const otherWithoutMember = { date: '2026-04-01', slots: [{ role: 'lead', member_id: 'm2' }] }
     expect(rule.check({ memberId: 'm1', role: 'cam', event: target }, ctx([otherWithoutMember]), CONSTRAINT_MODES.WOULD_PLACE)).toBeNull()
   })
 

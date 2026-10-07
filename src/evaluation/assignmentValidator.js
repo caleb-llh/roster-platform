@@ -1,6 +1,6 @@
 /**
  * Validate event assignments against constraints and preferences
- * @param {Array} events - All events with roster assignments
+ * @param {Array} events - All events with slot assignments
  * @param {Array} members - All members
  * @param {Array} memberConstraints - Member-level hard constraints
  * @param {Array} memberPreferences - Member-level preferences
@@ -30,13 +30,13 @@ import { getConstraintRule, CONSTRAINT_MODES } from '../rules/constraints'
 const checkUnavailabilityViolation = (event, memberConstraints, members) => {
   const errors = []
   
-  if (!event.roster || !Array.isArray(event.roster)) return errors
+  if (!event.slots || !Array.isArray(event.slots)) return errors
   
   // Availability is always reported here (NOT gated by the roster flag, unlike
   // the generator), so call the descriptor's `check` directly rather than
   // through `enabled`. Wording stays validator-specific.
   const availability = getConstraintRule('availability')
-  event.roster.forEach(assignment => {
+  event.slots.forEach(assignment => {
     if (assignment.member_id) {
       const violation = availability.check(
         { memberId: assignment.member_id, role: assignment.role, event },
@@ -64,7 +64,7 @@ const checkUnavailabilityViolation = (event, memberConstraints, members) => {
 const checkUnderstudyBeforeRole = (event, allEvents, rosterConstraints, members) => {
   const errors = []
 
-  if (!event.roster || !Array.isArray(event.roster)) return errors
+  if (!event.slots || !Array.isArray(event.slots)) return errors
 
   const understudyGate = getConstraintRule('understudy-before-role')
   const ctx = {
@@ -75,7 +75,7 @@ const checkUnderstudyBeforeRole = (event, allEvents, rosterConstraints, members)
   }
   if (!understudyGate.enabled(ctx)) return errors
 
-  event.roster.forEach(assignment => {
+  event.slots.forEach(assignment => {
     if (!assignment.member_id) return
     const violation = understudyGate.check(
       { memberId: assignment.member_id, role: assignment.role, event },
@@ -125,7 +125,7 @@ const checkRosterPeriodViolation = (event, rosterPeriod) => {
 const checkRosterConstraints = (event, allEvents, rosterConstraints, members, externalAssignments = {}) => {
   const errors = []
   
-  if (!event.roster || !rosterConstraints) return errors
+  if (!event.slots || !rosterConstraints) return errors
 
   const crossCaps = isConstraintEnabled(rosterConstraints, CONSTRAINT_KEYS.ENFORCE_CROSS_TEAM_CAPS)
   const crossClash = isConstraintEnabled(rosterConstraints, CONSTRAINT_KEYS.ENFORCE_CROSS_TEAM_CLASH)
@@ -140,7 +140,7 @@ const checkRosterConstraints = (event, allEvents, rosterConstraints, members, ex
   const makeCtx = (excludeRole) => ({
     rosterConstraints,
     members,
-    currentRoster: () => event.roster.filter(r => r.member_id && r.role !== excludeRole),
+    currentRoster: () => event.slots.filter(r => r.member_id && r.role !== excludeRole),
     weeklyCount: (memberId, date) =>
       getWeekAssignments(memberId, date, allEvents).length +
       (crossCaps ? externalWeeklyCount(memberId, date, externalAssignments) : 0),
@@ -172,14 +172,14 @@ const checkRosterConstraints = (event, allEvents, rosterConstraints, members, ex
   // ONLY_ONCE_PER_EVENT — decision from the registry, per member; wording lists
   // the specific roles so the message stays actionable.
   if (oncePerEvent.enabled(makeCtx())) {
-    const multipleRoles = getMembersWithMultipleRoles(event.roster)
+    const multipleRoles = getMembersWithMultipleRoles(event.slots)
     multipleRoles.forEach(({ memberId, roles }) => {
       const member = members.find(m => m.id === memberId)
       errors.push(`${member?.name || memberId} is assigned to multiple roles: ${roles.join(', ')}`)
     })
   }
   
-  const assignedMemberIds = event.roster
+  const assignedMemberIds = event.slots
     .filter(r => r.member_id)
     .map(r => r.member_id)
 
@@ -247,9 +247,9 @@ const checkRosterConstraints = (event, allEvents, rosterConstraints, members, ex
 const checkRosterPreferences = (event, allEvents, rosterPreferences, members) => {
   const warnings = []
   
-  if (!event.roster || !rosterPreferences) return warnings
+  if (!event.slots || !rosterPreferences) return warnings
   
-  const assignedMemberIds = event.roster
+  const assignedMemberIds = event.slots
     .filter(r => r.member_id)
     .map(r => r.member_id)
   
@@ -258,7 +258,7 @@ const checkRosterPreferences = (event, allEvents, rosterPreferences, members) =>
     assignedMemberIds.forEach(memberId => {
       // Find other events where member is assigned
       const otherAssignments = allEvents.filter(e => 
-        e.date !== event.date && e.roster?.some(r => r.member_id === memberId)
+        e.date !== event.date && e.slots?.some(r => r.member_id === memberId)
       )
       const member = members.find(m => m.id === memberId)
       
@@ -281,9 +281,9 @@ const checkRosterPreferences = (event, allEvents, rosterPreferences, members) =>
 const checkMemberPreferences = (event, memberPreferences, members) => {
   const warnings = []
   
-  if (!event.roster || !memberPreferences) return warnings
+  if (!event.slots || !memberPreferences) return warnings
   
-  event.roster.forEach(assignment => {
+  event.slots.forEach(assignment => {
     if (assignment.member_id) {
       const memberPref = memberPreferences.find(p => p.member_id === assignment.member_id)
       if (memberPref && memberPref.days) {

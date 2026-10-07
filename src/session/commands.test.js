@@ -14,7 +14,7 @@ const makeMembers = () => [
 const makeEvents = () => [
   {
     date: '2026-08-01', name: 'Morning', day_of_week: 'Saturday',
-    roster: [
+    slots: [
       { role: 'vm', member_id: 'alice' },
       { role: 'cam-1', member_id: 'bob', isGenerated: true },
       { role: 'cam-2', member_id: null },
@@ -22,7 +22,7 @@ const makeEvents = () => [
   },
   {
     date: '2026-08-02', name: 'Evening', day_of_week: 'Sunday',
-    roster: [{ role: 'vm', member_id: 'cara' }],
+    slots: [{ role: 'vm', member_id: 'cara' }],
   },
 ]
 
@@ -39,7 +39,7 @@ const makeState = (over = {}) => ({
 })
 
 const slotAt = (events, date, idx) =>
-  events.find((e) => e.date === date).roster[idx]
+  events.find((e) => e.date === date).slots[idx]
 
 describe('session/commands', () => {
   describe('assign', () => {
@@ -73,7 +73,7 @@ describe('session/commands', () => {
   describe('addSlot', () => {
     it('adds an unassigned role requirement', () => {
       const r = addSlot(makeState(), { eventDate: '2026-08-02', role: 'cam-1' })
-      const roster = r.nextEvents.find((e) => e.date === '2026-08-02').roster
+      const roster = r.nextEvents.find((e) => e.date === '2026-08-02').slots
       expect(roster).toContainEqual({ role: 'cam-1', member_id: null })
       expect(r.logEntry.category).toBe('insert')
     })
@@ -88,7 +88,7 @@ describe('session/commands', () => {
   describe('removeSlot', () => {
     it('removes the whole role slot', () => {
       const r = removeSlot(makeState(), { eventDate: '2026-08-01', roleIndex: 1 })
-      const roster = r.nextEvents.find((e) => e.date === '2026-08-01').roster
+      const roster = r.nextEvents.find((e) => e.date === '2026-08-01').slots
       expect(roster.map((s) => s.role)).toEqual(['vm', 'cam-2'])
       expect(r.logEntry.category).toBe('delete')
     })
@@ -128,7 +128,7 @@ describe('session/commands', () => {
 
     it('is a no-op when nothing is generated', () => {
       const state = makeState()
-      state.events[0].roster[1] = { role: 'cam-1', member_id: 'bob' } // drop isGenerated
+      state.events[0].slots[1] = { role: 'cam-1', member_id: 'bob' } // drop isGenerated
       const r = clearGenerated(state)
       expect(r.nextEvents).toBeNull()
     })

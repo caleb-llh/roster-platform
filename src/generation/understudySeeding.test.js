@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { generateRoster } from './index'
 import { seedUnderstudySlots } from './understudySeeding'
-import { AssignmentTracker } from '../state/assignmentTracker'
+import { AssignmentCounters } from '../state/assignmentCounters'
 import { EligibilityChecker } from '../evaluation/eligibilityChecker'
 import { CONSTRAINT_KEYS } from '../schema/rosterSchema'
 
@@ -29,7 +29,7 @@ describe('Understudy seeding (Phase 0)', () => {
     date,
     day_of_week: 'Sunday',
     reporting_time: '09:00',
-    roster: roles.map(role => ({ role, member_id: null })),
+    slots: roles.map(role => ({ role, member_id: null })),
   })
 
   it('seeds an understudy slot on an earlier event and unlocks the real role later', () => {
@@ -52,13 +52,13 @@ describe('Understudy seeding (Phase 0)', () => {
     )
 
     // A main-cam-understudy slot was injected on the first event for Eli.
-    const seeded = result.events[0].roster.find(r => r.role === 'main-cam-understudy')
+    const seeded = result.events[0].slots.find(r => r.role === 'main-cam-understudy')
     expect(seeded).toBeTruthy()
     expect(seeded.member_id).toBe('eli')
     expect(seeded.isGenerated).toBe(true)
 
     // Having understudied on 02-01, Eli can now perform the real role on 02-08.
-    const laterReal = result.events[1].roster.find(r => r.role === 'main-cam')
+    const laterReal = result.events[1].slots.find(r => r.role === 'main-cam')
     expect(laterReal.member_id).toBe('eli')
   })
 
@@ -69,12 +69,12 @@ describe('Understudy seeding (Phase 0)', () => {
     // Only a roving-cam slot exists; nothing to understudy for main-cam.
     const events = [evt('2026-02-01', ['roving-cam'])]
 
-    const tracker = new AssignmentTracker(members, events, rosterPeriod)
+    const tracker = new AssignmentCounters(members, events, rosterPeriod)
     const checker = new EligibilityChecker(members, [], constraints(), tracker)
     const created = seedUnderstudySlots(events, members, checker, tracker)
 
     expect(created).toBe(0)
-    expect(events[0].roster.some(r => r.role === 'main-cam-understudy')).toBe(false)
+    expect(events[0].slots.some(r => r.role === 'main-cam-understudy')).toBe(false)
   })
 
   it('does not seed when the trainee is unavailable on the feasible event', () => {
@@ -84,7 +84,7 @@ describe('Understudy seeding (Phase 0)', () => {
     const events = [evt('2026-02-01', ['main-cam'])]
     const memberConstraints = [{ member_id: 'eli', unavailable_dates: ['2026-02-01'] }]
 
-    const tracker = new AssignmentTracker(members, events, rosterPeriod)
+    const tracker = new AssignmentCounters(members, events, rosterPeriod)
     const checker = new EligibilityChecker(members, memberConstraints, constraints(), tracker)
     const created = seedUnderstudySlots(events, members, checker, tracker)
 
@@ -98,18 +98,18 @@ describe('Understudy seeding (Phase 0)', () => {
     // Pre-authored understudy slot already present on the same event.
     const events = [{
       name: 'Service', date: '2026-02-01', day_of_week: 'Sunday', reporting_time: '09:00',
-      roster: [
+      slots: [
         { role: 'main-cam', member_id: null },
         { role: 'main-cam-understudy', member_id: 'eli' },
       ],
     }]
 
-    const tracker = new AssignmentTracker(members, events, rosterPeriod)
+    const tracker = new AssignmentCounters(members, events, rosterPeriod)
     const checker = new EligibilityChecker(members, [], constraints(), tracker)
     const created = seedUnderstudySlots(events, members, checker, tracker)
 
     expect(created).toBe(0)
-    expect(events[0].roster.filter(r => r.role === 'main-cam-understudy')).toHaveLength(1)
+    expect(events[0].slots.filter(r => r.role === 'main-cam-understudy')).toHaveLength(1)
   })
 
   it('is promotion-aware: seeds the trainee who can actually be promoted next', () => {
@@ -135,10 +135,10 @@ describe('Understudy seeding (Phase 0)', () => {
     )
 
     // 02-01 understudy went to the promotable trainee...
-    const firstUnderstudy = result.events[0].roster.find(r => r.role === 'multi-vm-understudy')
+    const firstUnderstudy = result.events[0].slots.find(r => r.role === 'multi-vm-understudy')
     expect(firstUnderstudy.member_id).toBe('reachable')
     // ...who is then promoted into the real role on 03-01.
-    const laterReal = result.events[1].roster.find(r => r.role === 'multi-vm')
+    const laterReal = result.events[1].slots.find(r => r.role === 'multi-vm')
     expect(laterReal.member_id).toBe('reachable')
   })
 })

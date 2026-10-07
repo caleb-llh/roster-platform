@@ -12,9 +12,9 @@ describe('computeAvailabilityByRole', () => {
     { id: 'e', roles: [], understudyFor: ['multi-vm'] }, // trainee only
   ]
   const events = [
-    { date: '2026-02-01', roster: [{ role: 'vm' }, { role: 'multi-vm' }] },
-    { date: '2026-02-08', roster: [{ role: 'vm' }] },
-    { date: '2026-02-15', roster: [] },
+    { date: '2026-02-01', slots: [{ role: 'vm' }, { role: 'multi-vm' }] },
+    { date: '2026-02-08', slots: [{ role: 'vm' }] },
+    { date: '2026-02-15', slots: [] },
   ]
   const roles = ['vm', 'multi-vm']
 
@@ -44,7 +44,7 @@ describe('computeAvailabilityByRole', () => {
   })
 
   it('reports negative slack when required exceeds available', () => {
-    const busy = [{ date: '2026-02-01', roster: [{ role: 'vm' }, { role: 'vm' }, { role: 'vm' }] }]
+    const busy = [{ date: '2026-02-01', slots: [{ role: 'vm' }, { role: 'vm' }, { role: 'vm' }] }]
     const { series } = computeAvailabilityByRole(busy, members, roles, [])
     const vm = series.find(s => s.role === 'vm')
     expect(vm.counts).toEqual([2])
@@ -69,8 +69,8 @@ describe('computeAvailabilityByRole', () => {
 
   it('collapses multiple events on the same date into one point', () => {
     const dup = [
-      { date: '2026-02-01', roster: [{ role: 'vm' }] },
-      { date: '2026-02-01', roster: [{ role: 'vm' }] },
+      { date: '2026-02-01', slots: [{ role: 'vm' }] },
+      { date: '2026-02-01', slots: [{ role: 'vm' }] },
     ]
     const { dates, series } = computeAvailabilityByRole(dup, members, roles, [])
     expect(dates).toEqual(['2026-02-01'])
@@ -96,9 +96,9 @@ describe('computeAvailabilityByRole', () => {
 
   it('derives the roster-wide slack-ratio scale from cells with real slack', () => {
     const evs = [
-      { date: 'd1', roster: [{ role: 'vm' }] },                 // req 1, avail 2 -> ratio 2 (slack)
-      { date: 'd2', roster: [{ role: 'vm' }, { role: 'vm' }] }, // req 2, avail 2 -> exact, excluded
-      { date: 'd3', roster: [{ role: 'vm' }, { role: 'vm' }, { role: 'vm' }] }, // req 3, avail 2 -> short, excluded
+      { date: 'd1', slots: [{ role: 'vm' }] },                 // req 1, avail 2 -> ratio 2 (slack)
+      { date: 'd2', slots: [{ role: 'vm' }, { role: 'vm' }] }, // req 2, avail 2 -> exact, excluded
+      { date: 'd3', slots: [{ role: 'vm' }, { role: 'vm' }, { role: 'vm' }] }, // req 3, avail 2 -> short, excluded
     ]
     const { scale } = computeAvailabilityByRole(evs, members, ['vm'], [])
     // Only the slack cell (ratio 2) contributes; exact & short are excluded.

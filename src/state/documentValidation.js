@@ -6,7 +6,7 @@
  * TENANT shape's own invariant — a team's rosters must not overlap in time —
  * lives beside the tenant transform in `tenantResolver.validateTenantRosters`.
  * The provider load path runs BOTH and merges their warnings (see
- * `useLocalRosterProvider`), so a reader chasing "where is X validated" should
+ * `useLocalProvider`), so a reader chasing "where is X validated" should
  * check both halves.
  */
 
@@ -188,8 +188,8 @@ export const validateUnderstudy = (document) => {
   const understudySlotsInEvents = new Set()
   if (Array.isArray(document.events)) {
     document.events.forEach(event => {
-      if (Array.isArray(event.roster)) {
-        event.roster.forEach(slot => {
+      if (Array.isArray(event.slots)) {
+        event.slots.forEach(slot => {
           if (slot?.role && isUnderstudyRole(slot.role)) {
             understudySlotsInEvents.add(baseRoleOf(slot.role))
           }
@@ -265,11 +265,11 @@ export const validateDates = (document) => {
     })
   }
 
-  if (document?.roster) {
-    if (document.roster.start_date && !dateRegex.test(document.roster.start_date)) {
+  if (document?.roster_period) {
+    if (document.roster_period.start_date && !dateRegex.test(document.roster_period.start_date)) {
       errors.push(`Roster period: Invalid start_date format (expected YYYY-MM-DD)`)
     }
-    if (document.roster.end_date && !dateRegex.test(document.roster.end_date)) {
+    if (document.roster_period.end_date && !dateRegex.test(document.roster_period.end_date)) {
       errors.push(`Roster period: Invalid end_date format (expected YYYY-MM-DD)`)
     }
   }
@@ -281,23 +281,23 @@ export const validateRosterPeriod = (document) => {
   const errors = []
   const warnings = []
 
-  if (document?.roster) {
-    if (!document.roster.start_date) {
+  if (document?.roster_period) {
+    if (!document.roster_period.start_date) {
       warnings.push('Roster period: Missing start_date')
     }
-    if (!document.roster.end_date) {
+    if (!document.roster_period.end_date) {
       warnings.push('Roster period: Missing end_date')
     }
 
-    if (document.roster.start_date && document.roster.end_date) {
-      if (document.roster.start_date > document.roster.end_date) {
+    if (document.roster_period.start_date && document.roster_period.end_date) {
+      if (document.roster_period.start_date > document.roster_period.end_date) {
         errors.push('Roster period: start_date must be before end_date')
       }
 
       // Check if events are outside roster period
       if (document.events && Array.isArray(document.events)) {
         document.events.forEach((event) => {
-          if (event.date && (event.date < document.roster.start_date || event.date > document.roster.end_date)) {
+          if (event.date && (event.date < document.roster_period.start_date || event.date > document.roster_period.end_date)) {
             warnings.push(`Event "${event.name || event.date}" is outside roster period`)
           }
         })
@@ -312,11 +312,11 @@ export const validateRosterPeriod = (document) => {
             constraint.unavailable_dates.forEach((dateItem) => {
               // Handle both string dates and date range objects
               if (typeof dateItem === 'string') {
-                if (dateItem < document.roster.start_date || dateItem > document.roster.end_date) {
+                if (dateItem < document.roster_period.start_date || dateItem > document.roster_period.end_date) {
                   warnings.push(`${memberName}: Unavailable date ${dateItem} is outside roster period`)
                 }
               } else if (dateItem && typeof dateItem === 'object' && dateItem.start && dateItem.end) {
-                if (dateItem.end < document.roster.start_date || dateItem.start > document.roster.end_date) {
+                if (dateItem.end < document.roster_period.start_date || dateItem.start > document.roster_period.end_date) {
                   warnings.push(`${memberName}: Date range ${dateItem.start} to ${dateItem.end} is completely outside roster period`)
                 }
               }

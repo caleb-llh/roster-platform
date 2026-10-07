@@ -4,11 +4,13 @@ Covers the roster data structure, the draft/commit model, inline change review,
 and real-time statistics. See also [architecture.md](architecture.md) for the
 dual-mode provider contract that persists this data.
 
-## Data structure: `event.roster` is a positional array
+## Data structure: `event.slots` is a positional array
 
-`event.roster` is an **array** of slot objects `{ role, member_id, isGenerated? }` — *not* a role-keyed map. This is intentional so a role can appear multiple times in one event (e.g. two `support` slots, or a role plus its understudy). Any view that needs a role→member lookup must group into positional buckets (`byRole[role][index]`) rather than collapsing to a single value per role, or duplicate slots disappear.
+`event.slots` is an **array** of slot objects `{ role, member_id, isGenerated? }` — *not* a role-keyed map. This is intentional so a role can appear multiple times in one event (e.g. two `support` slots, or a role plus its understudy). Any view that needs a role→member lookup must group into positional buckets (`byRole[role][index]`) rather than collapsing to a single value per role, or duplicate slots disappear.
 
-- The CSV / "Copy to Excel" exports compute an `exportColumns` layout: for each role, the max count across all events → that many numbered columns; understudy roles get their own columns; cells are filled positionally from the per-event `byRole` buckets.
+The field is `slots` (not `roster`): "roster" was overloaded, so the per-event slot array has its own canonical name — see [glossary.md](glossary.md#nouns) → the three senses of "roster". Legacy YAML that keyed this array `roster:` is rewritten to `slots` at load by [`normalizeDocument`](../src/state/normalizeDocument.js).
+
+- Because slots are positional, any tabular export must fill cells positionally from the per-event `byRole` buckets rather than by role name. The resulting `exportColumns` layout (how many numbered columns each role gets, where understudy columns go) is owned by [events-ui.md](events-ui.md#export-column-order-real-roles-first-understudies-last).
 
 ## Time granularity: events are datetime ranges (UI still groups by day)
 
@@ -32,7 +34,7 @@ a day can't slip a timezone. Member unavailability remains a set of **day keys**
   two bare-date events on the same day are two whole-day ranges, so they still
   clash exactly as before, while a morning and an evening *timed* service on one
   day no longer do. This is the single rule the future cross-team clash check
-  ([multi-tenant.md](multi-tenant.md#compatibility-seam-how-we-avoid-rewriting-the-engine))
+  ([multi-tenant.md](multi-tenant.md#compatibility-seam))
   is written against — authored once against intervals.
 - **The clash rule is a hard constraint, enforced via the registry.** It is the
   `no-clash` (`ENFORCE_NO_CLASH`) **feasibility** descriptor in the `CONSTRAINTS`
@@ -75,7 +77,7 @@ a day can't slip a timezone. Member unavailability remains a set of **day keys**
 
 [`public/sample.yaml`](../public/sample.yaml) is the **single source of truth for what a valid input document looks like**. It must always parse (`js-yaml`) and pass `runAllValidators` with zero errors, and it should exercise every supported field so that reading it teaches the full schema — including the object form of member `roles` (`- name: <role>`) and the `understudy: true` flag. When the schema changes, update `sample.yaml` in the same change (it is part of the feedback loop in [`../AGENTS.md`](../AGENTS.md)); a stale sample is a spec regression. Member `roles` accept both the object form and a bare string for backward compatibility (`normalizeMemberRoles` handles both), but the sample and new documents use the object form for consistency and to make the understudy flag expressible.
 
-**Nested tenant sibling.** [`public/sample_tenant.yaml`](../public/sample_tenant.yaml) is the canonical example of the **nested multi-tenant shape** (tenant + member registry + `teams[].team_members`/`rosters`). It is a *sibling*, not a replacement: the flat `sample.yaml` stays the default and both are valid inputs. The nested shape and its flat-back-compat rule are owned by [multi-tenant.md](multi-tenant.md#phase-1-contract-local-model); the resolver (`resolveTenant`) flattens a selected team+roster back into *this* flat schema, so validators/engine are shape-agnostic. A validator test resolves every team+roster of `sample_tenant.yaml` and asserts each is a valid flat document.
+**Nested tenant sibling.** [`public/sample_tenant.yaml`](../public/sample_tenant.yaml) is the canonical example of the **nested multi-tenant shape** (tenant + member registry + `teams[].team_members`/`rosters`). It is a *sibling*, not a replacement: the flat `sample.yaml` stays the default and both are valid inputs. The nested shape and its flat-back-compat rule are owned by [multi-tenant.md](multi-tenant.md#canonical-nested-yaml-shape-full-tenant-in-one-file); the resolver (`selectRosterDocument`) flattens a selected team+roster back into *this* flat schema, so validators/engine are shape-agnostic. A validator test resolves every team+roster of `sample_tenant.yaml` and asserts each is a valid flat document.
 
 ## The adapter and document-validation live in `state/`
 
@@ -83,8 +85,8 @@ The **adapter** — the pure `document → State` transform that turns a parsed
 document into the working shape the engine reads — lives in
 [`src/state/`](../src/state/) as two halves: normalization
 ([`derivedState.js`](../src/state/derivedState.js), `toState`) and tenant
-resolution ([`tenantResolver.js`](../src/state/tenantResolver.js), `resolveTenant`
-et al.). `toState(resolveTenant(...))` is the full adapter. It is the
+resolution ([`tenantResolver.js`](../src/state/tenantResolver.js), `selectRosterDocument`
+et al.). `toState(selectRosterDocument(...))` is the full adapter. It is the
 core's **inbound port (anti-corruption boundary)**: it branches only on the
 document's *shape* (`isTenantShape`, flat vs. nested-tenant), never on the storage
 backend, so both providers (local, Supabase) hand it the same shapes and stay
@@ -98,12 +100,183 @@ rows) is provider-side; shape-mapping is adapter-side.
 | | Answers | Runs on | Home |
 | --- | --- | --- | --- |
 | **Document validation** | "is this document *well-formed*?" (shape/schema integrity) | a parsed document, on the way IN | [`state/documentValidation.js`](../src/state/documentValidation.js) (`runAllValidators`) — next to the adapter it guards |
-| **Roster evaluation** | "is this *placement* legal / good?" (rule verdicts) | a State snapshot | `evaluation/` (the rule layer) |
+| **Roster evaluation** | "is this *placement* legal / good?" (rule verdicts) | a `State` | `evaluation/` (the rule layer) |
 
 Document validation is the gate the adapter is about to feed; it produces the
 display-only `data.warnings` (see the provider contract) and is **not**
 rule-Evaluation. It lives in `state/` as `documentValidation.js`, beside the
 adapter it guards, so the distinction from rule-Evaluation stays legible.
+
+## Data flow examples
+
+These walk the vocabulary pipeline ([glossary.md](glossary.md)) through concrete
+operations, so the stage boundaries read against real behaviour. The pipeline is:
+
+```
+committed document  ──assembleEffectiveDocument──▶  effective document  ──toState──▶  State  ──assembleStateWithExternal──▶  State with external
+```
+
+Each verb has one named producer, and the whole chain is walked in exactly **one
+place**: the Session hook ([`useSession.js`](../src/session/useSession.js))
+memoizes a single `effectiveStateWithExternal` (the `State with external` stage) keyed on its
+three source inputs — the committed document, the draft, and
+`externalAssignments`. In every example below, note **which stage is a
+`document`** (can be persisted) and **which is a `State`** (derived, thrown away
+after the computation).
+
+### Data flow: one producer, many consumers
+
+The three derived stages (effective document, `State`, `State with external`) are
+**transient** — produced and consumed in the same breath, held by nobody. Only
+the two *source* nouns persist across renders: the committed document (in the
+provider) and the draft (in [`useDraftHistory`](../src/session/useDraftHistory.js)).
+Everything else is recomputed from those.
+
+Because the derivation is a pure function of `(committed document, draft,
+externalAssignments)`, Session walks it **once**, memoized on exactly those three
+inputs, and exposes the result as `effectiveStateWithExternal`. Every consumer reads that one
+value:
+
+| Consumer | Reads | For |
+|---|---|---|
+| the UI render (`App.jsx`) | `effectiveStateWithExternal` (destructured) | rendering the roster, stats, validation |
+| commands (`assign`/`swap`/…) | the *same* memoized `effectiveStateWithExternal` value | the pure input a mutation is judged against |
+| the generator (`generateRoster`) | the same `State with external` | the pure input a fill is computed from |
+| the draft diff | `committedEvents` (also Session-derived) | the "before" side vs. the effective "after" |
+
+**Invariant — one producer, many consumers.** The pipeline must be walked in
+exactly one place. An earlier arrangement had the render path (`App.jsx`) and the
+command path (`useSession`) each re-derive the pipeline independently, and they
+drifted: the render path never assembled the `State with external` stage, so the
+UI validated against a `State` that threaded `externalAssignments` as a loose
+side-argument while commands judged against the fully-assembled stage. Routing
+every consumer through the single memoized `effectiveStateWithExternal` closes that gap by
+construction — the render path and the command/generator path cannot diverge on
+the same inputs because there is only one derivation. Memoizing on the three
+source inputs (not on anything downstream) is what keeps the shared value from
+going stale: it recomputes precisely when a source changes and never otherwise.
+
+### The stages and their lifetimes
+
+Each stage exists for one reason, and lives for one span. Two nouns persist; the
+rest are recomputed on demand:
+
+| Stage | Unique purpose | Lifetime | Held by |
+|---|---|---|---|
+| **committed document** | the authoritative, savable base; the only thing permissions/RLS attach to | until next load / save / import | the provider (`data`) |
+| **draft** (events + undo/redo stacks) | uncommitted edits and history; the one mutable write-buffer | until commit / discard / reset | [`useDraftHistory`](../src/session/useDraftHistory.js) |
+| **effective document** | "the roster as it looks *now*, unsaved edits included" — committed with the draft overlaid; still document-shaped, so it *could* be saved as-is | one derivation (transient) | nobody |
+| **State** | the engine/UI *shape* — resolves constraints, normalizes roles, computes `activeMembers`/`roleColorMap`; the purity firewall the core computes over | one derivation (transient) | nobody |
+| **State with external** | `State` plus cross-team load (`externalAssignments`); the complete input a command or the generator judges against | one derivation (transient) | nobody |
+
+The line between the two persisted nouns and the three transient ones is the
+persisted-vs-derived split ([architecture.md](architecture.md#the-vocabulary-split-document-is-persisted-state-is-derived)):
+writes target the base (via the draft, then commit); everything downstream is a
+disposable projection recomputed from it.
+
+**Why each stage is distinct — what breaks if it is removed or merged.** The
+pipeline looks long, but each boundary is load-bearing; collapsing any one
+removes a capability or a guarantee:
+
+- **committed document — if merged into the draft:** there would be no "last
+  saved" base to diff against or revert to, so Save/Discard and the uncommitted-
+  changes review ([`computeRosterDiff`](../src/readmodel/rosterDiff.js)) lose
+  their reference point. It is also the only noun permissions/RLS attach to
+  ([permissions.md](permissions.md)); without a distinct persisted base there is
+  nothing to authorize a write against.
+- **draft — if removed (edits write straight to the committed document):** every
+  keystroke persists, so there is no atomic "publish" step, no undo/redo, and a
+  half-finished roster immediately becomes the shared source of truth. The draft
+  exists precisely to hold edits *off* the base until commit.
+- **effective document — if removed (cast the committed document directly):**
+  unsaved edits would be invisible to the engine and UI — validation, stats, and
+  generation would all run against the last *saved* roster, not what the user is
+  looking at. This stage is what makes pending edits take effect everywhere
+  before Save. It stays *document*-shaped (not already a `State`) so it could be
+  persisted as-is at commit and so the single cast (`toState`) has one input
+  shape regardless of whether a draft exists.
+- **State — if merged with the document (engine reads the document directly):**
+  the pure core (`generate`/`evaluate`) would take the persisted shape and the
+  firewall is gone — it could then reach for storage concerns, drafts, or
+  re-loading, and it could no longer be unit-tested as `f(Rules, State)`. The
+  cast also does real resolution (constraints, `activeMembers`, `roleColorMap`)
+  that must happen exactly once, in one place, or consumers drift (the historical
+  `active`/`include` bug). See the adapter below.
+- **State with external — if merged into State:** the cross-team load would have
+  to be threaded into the engine as a loose side-argument (the exact bug the
+  one-producer unification fixed), and single-team vs. multi-team would stop
+  being the same code path with an empty-vs-populated relation. Keeping it a
+  named stage means every consumer judges against the *same* assembled input.
+
+### The adapter and validation sit on the `document → State` boundary
+
+The one cast in the pipeline — `document → State` — **is** the adapter, and
+document validation runs on the incoming document just before it. Neither is a
+new stage; they are the *mechanism* of the `toState` arrow. Both are owned by
+[The adapter and document-validation live in `state/`](#the-adapter-and-document-validation-live-in-state)
+above.
+
+### 1. Loading and rendering a roster (read path)
+
+```
+provider.load()                → committed document         [persisted → in memory]
+assembleEffectiveDocument(doc, draftEvents ?? doc.events)
+                               → effective document         [committed, with any draft overlaid]
+toState(effective document)    → State                      [derived engine input]
+readmodel (rosterStats, …)     reads State                  [live aggregates, never stored]
+```
+
+With no draft, `effectiveEvents === doc.events`, so the effective document equals
+the committed document and `State` is the cast of the saved roster. The UI reads
+only `State`; nothing persists it.
+
+### 2. A manual assignment (edit path, through a command)
+
+```
+user clicks a slot
+runCommand(assign) :
+  effectiveStateWithExternal          → State with external   [committed ⋈ draft ⋈ external]
+  assign(state, args)                 → { nextEvents, verdict, logEntry }   [pure command]
+  draft.applyDraftEdit(nextEvents)                            [nextEvents land in the DRAFT only]
+```
+
+The command is a **pure function of a `State with external`** — it never sees a
+`document` and never persists. Its `nextEvents` go into the draft; the committed
+document is untouched until commit. The warn-still-apply verdict rides back out
+on `verdict` (see [session.md](session.md)).
+
+### 3. Committing the draft (the one persistence seam)
+
+```
+user clicks Save
+commitDraft() :
+  provider.saveEvents(effectiveEvents)   → committed document [draft folded into the base, persisted]
+  draft stacks survive (undo still works past a save)
+```
+
+Commit is the **only** place storage is written and the **only** place the draft
+collapses back into the committed document. Before it, every "current roster" the
+UI showed was a derived `State` built from committed ⋈ draft.
+
+### 4. A cross-team-aware generate (multi-tenant read path)
+
+```
+tenant document (nested)
+selectRosterDocument(tenant, { teamId, rosterId })  → committed document (flat)   [pick one + flatten]
+deriveExternalAssignments(tenant document, { teamId }) → externalAssignments       [cross-team relation]
+toState(effective document)                         → State
+assembleStateWithExternal(State, { externalAssignments }) → State with external
+generateRoster(State with external, seed)           → candidate events             [pure core; scratch dropped]
+```
+
+The two cross-team pieces come from **different triggers** — the document from a
+team/roster selection, the `externalAssignments` from edits on other teams — so
+they are built separately and combined by `assembleStateWithExternal`. A flat
+(single-team) document skips `selectRosterDocument`/`deriveExternalAssignments`:
+`externalAssignments` defaults to empty and the `State with external` is the
+plain `State` with an empty relation, so single-team behaviour is identical. The
+generator's own `WorkingRoster`/`AssignmentCounters` scratch exists only inside
+the call and never becomes a `document` or escapes as `State`.
 
 ## Draft/commit is separate from undo/redo history
 
@@ -117,9 +290,9 @@ The mechanism lives in [`useDraftHistory.js`](../src/session/useDraftHistory.js)
 
 ## Roster statistics are real-time, not a generation snapshot
 
-Roster statistics — including the quality metrics (the shift-distribution bell curve, per-member Time Spacing, and per-role Role Rotation Quality) **and the unassignable-roles warning** — are computed from the **current** roster state on every render by `calculateRosterStats(events, members, rosterPeriod, memberConstraints, rosterConstraints)` (`rosterStats.js`). It builds a live `AssignmentTracker` from the present `events` so the fairness/spread formulas are identical to the generator's, and returns `fairnessMetrics` + `assignedRoles` + `unassignableRoles`. Rationale: reading the detailed quality metrics from a frozen `generationResult` snapshot would leave them **stale** after hand-edits/swaps while the summary numbers above them update — an inconsistency. There is no stored `generationResult` state; the only place a generation-time count is still appropriate is the transient post-generate **toast** (it reports what *that click* filled, computed from the run's own `result.stats`), which reads the local `result` directly, not stored state. **Invariant: anything a user can change by editing the roster must be recomputed from `events`, not read from a generation snapshot.**
+Roster statistics — including the quality metrics (the shift-distribution bell curve, per-member Time Spacing, and per-role Role Rotation Quality) **and the unassignable-roles warning** — are computed from the **current** roster state on every render by `calculateRosterStats(events, members, rosterPeriod, memberConstraints, rosterConstraints)` (`rosterStats.js`). It builds a live `AssignmentCounters` from the present `events` so the fairness/spread formulas are identical to the generator's, and returns `fairnessMetrics` + `assignedRoles` + `unassignableRoles`. Rationale: reading the detailed quality metrics from a frozen `generationResult` snapshot would leave them **stale** after hand-edits/swaps while the summary numbers above them update — an inconsistency. There is no stored `generationResult` state; the only place a generation-time count is still appropriate is the transient post-generate **toast** (it reports what *that click* filled, computed from the run's own `result.stats`), which reads the local `result` directly, not stored state. **Invariant: anything a user can change by editing the roster must be recomputed from `events`, not read from a generation snapshot.**
 
-**Unassignable-roles warning is live, not a generation snapshot.** The "Unassignable Roles" panel lists slots that are **currently empty** and for which **no active member is eligible** under the current roster + constraints, computed in `calculateRosterStats` via the same `EligibilityChecker` the generator uses (so the eligibility rules never drift between the two). It therefore updates in real time: the moment a user manually assigns a member the slot leaves the list, and if an eligible-less slot is emptied it reappears. Rationale: a user reported "it stayed even after I found an assignment" — the panel was reading the frozen `generationResult.stats.unassignableRoles` from the last generation, which never reflected later edits. Once-per-event eligibility is judged against the event's already-filled slots (`event.roster.filter(s => s.member_id)`); `calculateRosterStats` now takes `memberConstraints`/`rosterConstraints` for this (defaulting to empty so callers/tests without constraints still get an empty, non-crashing list).
+**Unassignable-roles warning is live, not a generation snapshot.** The "Unassignable Roles" panel lists slots that are **currently empty** and for which **no active member is eligible** under the current roster + constraints, computed in `calculateRosterStats` via the same `EligibilityChecker` the generator uses (so the eligibility rules never drift between the two). It therefore updates in real time: the moment a user manually assigns a member the slot leaves the list, and if an eligible-less slot is emptied it reappears. Rationale: a user reported "it stayed even after I found an assignment" — the panel was reading the frozen `generationResult.stats.unassignableRoles` from the last generation, which never reflected later edits. Once-per-event eligibility is judged against the event's already-filled slots (`event.slots.filter(s => s.member_id)`); `calculateRosterStats` now takes `memberConstraints`/`rosterConstraints` for this (defaulting to empty so callers/tests without constraints still get an empty, non-crashing list).
 
 **Quality metrics are shown as human-meaningful quantities, not raw std-devs.** The compact `QualityMetrics` panel deliberately does **not** surface `assignmentStdDev`/`spreadStdDev` as bare numbers — a "1.34" told a scheduler nothing. Instead: the Shift Balance card was **removed** (the bell curve already shows workload spread); **Time Spacing** is a per-member **timeline** that plots each shift as a dot positioned by date across the roster period (`memberStats[].assignmentDates` on a shared `periodStart`/`periodEnd` axis) so clustering vs. even spacing reads visually — chosen over a single `avgGapDays` bar because a bar collapses *when* shifts fall into one scalar and hides bunching; the numeric `~avgGapDays` is kept only as a right-hand annotation; **Role Rotation Quality** is one bar per role of `rotationRatio = uniqueMembers / totalAssignments` (1.0 = every shift went to a different person, low = the same few people repeat the role). The old "Avg Members Per Role" gauge and the separate "Member Workload Distribution" list were removed (the bell curve + Time Spacing timeline cover per-member insight). `avgGapDays` is `null` for members with fewer than two shifts (no gap to measure). The raw std-dev fields still exist on `fairnessMetrics` for the generator's objective and the full `QualityMetrics` view (RosterStatsPanel "Show Details").
 

@@ -42,7 +42,7 @@ import { isMemberIncluded } from '../schema/rosterSchema'
  * @param {Array} events    cloned, chronologically-sorted events (mutated in place)
  * @param {Array} members   normalized members ({ id, roles, understudyFor, ... })
  * @param {EligibilityChecker} eligibilityChecker
- * @param {AssignmentTracker} tracker  tracker seeded from these events (mutated)
+ * @param {AssignmentCounters} tracker  tracker seeded from these events (mutated)
  * @param {Object} [options]
  * @param {ActionLogger} [options.logger]
  * @returns {number} number of understudy slots created
@@ -76,12 +76,12 @@ export function seedUnderstudySlots(events, members, eligibilityChecker, tracker
     // understudy slot for this role is a shadowing opportunity.
     events.forEach((event, eventIndex) => {
       if (stillNeeds.size === 0) return
-      if (!Array.isArray(event.roster)) return
+      if (!Array.isArray(event.slots)) return
 
-      const currentRoster = event.roster.filter(s => s.member_id)
-      const existing = event.roster.find(s => s.role === slotRole && !s.member_id)
-      const hasBaseRole = event.roster.some(s => s.role === baseRole)
-      const alreadyHasUnderstudy = event.roster.some(s => s.role === slotRole)
+      const currentRoster = event.slots.filter(s => s.member_id)
+      const existing = event.slots.find(s => s.role === slotRole && !s.member_id)
+      const hasBaseRole = event.slots.some(s => s.role === baseRole)
+      const alreadyHasUnderstudy = event.slots.some(s => s.role === slotRole)
 
       // Can this event host a new understudy session at all?
       const canFill = Boolean(existing)
@@ -99,7 +99,7 @@ export function seedUnderstudySlots(events, members, eligibilityChecker, tracker
       // Later events that host a REAL base-role slot are promotion sites.
       const laterRealEvents = events
         .slice(eventIndex + 1)
-        .filter(e => Array.isArray(e.roster) && e.roster.some(s => s.role === baseRole))
+        .filter(e => Array.isArray(e.slots) && e.slots.some(s => s.role === baseRole))
 
       // Score each candidate by how soon they could be promoted after this
       // session (index into laterRealEvents). Promotable candidates sort first;
@@ -115,7 +115,7 @@ export function seedUnderstudySlots(events, members, eligibilityChecker, tracker
         existing.member_id = chosen.id
         existing.isGenerated = true
       } else {
-        event.roster.push({ role: slotRole, member_id: chosen.id, isGenerated: true })
+        event.slots.push({ role: slotRole, member_id: chosen.id, isGenerated: true })
         created++
       }
       tracker.recordAssignment(chosen.id, event.date, event.day_of_week, slotRole)

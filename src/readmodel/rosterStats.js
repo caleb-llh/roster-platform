@@ -1,11 +1,11 @@
 /**
  * Calculate roster statistics for members
- * @param {Array} events - All events with roster assignments
+ * @param {Array} events - All events with slot assignments
  * @param {Array} members - All members
  * @param {Object} rosterPeriod - Roster period with start_date and end_date
  * @returns {Object} - Statistics including total slots, per-member stats, etc.
  */
-import { AssignmentTracker } from '../state/assignmentTracker'
+import { AssignmentCounters } from '../state/assignmentCounters'
 import { EligibilityChecker } from '../evaluation/eligibilityChecker'
 import { isMemberIncluded } from '../schema/rosterSchema'
 
@@ -32,8 +32,8 @@ export const calculateRosterStats = (events, members, rosterPeriod, memberConstr
   const memberDates = {} // Track each member's assignment dates for time-spacing
 
   events.forEach(event => {
-    if (event.roster && Array.isArray(event.roster)) {
-      event.roster.forEach(assignment => {
+    if (event.slots && Array.isArray(event.slots)) {
+      event.slots.forEach(assignment => {
         totalSlots++ // Count all slots, not just assigned ones
         
         // Count assignments per member (using both member_id and id fields)
@@ -108,8 +108,8 @@ export const calculateRosterStats = (events, members, rosterPeriod, memberConstr
   // Calculate role diversity: measure variety of members per role
   const roleVariety = {}
   events.forEach(event => {
-    if (event.roster && Array.isArray(event.roster)) {
-      event.roster.forEach(assignment => {
+    if (event.slots && Array.isArray(event.slots)) {
+      event.slots.forEach(assignment => {
         const memberId = assignment.member_id || assignment.id
         if (memberId && assignment.role) {
           if (!roleVariety[assignment.role]) {
@@ -142,9 +142,9 @@ export const calculateRosterStats = (events, members, rosterPeriod, memberConstr
 
   // Live fairness metrics computed from the CURRENT roster state (not a
   // generation snapshot), so statistics update in real time as slots are
-  // edited/swapped. Reuses AssignmentTracker so the formulas stay identical to
+  // edited/swapped. Reuses AssignmentCounters so the formulas stay identical to
   // the generator's fairness/spread scores.
-  const tracker = new AssignmentTracker(activeMembers, events, rosterPeriod)
+  const tracker = new AssignmentCounters(activeMembers, events, rosterPeriod)
   const assignmentsByMember = {}
   let assignedRoles = 0
   activeMembers.forEach(m => {
@@ -168,9 +168,9 @@ export const calculateRosterStats = (events, members, rosterPeriod, memberConstr
   const eligibilityChecker = new EligibilityChecker(activeMembers, memberConstraints, rosterConstraints, tracker)
   const unassignableRoles = []
   events.forEach(event => {
-    if (!event.roster || !Array.isArray(event.roster)) return
-    const filledRoster = event.roster.filter(s => s.member_id)
-    event.roster.forEach(assignment => {
+    if (!event.slots || !Array.isArray(event.slots)) return
+    const filledRoster = event.slots.filter(s => s.member_id)
+    event.slots.forEach(assignment => {
       if (assignment.member_id) return // filled → not unassignable
       if (eligibilityChecker.getEligibleMembers(assignment.role, event, filledRoster).length === 0) {
         unassignableRoles.push({

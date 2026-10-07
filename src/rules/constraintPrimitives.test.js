@@ -181,9 +181,9 @@ describe('constraintPrimitives', () => {
 
   describe('countMonthlyAssignments', () => {
     const events = [
-      { date: '2026-02-01', roster: [{ member_id: 'alice' }] },
-      { date: '2026-02-15', roster: [{ member_id: 'alice' }] },
-      { date: '2026-03-01', roster: [{ member_id: 'alice' }] }
+      { date: '2026-02-01', slots: [{ member_id: 'alice' }] },
+      { date: '2026-02-15', slots: [{ member_id: 'alice' }] },
+      { date: '2026-03-01', slots: [{ member_id: 'alice' }] }
     ]
 
     it('should count assignments in the same month', () => {
@@ -197,9 +197,9 @@ describe('constraintPrimitives', () => {
 
   describe('getWeekAssignments', () => {
     const events = [
-      { date: '2026-02-03', roster: [{ member_id: 'alice' }] }, // Tue
-      { date: '2026-02-07', roster: [{ member_id: 'alice' }] }, // Sat (same week)
-      { date: '2026-02-10', roster: [{ member_id: 'alice' }] }, // next week
+      { date: '2026-02-03', slots: [{ member_id: 'alice' }] }, // Tue
+      { date: '2026-02-07', slots: [{ member_id: 'alice' }] }, // Sat (same week)
+      { date: '2026-02-10', slots: [{ member_id: 'alice' }] }, // next week
     ]
 
     it('returns events in the same week as the target date', () => {

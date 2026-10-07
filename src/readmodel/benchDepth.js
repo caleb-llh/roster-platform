@@ -26,7 +26,7 @@ import { isMemberIncluded } from '../schema/rosterSchema'
  *   actually has a slot for that role — it answers "how many COULD I field",
  *   not "how many did I use".
  *
- * @param {Array} events            events, each `{ date, roster? }`
+ * @param {Array} events            events, each `{ date, slots? }`
  * @param {Array} members           normalized members (`roles`, `understudyFor`)
  * @param {Array} roles             the role catalog (strings)
  * @param {Array} memberConstraints constraint objects (`member_id`, `unavailable_dates`)
@@ -57,10 +57,10 @@ export function computeAvailabilityByRole(events, members, roles, memberConstrai
   const requiredByDateRole = {} // date -> { role -> count }
   for (const date of dates) requiredByDateRole[date] = {}
   for (const event of events || []) {
-    if (!event || !event.date || !Array.isArray(event.roster)) continue
+    if (!event || !event.date || !Array.isArray(event.slots)) continue
     const bucket = requiredByDateRole[event.date]
     if (!bucket) continue
-    for (const slot of event.roster) {
+    for (const slot of event.slots) {
       if (slot && slot.role) bucket[slot.role] = (bucket[slot.role] || 0) + 1
     }
   }

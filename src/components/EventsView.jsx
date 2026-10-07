@@ -149,7 +149,7 @@ export default function EventsView({ events, members, memberConstraints, roleCol
         event.name.toLowerCase().includes(searchLower) ||
         event.day_of_week.toLowerCase().includes(searchLower) ||
         event.reminder?.toLowerCase().includes(searchLower) ||
-        event.roster?.some(r => r.role.toLowerCase().includes(searchLower) || r.member_id?.toLowerCase().includes(searchLower))
+        event.slots?.some(r => r.role.toLowerCase().includes(searchLower) || r.member_id?.toLowerCase().includes(searchLower))
       )
     }))
     .filter(month => month.events.length > 0)
@@ -232,7 +232,7 @@ export default function EventsView({ events, members, memberConstraints, roleCol
   const exportColumns = buildExportColumns(events, allRoles).columns
 
   // Whether any slot carries the auto-generated tag (enables "Remove generated").
-  const hasGenerated = (events || []).some(e => e.roster?.some(s => s.isGenerated))
+  const hasGenerated = (events || []).some(e => e.slots?.some(s => s.isGenerated))
 
   // Selectable slot keys within the CURRENTLY VISIBLE (filtered) events. Only
   // filled slots are selectable — a bulk "clear" has nothing to do to an empty
@@ -248,7 +248,7 @@ export default function EventsView({ events, members, memberConstraints, roleCol
     monthFilledKeys[monthIdx] = []
     month.events.forEach(event => {
       eventFilledKeys[event.date] = []
-      ;(event.roster || []).forEach((slot, idx) => {
+      ;(event.slots || []).forEach((slot, idx) => {
         if (!slot.member_id) return
         const key = slotKey(event.date, idx)
         visibleFilledKeys.push(key)
@@ -546,15 +546,15 @@ export default function EventsView({ events, members, memberConstraints, roleCol
                     </div>
                   </div>
                   
-                  {(event.roster?.length > 0 || onAddRosterSlot) && (
+                  {(event.slots?.length > 0 || onAddRosterSlot) && (
                     <div className="mb-2">
                       <div className={`mb-1 ${tierSection}`}>Roster</div>
                       <div className="flex flex-col gap-1.5">
-                        {(event.roster || []).map((assignment, idx) => {
+                        {(event.slots || []).map((assignment, idx) => {
                           // Members already assigned in this event (exclude from
                           // candidates so inserts respect one-slot-per-event).
                           const assignedInEvent = new Set(
-                            event.roster
+                            event.slots
                               .filter((r, i) => i !== idx && r.member_id)
                               .map(r => r.member_id)
                           )

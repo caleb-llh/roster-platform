@@ -30,10 +30,10 @@ export function buildBulkClear(events, keys) {
 
   let count = 0
   const nextEvents = (events || []).map(event => {
-    if (!event.roster?.length) return event
+    if (!event.slots?.length) return event
 
     let changed = false
-    const nextRoster = event.roster.map((slot, idx) => {
+    const nextRoster = event.slots.map((slot, idx) => {
       if (!keySet.has(slotKey(event.date, idx))) return slot
       if (!slot.member_id) return slot // nothing to clear
       changed = true
@@ -42,7 +42,7 @@ export function buildBulkClear(events, keys) {
       return { ...rest, member_id: null }
     })
 
-    return changed ? { ...event, roster: nextRoster } : event
+    return changed ? { ...event, slots: nextRoster } : event
   })
 
   return { nextEvents, count }

@@ -22,7 +22,7 @@ import { isMemberIncluded } from '../schema/rosterSchema'
  * "one authority, many consumers" decision in specs/generation.md.
  *
  * The once-per-event check must ignore the slot each member is LEAVING within
- * the event being checked. In a same-event swap both slots live in one roster
+ * the event being checked. In a same-event swap both slots live in one slot
  * array, so memberA leaves `sourceIndex` and memberB leaves `targetIndex`;
  * ignoring the wrong index falsely reports a duplicate and blocks a legal
  * same-event, different-role swap. For the same reason the cross-event clash
@@ -67,7 +67,7 @@ export const explainSwap = ({
     )
     if (unavailable) return formatViolation(unavailable, nameOf)
 
-    const dup = event.roster.some((r, i) => i !== ignoreRoleIndex && r.member_id === memberId)
+    const dup = event.slots.some((r, i) => i !== ignoreRoleIndex && r.member_id === memberId)
     if (dup) return `${nameOf(memberId)} is already rostered on ${event.date}.`
 
     // Cross-event time clash (feasibility): member already in another event whose

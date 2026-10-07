@@ -49,9 +49,9 @@ describe('understudy policy', () => {
 
   describe('promotion helpers (UI)', () => {
     const events = [
-      { date: '2026-02-01', roster: [{ role: 'multi-vm-understudy', member_id: 'dana' }] },
-      { date: '2026-02-15', roster: [{ role: 'multi-vm-understudy', member_id: 'dana' }] },
-      { date: '2026-03-01', roster: [{ role: 'multi-vm', member_id: null }] },
+      { date: '2026-02-01', slots: [{ role: 'multi-vm-understudy', member_id: 'dana' }] },
+      { date: '2026-02-15', slots: [{ role: 'multi-vm-understudy', member_id: 'dana' }] },
+      { date: '2026-03-01', slots: [{ role: 'multi-vm', member_id: null }] },
     ]
 
     it('counts only understudy sessions strictly before the given date', () => {

@@ -18,7 +18,7 @@ describe('getAvailableMembersForEvent', () => {
 
   const event = {
     date: '2026-02-14',
-    roster: [
+    slots: [
       { role: 'vm', member_id: 'john' },
       { role: 'cam-1', member_id: null }
     ]
@@ -68,7 +68,7 @@ describe('getAvailableMembersForEvent', () => {
   })
 
   it('should handle event with no roster', () => {
-    const emptyEvent = { date: '2026-02-14', roster: [] }
+    const emptyEvent = { date: '2026-02-14', slots: [] }
     const result = getAvailableMembersForEvent(emptyEvent, members, constraints)
 
     expect(Object.keys(result)).toHaveLength(0)
@@ -87,7 +87,7 @@ describe('getAvailableMembersForEvent', () => {
     // slot of that role), but 'assigned' must reflect ANY slot's occupant.
     const dupEvent = {
       date: '2026-03-01',
-      roster: [
+      slots: [
         { role: 'vm', member_id: 'john' },
         { role: 'vm', member_id: 'jane' },
       ],
@@ -113,8 +113,8 @@ describe('getAvailableMembersForEvent', () => {
       { id: 'trainee', name: 'Trainee', roles: ['vm'], understudyFor: ['multi-vm'] },
     ]
     const allEvents = [
-      { date: '2026-02-01', roster: [{ role: 'multi-vm-understudy', member_id: 'trainee' }] },
-      { date: '2026-02-08', roster: [{ role: 'multi-vm', member_id: null }] },
+      { date: '2026-02-01', slots: [{ role: 'multi-vm-understudy', member_id: 'trainee' }] },
+      { date: '2026-02-08', slots: [{ role: 'multi-vm', member_id: null }] },
     ]
 
     it('lists a promoted trainee for a real role once they have understudied earlier', () => {
@@ -134,7 +134,7 @@ describe('getAvailableMembersForEvent', () => {
       expect(result['multi-vm-understudy'].map(m => m.id)).toContain('trainee')
       // ...but there is no real multi-vm slot in this event to be promoted into.
       const noPriorSessions = getAvailableMembersForEvent(
-        { date: '2026-02-08', roster: [{ role: 'multi-vm', member_id: null }] },
+        { date: '2026-02-08', slots: [{ role: 'multi-vm', member_id: null }] },
         uMembers, [], [allEvents[1]] // only the later event: no earlier understudy
       )
       expect(noPriorSessions['multi-vm'].map(m => m.id)).not.toContain('trainee')

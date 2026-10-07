@@ -5,7 +5,7 @@
  *
  * The nested-tenant resolution half lives in tenantResolver.js: it flattens a
  * multi-team tenant document into the SAME flat shape this module consumes, so
- * `toState(resolveTenant(...))` is the full adapter. Flat input needs no
+ * `toState(selectRosterDocument(...))` is the full adapter. Flat input needs no
  * resolver, so single-team behaviour is unchanged.
  */
 
@@ -85,36 +85,48 @@ export function toState(document) {
 }
 
 /**
- * Convenience aggregator: derived state + the cross-team `externalAssignments`
- * snapshot in one object. Names the "resolved derived-state" contract the
- * engine/validators consume, so a future tenant/team backend can resolve the
- * SAME shape by joining `members` + `team_members` without the engine changing.
+ * Combine a committed document with uncommitted draft events into the EFFECTIVE
+ * document: the same document shape with its `events` replaced by the draft's
+ * `effectiveEvents` (`draftEvents ?? committed.events`). A pure COMBINE of two
+ * inputs (`assemble*`) that produces a `document` — the committed-vs-draft merge
+ * the engine input is then cast from. Returns the input unchanged when it is
+ * null (nothing to overlay).
  *
- * NOTE ON WIRING: the live provider path assembles these two pieces separately —
- * `toState(resolveTenant(...))` for the flat state and
- * `deriveExternalAssignments(...)` for the snapshot — because they update on
- * different triggers (selection vs. cross-team edits). This helper bundles them
- * for callers/tests that want the whole contract in one call; both routes yield
- * the same shape.
+ * @param {object|null} document - the committed document.
+ * @param {any[]} effectiveEvents - the draft's effective events to overlay.
+ * @returns the effective document (a `document`).
+ */
+export function assembleEffectiveDocument(document, effectiveEvents) {
+  if (!document) return document
+  return { ...document, events: effectiveEvents }
+}
+
+/**
+ * Combine a finished `State` (from `toState`) with the cross-team
+ * `externalAssignments` snapshot (from `deriveExternalAssignments`) into the
+ * complete engine input: `State with external`. This is a PURE COMBINE of two
+ * already-made nouns — it does NOT cast a document and does NOT know about
+ * drafts or tenants. Its name reflects its inputs: `assemble*` = combine, and
+ * both inputs are the named nouns (`State`, `externalAssignments`).
  *
- * For a single team it is an identity pass over `toState(document)` plus the
- * optional read-only cross-team **assignments**, which default to empty/no-op so
- * single-team behaviour is byte-for-byte identical.
+ * Callers build the two pieces themselves — `toState(selectRosterDocument(...))`
+ * for the State and `deriveExternalAssignments(...)` for the snapshot — because
+ * they update on different triggers (selection vs. cross-team edits).
  *
  * `externalAssignments` is the single cross-team primitive: any "load" figure
  * (monthly/weekly/total counts) is *derived* from it by the same rollup the
- * `AssignmentTracker` already applies to local assignments, so it is never
+ * `AssignmentCounters` already applies to local assignments, so it is never
  * passed or stored as a separate, drift-prone input. See specs/multi-tenant.md.
  *
- * @param {object|null} document - the roster document (flat, or already-resolved)
+ * @param {object} state - a `State` (the output of `toState`).
  * @param {object} [external] - { externalAssignments } read-only snapshot of the
  *   member's assignments in OTHER teams (`{ memberId: [dateOrDatetime, ...] }`);
  *   empty by default.
- * @returns derived state + `externalAssignments`.
+ * @returns the `State` with `externalAssignments` attached.
  */
-export function resolveState(document, external = {}) {
+export function assembleStateWithExternal(state, external = {}) {
   return {
-    ...toState(document),
+    ...state,
     externalAssignments: external.externalAssignments || {},
   }
 }

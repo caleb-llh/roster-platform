@@ -1,11 +1,13 @@
 /**
- * Track assignments during roster generation to maintain state
+ * Scratch counters tracked incrementally during roster generation — the
+ * generator's private work-area, not an authoritative store (see the glossary:
+ * "generator scratch"). Dropped at the flush seam.
  */
 
 import { getWeekKey } from '../rules/constraintPrimitives'
 import { isMemberIncluded } from '../schema/rosterSchema'
 
-export class AssignmentTracker {
+export class AssignmentCounters {
   constructor(members, events, rosterPeriod) {
     this.rosterPeriod = rosterPeriod
     
@@ -33,8 +35,8 @@ export class AssignmentTracker {
   
   _initializeFromEvents(events) {
     events.forEach(event => {
-      if (event.roster) {
-        event.roster.forEach(assignment => {
+      if (event.slots) {
+        event.slots.forEach(assignment => {
           if (assignment.member_id) {
             this.recordAssignment(assignment.member_id, event.date, event.day_of_week, assignment.role)
           }

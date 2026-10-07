@@ -14,7 +14,7 @@ import {
   validateDates,
   runAllValidators
 } from './documentValidation'
-import { isTenantShape, tenantSelection, resolveTenant } from './tenantResolver'
+import { isTenantShape, tenantSelection, selectRosterDocument } from './tenantResolver'
 
 describe('validators', () => {
   describe('ValidationBuilder', () => {
@@ -245,7 +245,7 @@ describe('validators', () => {
   describe('validateRosterPeriod', () => {
     it('should pass when dates within period', () => {
       const data = {
-        roster: { start_date: '2026-02-01', end_date: '2026-04-30' },
+        roster_period: { start_date: '2026-02-01', end_date: '2026-04-30' },
         events: [
           { name: 'Event 1', date: '2026-02-15' }
         ],
@@ -263,7 +263,7 @@ describe('validators', () => {
 
     it('should warn on event date outside period', () => {
       const data = {
-        roster: { start_date: '2026-02-01', end_date: '2026-04-30' },
+        roster_period: { start_date: '2026-02-01', end_date: '2026-04-30' },
         events: [
           { name: 'Event 1', date: '2026-05-01' }
         ]
@@ -275,7 +275,7 @@ describe('validators', () => {
 
     it('should warn on constraint date outside period', () => {
       const data = {
-        roster: { start_date: '2026-02-01', end_date: '2026-04-30' },
+        roster_period: { start_date: '2026-02-01', end_date: '2026-04-30' },
         events: [],
         members: [
           { id: 'john', name: 'John' }
@@ -291,7 +291,7 @@ describe('validators', () => {
 
     it('should warn on date range outside period', () => {
       const data = {
-        roster: { start_date: '2026-02-01', end_date: '2026-04-30' },
+        roster_period: { start_date: '2026-02-01', end_date: '2026-04-30' },
         events: [],
         members: [
           { id: 'john', name: 'John' }
@@ -411,7 +411,7 @@ describe('validators', () => {
     })
 
     it('resolves the first team + roster to a valid flat document', () => {
-      const flat = resolveTenant(tenant, {})
+      const flat = selectRosterDocument(tenant, {})
       const result = runAllValidators(flat)
       expect(result.errors).toEqual([])
       expect(result.isValid).toBe(true)
@@ -421,7 +421,7 @@ describe('validators', () => {
       const sel = tenantSelection(tenant)
       for (const team of sel.teams) {
         for (const roster of team.rosters) {
-          const flat = resolveTenant(tenant, { teamId: team.id, rosterId: roster.id })
+          const flat = selectRosterDocument(tenant, { teamId: team.id, rosterId: roster.id })
           const result = runAllValidators(flat)
           expect(result.isValid, `${team.name}/${roster.name}`).toBe(true)
         }
@@ -430,8 +430,8 @@ describe('validators', () => {
 
     it('resolves the same member to different roles across teams', () => {
       const sel = tenantSelection(tenant)
-      const worship = resolveTenant(tenant, { teamId: sel.teams[0].id })
-      const hospitality = resolveTenant(tenant, { teamId: sel.teams[1].id })
+      const worship = selectRosterDocument(tenant, { teamId: sel.teams[0].id })
+      const hospitality = selectRosterDocument(tenant, { teamId: sel.teams[1].id })
       const aliceWorship = worship.members.find(m => m.id === 'member-1-alice')
       const aliceHospitality = hospitality.members.find(m => m.id === 'member-1-alice')
       expect(aliceWorship.roles.map(r => r.name)).toContain('lead')

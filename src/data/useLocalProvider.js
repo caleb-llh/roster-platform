@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react'
 import yaml from 'js-yaml'
 import { runAllValidators } from '../state/documentValidation'
+import { normalizeDocument } from '../state/normalizeDocument'
 import { LOCAL_PERMISSIONS, appendActionLog } from './providerContract'
-import { isTenantShape, tenantSelection, resolveTenant, memberTeams, withRosterEvents, deriveExternalAssignments, validateTenantRosters } from '../state/tenantResolver'
+import { isTenantShape, tenantSelection, selectRosterDocument, memberTeams, withRosterEvents, deriveExternalAssignments, validateTenantRosters } from '../state/tenantResolver'
 
 /**
  * Local (in-memory) implementation of the roster data provider contract.
@@ -18,9 +19,9 @@ import { isTenantShape, tenantSelection, resolveTenant, memberTeams, withRosterE
  * overlay. That is the Session layer (`useSession`, which wraps this provider and
  * calls `saveEvents` on commit). See specs/data-layer.md and the overhaul plan.
  *
- * @returns {import('./providerContract').RosterProvider}
+ * @returns {import('./providerContract').StorageProvider}
  */
-export function useLocalRosterProvider() {
+export function useLocalProvider() {
   const [data, setData] = useState(null)
   const [originalData, setOriginalData] = useState(null)
   const [error, setError] = useState(null)
@@ -86,7 +87,7 @@ export function useLocalRosterProvider() {
   const importData = async (yamlText) => {
     let parsedData
     try {
-      parsedData = yaml.load(yamlText)
+      parsedData = normalizeDocument(yaml.load(yamlText))
     } catch (err) {
       return { ok: false, errors: [err.message] }
     }
@@ -102,7 +103,7 @@ export function useLocalRosterProvider() {
       const firstTeam = sel.teams[0]
       nextTeamId = firstTeam ? firstTeam.id : null
       nextRosterId = firstTeam && firstTeam.rosters[0] ? firstTeam.rosters[0].id : null
-      flatData = resolveTenant(parsedData, { teamId: nextTeamId, rosterId: nextRosterId })
+      flatData = selectRosterDocument(parsedData, { teamId: nextTeamId, rosterId: nextRosterId })
     }
 
     const validation = runAllValidators(flatData)
@@ -134,7 +135,7 @@ export function useLocalRosterProvider() {
   // the held tenant document. Only meaningful when a nested tenant doc is loaded.
   const applySelection = (teamIdSel, rosterIdSel) => {
     if (!tenantDoc) return
-    const flatData = resolveTenant(tenantDoc, { teamId: teamIdSel, rosterId: rosterIdSel })
+    const flatData = selectRosterDocument(tenantDoc, { teamId: teamIdSel, rosterId: rosterIdSel })
     setOriginalData(JSON.parse(JSON.stringify(flatData)))
     setData(flatData)
     setActionLog([])
@@ -180,6 +181,7 @@ export function useLocalRosterProvider() {
    * as manual edits — see README "Draft/commit is separate from undo/redo").
    */
   const replaceDocument = async (parsedData, keepEvents) => {
+    parsedData = normalizeDocument(parsedData)
     const validation = runAllValidators(parsedData)
     if (!validation.isValid) {
       return { ok: false, errors: validation.errors }

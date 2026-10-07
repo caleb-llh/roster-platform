@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import yaml from 'js-yaml'
 import { runAllValidators } from '../state/documentValidation'
+import { normalizeDocument } from '../state/normalizeDocument'
 import { supabase } from './supabaseClient'
 import { appendActionLog } from './providerContract'
 
@@ -22,9 +23,9 @@ import { appendActionLog } from './providerContract'
  * (id/name/role); `activeRosterId` selects the one currently loaded, switchable
  * via `selectRoster`. Role/permissions always reflect the active roster.
  *
- * @returns {import('./providerContract').RosterProvider}
+ * @returns {import('./providerContract').StorageProvider}
  */
-export function useSupabaseRosterProvider() {
+export function useSupabaseProvider() {
   const [rosters, setRosters] = useState([]) // [{ id, name, role }]
   const [rosterId, setRosterId] = useState(null)
   const activeIdRef = useRef(null) // mirrors rosterId for stable reads in loaders
@@ -42,6 +43,7 @@ export function useSupabaseRosterProvider() {
   }
 
   const withWarnings = (parsed) => {
+    parsed = normalizeDocument(parsed)
     const validation = runAllValidators(parsed)
     if (!validation.isValid) return { ok: false, errors: validation.errors, doc: null }
     const doc = validation.hasWarnings ? { ...parsed, warnings: validation.warnings } : parsed
@@ -49,6 +51,7 @@ export function useSupabaseRosterProvider() {
   }
 
   const applyDoc = useCallback((doc) => {
+    doc = normalizeDocument(doc)
     if (doc) {
       const { doc: validated } = withWarnings(doc)
       setData(validated || doc)

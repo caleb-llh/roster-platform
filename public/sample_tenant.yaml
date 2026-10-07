@@ -66,14 +66,14 @@ teams:
           - name: lead          # training for lead ON THIS team
             understudy: true
     rosters:
-      - roster:
+      - roster_period:
           start_date: "2026-02-01"
           end_date: "2026-03-31"
         events:
           - name: "Weekend Service"
             date: "2026-02-07"
             day_of_week: "Saturday"
-            roster:
+            slots:
               - role: lead
                 member_id:
               - role: support
@@ -95,13 +95,13 @@ teams:
         roles:
           - name: host
     rosters:
-      - roster:
+      - roster_period:
           start_date: "2026-02-01"
           end_date: "2026-03-31"
         events:
           - name: "Sunday Welcome"
             date: "2026-02-08"
             day_of_week: "Sunday"
-            roster:
+            slots:
               - role: host
                 member_id:

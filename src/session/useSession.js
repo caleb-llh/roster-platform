@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { useDraftHistory } from './useDraftHistory'
-import { toState } from '../state/derivedState'
+import { toState, assembleEffectiveDocument, assembleStateWithExternal } from '../state/derivedState'
 import * as commands from './commands'
 
 /**
@@ -12,6 +12,11 @@ import * as commands from './commands'
  * command surface the UI drives. This hook layers all of that on top:
  *
  *  - It owns `useDraftHistory`, keyed off the provider's committed events.
+ *  - It owns THE derived pipeline: a single memoized `effectiveStateWithExternal`
+ *    (committed ⋈ draft → toState → + externalAssignments) that every consumer
+ *    reads — the UI renders from it, and `runCommand`/the generator judge against
+ *    that same value. Also exposes `committedEvents` (last-saved events) for
+ *    diffing the draft.
  *  - It exposes the draft/history keys (`draftEvents`, `effectiveEvents`,
  *    `hasUncommitted`, `canUndo`, `canRedo`, `undo`, `redo`, `commitDraft`,
  *    `discardDraft`), the whole-document commands (`stageEvents`,
@@ -31,8 +36,8 @@ import * as commands from './commands'
  * The composed surface is the identical flat shape the UI already consumes, so
  * assembling Session above the provider is transparent to App.jsx.
  *
- * @param {import('../data/providerContract').RosterProvider} provider
- * @returns {import('../data/providerContract').RosterProvider}
+ * @param {import('../data/providerContract').StorageProvider} provider
+ * @returns {import('../data/providerContract').StorageProvider}
  */
 export function useSession(provider) {
   const draft = useDraftHistory(provider.data?.events, provider.saveEvents)
@@ -78,16 +83,31 @@ export function useSession(provider) {
     return { ok: true, errors: [] }
   }
 
-  // The derived state a pure command consumes: the EFFECTIVE document (committed
-  // + uncommitted draft overlaid) run through the adapter, plus the provider's
-  // externalAssignments (person-global other-team load). Recomputed per call so
-  // a command always sees the latest draft.
-  const commandState = () => {
-    const effectiveData = provider.data
-      ? { ...provider.data, events: draft.effectiveEvents }
-      : provider.data
-    return { ...toState(effectiveData), externalAssignments: provider.externalAssignments }
-  }
+  // THE pipeline value — the `State with external` the whole app judges against,
+  // walked ONCE here and shared by every consumer (the UI renders from it;
+  // commands and the generator judge against it). Named after the noun it is: a
+  // `State` (from the EFFECTIVE document) with external load attached. It is a
+  // pure function of three source inputs — the committed document, the draft, and
+  // the provider's externalAssignments — so it is memoized on exactly those three
+  // and recomputes precisely when one changes (never stale, never redundant):
+  //
+  //   committed document  ─assembleEffectiveDocument(+draft)─▶  effective document
+  //                       ─toState──────────────────────────▶  State
+  //                       ─assembleStateWithExternal(+ext)───▶  State with external
+  //
+  // `assembleEffectiveDocument` overlays the uncommitted draft events; `toState`
+  // casts the document into engine/UI shape (resolves constraints, computes
+  // activeMembers/roleColorMap); `assembleStateWithExternal` adds person-global
+  // other-team load. The three derived stages are transient — produced here and
+  // consumed immediately; nobody else re-walks the pipeline.
+  const effectiveStateWithExternal = useMemo(
+    () =>
+      assembleStateWithExternal(
+        toState(assembleEffectiveDocument(provider.data, draft.effectiveEvents)),
+        { externalAssignments: provider.externalAssignments }
+      ),
+    [provider.data, draft.effectiveEvents, provider.externalAssignments]
+  )
 
   // Run a pure command: check edit permission, apply its `nextEvents` to the
   // draft, and return the command's verdict/logEntry/preview to the caller so
@@ -104,13 +124,19 @@ export function useSession(provider) {
     if (!provider.permissions.canEditRoster) {
       return { ok: false, reason: 'You do not have permission to edit.', nextEvents: null, verdict: { warnings: [] }, logEntry: null }
     }
-    const result = fn(commandState(), args)
+    const result = fn(effectiveStateWithExternal, args)
     if (!preview && result.ok && result.nextEvents) draft.applyDraftEdit(result.nextEvents)
     return result
   }
 
   return {
     ...provider,
+    // THE shared derived pipeline (one producer, many consumers). The UI renders
+    // from `effectiveStateWithExternal` (the `State with external` engine input);
+    // `committedEvents` is the last-saved events for diffing the draft against.
+    // Both are derived, never persisted.
+    effectiveStateWithExternal,
+    committedEvents: toState(provider.data).events,
     // Draft / history overlay.
     draftEvents: draft.draftEvents,
     effectiveEvents: draft.effectiveEvents,

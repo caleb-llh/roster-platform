@@ -108,7 +108,7 @@ but routing it through the placement-oriented registry would be a category error
 **Design Decision — the counting seam (tracker vs. scan).** Feasibility rules
 read intrinsic facts off `ctx` (`memberConstraints`, `members`). Load-cadence
 rules need *counts*, which each consumer computes differently: the generator from
-its stateful [`AssignmentTracker`](../src/state/assignmentTracker.js)
+its stateful [`AssignmentCounters`](../src/state/assignmentCounters.js)
 (incremental, fast in the O(slots²) placement loop), the validator from a
 whole-roster scan of `allEvents` (no running tally on a finished roster). To keep
 the rule defined once, the descriptor calls a small **uniform counting interface**
@@ -137,7 +137,7 @@ untouched (the clash descriptor only gained a `params.external` flag so a
 consumer can word a cross-team clash distinctly). Both keys default **OFF** and
 the snapshot is empty in single-team mode, so single-team output is byte-for-byte
 identical. Two subtleties, owned in detail by
-[multi-tenant.md](multi-tenant.md#phased-delivery): cross-team **caps depend on
+[multi-tenant.md](multi-tenant.md#cross-team-enforcement-rules): cross-team **caps depend on
 the local cap** being enabled (they change *what counts*, not *whether the cap
 applies*); cross-team **clash BLOCKS during generation** (it is feasibility, not
 a soft cadence), so the generator OR-s `ENFORCE_CROSS_TEAM_CLASH` into the

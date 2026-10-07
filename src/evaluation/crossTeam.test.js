@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { EligibilityChecker } from './eligibilityChecker'
-import { AssignmentTracker } from '../state/assignmentTracker'
+import { AssignmentCounters } from '../state/assignmentCounters'
 import { validateEventAssignments } from './assignmentValidator'
 import { explainSwap } from './swapPolicy'
 import { CONSTRAINT_KEYS } from '../schema/rosterSchema'
@@ -38,11 +38,11 @@ describe('Cross-team enforcement (Phase 2)', () => {
 
   const evt = (date, roles = ['cam']) => ({
     name: `Service ${date}`, date, day_of_week: 'Sunday', reporting_time: '09:00',
-    roster: roles.map(role => ({ role, member_id: null })),
+    slots: roles.map(role => ({ role, member_id: null })),
   })
 
   const checkerFor = (rosterConstraints, events, externalAssignments) => {
-    const tracker = new AssignmentTracker(members, events, rosterPeriod)
+    const tracker = new AssignmentCounters(members, events, rosterPeriod)
     return new EligibilityChecker(members, [], rosterConstraints, tracker, { events, externalAssignments })
   }
 
@@ -130,7 +130,7 @@ describe('Cross-team enforcement (Phase 2)', () => {
   describe('validator', () => {
     const placed = (date) => ({
       name: `Service ${date}`, date, day_of_week: 'Sunday', reporting_time: '09:00',
-      roster: [{ role: 'cam', member_id: 'ann' }],
+      slots: [{ role: 'cam', member_id: 'ann' }],
     })
 
     it('is unaffected by externalAssignments when the flags are OFF', () => {
@@ -172,14 +172,14 @@ describe('Cross-team enforcement (Phase 2)', () => {
       { id: 'ann', name: 'Ann', include: true, roles: ['cam'] },
       { id: 'bea', name: 'Bea', include: true, roles: ['cam'] },
     ]
-    const eventA = { date: '2026-02-08', roster: [{ role: 'cam', member_id: 'ann' }] }
+    const eventA = { date: '2026-02-08', slots: [{ role: 'cam', member_id: 'ann' }] }
 
     it('rejects moving a member onto a slot that clashes with another team', () => {
       const { ok, reason } = explainSwap({
         memberA: 'ann', memberB: null,
         eventA, eventB: eventA,
         sourceIndex: 0, targetIndex: 0,
-        slotA: eventA.roster[0], slotB: eventA.roster[0],
+        slotA: eventA.slots[0], slotB: eventA.slots[0],
         members: swapMembers, memberConstraints: [], allEvents: [eventA],
         externalAssignments: { ann: ['2026-02-08'] },
       })
@@ -193,7 +193,7 @@ describe('Cross-team enforcement (Phase 2)', () => {
         memberA: 'ann', memberB: null,
         eventA, eventB: eventA,
         sourceIndex: 0, targetIndex: 0,
-        slotA: eventA.roster[0], slotB: eventA.roster[0],
+        slotA: eventA.slots[0], slotB: eventA.slots[0],
         members: swapMembers, memberConstraints: [], allEvents: [eventA],
         externalAssignments: { ann: ['2026-02-15'] },
       })

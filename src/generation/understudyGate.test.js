@@ -27,7 +27,7 @@ describe('Understudy before role', () => {
     date,
     day_of_week: 'Sunday',
     reporting_time: '09:00',
-    roster: roles.map(role => ({ role, member_id: null })),
+    slots: roles.map(role => ({ role, member_id: null })),
   })
 
   it('does not assign a trainee to the real role before understudying it', () => {
@@ -43,7 +43,7 @@ describe('Understudy before role', () => {
       events, members, [], [], constraints(), {}, rosterPeriod
     )
 
-    const realSlot = result.events[0].roster.find(r => r.role === 'multi-vm')
+    const realSlot = result.events[0].slots.find(r => r.role === 'multi-vm')
     expect(realSlot.member_id).toBeNull()
   })
 
@@ -61,9 +61,9 @@ describe('Understudy before role', () => {
     )
 
     // Understudy slot filled on the earlier date...
-    expect(result.events[0].roster[0].member_id).toBe('dana')
+    expect(result.events[0].slots[0].member_id).toBe('dana')
     // ...which unlocks the real role on the later date.
-    expect(result.events[1].roster[0].member_id).toBe('dana')
+    expect(result.events[1].slots[0].member_id).toBe('dana')
   })
 
   it('does not unlock the real role on the SAME date as the understudy slot', () => {
@@ -78,8 +78,8 @@ describe('Understudy before role', () => {
       events, members, [], [], constraints(), {}, rosterPeriod
     )
 
-    const understudySlot = result.events[0].roster.find(r => r.role === 'multi-vm-understudy')
-    const realSlot = result.events[0].roster.find(r => r.role === 'multi-vm')
+    const understudySlot = result.events[0].slots.find(r => r.role === 'multi-vm-understudy')
+    const realSlot = result.events[0].slots.find(r => r.role === 'multi-vm')
     expect(understudySlot.member_id).toBe('dana')
     expect(realSlot.member_id).toBeNull()
   })
@@ -94,7 +94,7 @@ describe('Understudy before role', () => {
       events, members, [], [], constraints(), {}, rosterPeriod
     )
 
-    expect(result.events[0].roster[0].member_id).toBe('fred')
+    expect(result.events[0].slots[0].member_id).toBe('fred')
   })
 
   it('allows the real role without understudy when the constraint is disabled', () => {
@@ -110,7 +110,7 @@ describe('Understudy before role', () => {
     )
 
     // With the gate off, a trainee is treated as a full performer.
-    expect(result.events[0].roster[0].member_id).toBe('dana')
+    expect(result.events[0].slots[0].member_id).toBe('dana')
   })
 
   it('caps understudy at one session: a second understudy slot is not re-filled by the same trainee', () => {
@@ -129,9 +129,9 @@ describe('Understudy before role', () => {
       events, members, [], [], constraints(), {}, rosterPeriod
     )
 
-    expect(result.events[0].roster[0].member_id).toBe('dana')
+    expect(result.events[0].slots[0].member_id).toBe('dana')
     // Already completed her one session -> blocked from understudying again.
-    expect(result.events[1].roster[0].member_id).toBeNull()
+    expect(result.events[1].slots[0].member_id).toBeNull()
   })
 
   it('prefers promoting an unlocked trainee into the real role over a full performer', () => {
@@ -151,7 +151,7 @@ describe('Understudy before role', () => {
       events, members, [], [], constraints(), {}, rosterPeriod
     )
 
-    expect(result.events[0].roster[0].member_id).toBe('dana')
-    expect(result.events[1].roster[0].member_id).toBe('dana')
+    expect(result.events[0].slots[0].member_id).toBe('dana')
+    expect(result.events[1].slots[0].member_id).toBe('dana')
   })
 })

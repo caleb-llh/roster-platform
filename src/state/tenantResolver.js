@@ -64,7 +64,7 @@ export function tenantSelection(document) {
       name: (team && team.name) || `Team ${ti + 1}`,
       rosters: ((team && team.rosters) || []).map((r, ri) => ({
         id: rosterId(r, ri),
-        name: (r && r.name) || (r && r.roster && r.roster.start_date) || `Roster ${ri + 1}`,
+        name: (r && r.name) || (r && r.roster_period && r.roster_period.start_date) || `Roster ${ri + 1}`,
       })),
     })),
   }
@@ -92,7 +92,7 @@ export function memberTeams(document) {
 /**
  * Reverse events transform: return a NEW tenant document with the selected
  * roster's `events` replaced by `events` (the input is not mutated). This is the
- * inverse of `resolveTenant` for the events portion: `resolveTenant` reads a
+ * inverse of `selectRosterDocument` for the events portion: `selectRosterDocument` reads a
  * roster's events out to the flat working doc; on commit this writes the edited
  * events back so switching team/roster and returning preserves the edit
  * (multi-tenant Phase 1 write-back).
@@ -101,9 +101,9 @@ export function memberTeams(document) {
  * `(document, selection, events) -> document` function with no I/O — the
  * persistence "write" is the provider's `saveEvents`; this just produces the
  * next document value. It is the only reverse transform the app has; there is
- * deliberately no full `toDocument(State) -> document` (see specs/multi-tenant.md
- * and the overhaul plan — nothing reconstructs a whole document from State, the
- * raw document stays the source of truth).
+ * deliberately no full `toDocument(state) -> document` (see specs/multi-tenant.md
+ * and the overhaul plan — nothing reconstructs a whole document from the derived
+ * `State`, the raw document stays the source of truth).
  *
  * Only the addressed roster's `events` change; everything else (registry,
  * team_members, other rosters, roster period/overrides) is untouched. Flat
@@ -153,7 +153,7 @@ export function deriveExternalAssignments(document, { teamId: selTeamId } = {}) 
       ;(r.events || []).forEach(ev => {
         const date = ev && ev.date
         if (!date) return
-        ;(ev.roster || []).forEach(slot => {
+        ;(ev.slots || []).forEach(slot => {
           const mid = slot && slot.member_id
           if (!mid) return
           ;(external[mid] || (external[mid] = [])).push(date)
@@ -193,7 +193,7 @@ export function validateTenantRosters(document) {
     const teamName = (team && team.name) || `Team ${ti + 1}`
     const periods = ((team && team.rosters) || [])
       .map((r, ri) => {
-        const p = r && r.roster
+        const p = r && r.roster_period
         if (!p || !p.start_date || !p.end_date) return null
         // Parse via the shared local-midnight helper (not `new Date(str)`, which
         // is UTC and can slip a day in negative-offset zones — see calendarUtils).
@@ -234,7 +234,7 @@ export function validateTenantRosters(document) {
  * `teamId`/`rosterId` default to the first team/roster. Members not on the
  * selected team are excluded (a member absent from `team_members` is not on it).
  */
-export function resolveTenant(document, { teamId: selTeamId, rosterId: selRosterId } = {}) {
+export function selectRosterDocument(document, { teamId: selTeamId, rosterId: selRosterId } = {}) {
   if (!isTenantShape(document)) return document
 
   const teams = document.teams || []
@@ -302,7 +302,7 @@ export function resolveTenant(document, { teamId: selTeamId, rosterId: selRoster
     roles: team.roles || [],
     events: roster.events || [],
   }
-  if (roster.roster) flat.roster = roster.roster
+  if (roster.roster_period) flat.roster_period = roster.roster_period
   // Constraint/preference merge chain: tenant → team → roster (later wins),
   // mirroring today's DEFAULT → document merge one level deeper. A team can set
   // tenant-wide house rules (e.g. cross-team caps) that a specific roster may

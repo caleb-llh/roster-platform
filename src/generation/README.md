@@ -29,8 +29,8 @@ src/generation/
 > [generation spec](../../specs/generation.md) and the two-validators note in
 > [data-layer.md](../../specs/data-layer.md).
 
-> State lives in the state layer, not here: `AssignmentTracker`
-> (`../state/assignmentTracker.js`) and `WorkingRoster`
+> State lives in the state layer, not here: `AssignmentCounters`
+> (`../state/assignmentCounters.js`) and `WorkingRoster`
 > (`../state/workingRoster.js`) are the engine's working-memory shape and moved to
 > `src/state/` (overhaul step 3). The generator imports them; it does not own them.
 > See the [data-layer spec](../../specs/data-layer.md).
@@ -88,7 +88,7 @@ Every decision is recorded by a verbose logger and returned as
 
 ## Components
 
-### AssignmentTracker
+### AssignmentCounters
 Maintains state during generation:
 - Total assignments per member
 - Assignments by month, week, day
@@ -291,7 +291,7 @@ The modular design allows easy extensions:
    in `../../state/workingRoster.js` (e.g. 3-way rotations, chain moves)
 4. **Advanced Search** - Swap hill-climbing for simulated annealing by changing
    the acceptance rule in `optimizeRoster` (state is already reversible)
-5. **Custom Metrics** - Extend `../../state/assignmentTracker.js`
+5. **Custom Metrics** - Extend `../../state/assignmentCounters.js`
 
 ## Performance
 

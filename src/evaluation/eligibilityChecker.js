@@ -166,7 +166,7 @@ export class EligibilityChecker {
     if (!isMemberIncluded(member)) return false
     if (!isRoleCapable(member, role)) return false
     if (getConstraintRule('availability').check({ memberId, role, event }, this, CONSTRAINT_MODES.WOULD_PLACE)) return false
-    if (isAssignedToEvent(memberId, (event.roster || []).filter(s => s.member_id))) return false
+    if (isAssignedToEvent(memberId, (event.slots || []).filter(s => s.member_id))) return false
     return true
   }
   

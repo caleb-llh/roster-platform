@@ -14,7 +14,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-02-15',
         day_of_week: 'Sunday',
-        roster: [{ role: 'vm', member_id: 'alice' }]
+        slots: [{ role: 'vm', member_id: 'alice' }]
       }]
       const memberConstraints = [{
         member_id: 'alice',
@@ -31,7 +31,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-02-20',
         day_of_week: 'Friday',
-        roster: [{ role: 'cam-1', member_id: 'bob' }]
+        slots: [{ role: 'cam-1', member_id: 'bob' }]
       }]
       const memberConstraints = [{
         member_id: 'bob',
@@ -49,7 +49,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-03-01',
         day_of_week: 'Sunday',
-        roster: [{ role: 'vm', member_id: 'alice' }]
+        slots: [{ role: 'vm', member_id: 'alice' }]
       }]
       const memberConstraints = [{
         member_id: 'alice',
@@ -67,7 +67,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-03-08',
         day_of_week: 'Sunday',
-        roster: [
+        slots: [
           { role: 'vm', member_id: 'alice' },
           { role: 'cam-1', member_id: 'alice' }
         ]  }]
@@ -86,7 +86,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-03-08',
         day_of_week: 'Sunday',
-        roster: [
+        slots: [
           { role: 'vm', member_id: 'bob' },
           { role: 'cam-1', member_id: 'bob' },
           { role: 'cam-2', member_id: 'bob' }
@@ -105,7 +105,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-03-08',
         day_of_week: 'Sunday',
-        roster: [
+        slots: [
           { role: 'vm', member_id: 'alice' },
           { role: 'cam-1', member_id: 'bob' }
         ]
@@ -123,7 +123,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-03-08',
         day_of_week: 'Sunday',
-        roster: [
+        slots: [
           { role: 'vm', member_id: 'alice' },
           { role: 'cam-1', member_id: 'alice' }
         ]
@@ -141,7 +141,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-03-08',
         day_of_week: 'Sunday',
-        roster: [
+        slots: [
           { role: 'vm', member_id: 'alice' },
           { role: 'cam-1', member_id: 'alice' }
         ]
@@ -159,8 +159,8 @@ describe('assignmentValidator', () => {
     // both is a clash across events (distinct from once-per-event, which is
     // within one event).
     const twoSameDayEvents = () => ([
-      { name: 'Morning', date: '2026-05-10', day_of_week: 'Sunday', roster: [{ role: 'vm', member_id: 'alice' }] },
-      { name: 'Evening', date: '2026-05-10', day_of_week: 'Sunday', roster: [{ role: 'cam-1', member_id: 'alice' }] },
+      { name: 'Morning', date: '2026-05-10', day_of_week: 'Sunday', slots: [{ role: 'vm', member_id: 'alice' }] },
+      { name: 'Evening', date: '2026-05-10', day_of_week: 'Sunday', slots: [{ role: 'cam-1', member_id: 'alice' }] },
     ])
 
     it('flags a member rostered on two overlapping events', () => {
@@ -173,8 +173,8 @@ describe('assignmentValidator', () => {
     it('does not flag non-overlapping timed events on the same day', () => {
       const rosterConstraints = { [CONSTRAINT_KEYS.ENFORCE_NO_CLASH]: true }
       const events = [
-        { name: 'AM', date: '2026-05-10', start: '2026-05-10T09:00', end: '2026-05-10T11:00', roster: [{ role: 'vm', member_id: 'alice' }] },
-        { name: 'PM', date: '2026-05-10', start: '2026-05-10T18:00', end: '2026-05-10T20:00', roster: [{ role: 'cam-1', member_id: 'alice' }] },
+        { name: 'AM', date: '2026-05-10', start: '2026-05-10T09:00', end: '2026-05-10T11:00', slots: [{ role: 'vm', member_id: 'alice' }] },
+        { name: 'PM', date: '2026-05-10', start: '2026-05-10T18:00', end: '2026-05-10T20:00', slots: [{ role: 'cam-1', member_id: 'alice' }] },
       ]
       const result = validateEventAssignments(events, mockMembers, [], [], rosterConstraints, {})
       expect(result['2026-05-10']).toBeUndefined()
@@ -193,12 +193,12 @@ describe('assignmentValidator', () => {
         {
           date: '2026-02-09', // Monday
           day_of_week: 'Monday',
-          roster: [{ role: 'vm', member_id: 'alice' }]
+          slots: [{ role: 'vm', member_id: 'alice' }]
         },
         {
           date: '2026-02-14', // Saturday (same week)
           day_of_week: 'Saturday',
-          roster: [{ role: 'cam-1', member_id: 'alice' }]
+          slots: [{ role: 'cam-1', member_id: 'alice' }]
         }
       ]
       const rosterConstraints = {
@@ -217,12 +217,12 @@ describe('assignmentValidator', () => {
         {
           date: '2026-03-08', // Sunday (week ending Mar 8)
           day_of_week: 'Sunday',
-          roster: [{ role: 'vm', member_id: 'alice' }]
+          slots: [{ role: 'vm', member_id: 'alice' }]
         },
         {
           date: '2026-03-14', // Saturday (week starting Mar 9)
           day_of_week: 'Saturday',
-          roster: [{ role: 'cam-1', member_id: 'alice' }]
+          slots: [{ role: 'cam-1', member_id: 'alice' }]
         }
       ]
       const rosterConstraints = {
@@ -240,12 +240,12 @@ describe('assignmentValidator', () => {
         {
           date: '2026-02-07', // Saturday
           day_of_week: 'Saturday',
-          roster: [{ role: 'vm', member_id: 'alice' }]
+          slots: [{ role: 'vm', member_id: 'alice' }]
         },
         {
           date: '2026-02-08', // Sunday (same week)
           day_of_week: 'Sunday',
-          roster: [{ role: 'cam-1', member_id: 'alice' }]
+          slots: [{ role: 'cam-1', member_id: 'alice' }]
         }
       ]
       const rosterConstraints = {
@@ -264,12 +264,12 @@ describe('assignmentValidator', () => {
         {
           date: '2026-02-07',
           day_of_week: 'Saturday',
-          roster: [{ role: 'vm', member_id: 'alice' }]
+          slots: [{ role: 'vm', member_id: 'alice' }]
         },
         {
           date: '2026-02-15',
           day_of_week: 'Sunday',
-          roster: [{ role: 'cam-1', member_id: 'alice' }]
+          slots: [{ role: 'cam-1', member_id: 'alice' }]
         }
       ]
       const rosterConstraints = {
@@ -289,12 +289,12 @@ describe('assignmentValidator', () => {
         {
           date: '2026-02-07',
           day_of_week: 'Saturday',
-          roster: [{ role: 'vm', member_id: 'alice' }]
+          slots: [{ role: 'vm', member_id: 'alice' }]
         },
         {
           date: '2026-02-15',
           day_of_week: 'Sunday',
-          roster: [{ role: 'cam-1', member_id: 'alice' }]
+          slots: [{ role: 'cam-1', member_id: 'alice' }]
         }
       ]
       const rosterConstraints = {
@@ -314,12 +314,12 @@ describe('assignmentValidator', () => {
         {
           date: '2026-02-07',
           day_of_week: 'Saturday',
-          roster: [{ role: 'vm', member_id: 'alice' }]
+          slots: [{ role: 'vm', member_id: 'alice' }]
         },
         {
           date: '2026-02-14',
           day_of_week: 'Saturday',
-          roster: [{ role: 'cam-1', member_id: 'alice' }]
+          slots: [{ role: 'cam-1', member_id: 'alice' }]
         }
       ]
       const rosterPreferences = {
@@ -337,12 +337,12 @@ describe('assignmentValidator', () => {
         {
           date: '2026-02-07',
           day_of_week: 'Saturday',
-          roster: [{ role: 'vm', member_id: 'alice' }]
+          slots: [{ role: 'vm', member_id: 'alice' }]
         },
         {
           date: '2026-02-21',
           day_of_week: 'Saturday',
-          roster: [{ role: 'cam-1', member_id: 'alice' }]
+          slots: [{ role: 'cam-1', member_id: 'alice' }]
         }
       ]
       const rosterPreferences = {
@@ -361,7 +361,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-02-07',
         day_of_week: 'Saturday',
-        roster: [{ role: 'vm', member_id: 'alice' }]
+        slots: [{ role: 'vm', member_id: 'alice' }]
       }]
       const memberPreferences = [{
         member_id: 'alice',
@@ -377,7 +377,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-02-08',
         day_of_week: 'Sunday',
-        roster: [{ role: 'vm', member_id: 'alice' }]
+        slots: [{ role: 'vm', member_id: 'alice' }]
       }]
       const memberPreferences = [{
         member_id: 'alice',
@@ -395,7 +395,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-02-15',
         day_of_week: 'Sunday',
-        roster: [
+        slots: [
           { role: 'vm', member_id: 'alice' },
           { role: 'cam-1', member_id: 'alice' }
         ]
@@ -419,7 +419,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-02-08',
         day_of_week: 'Sunday',
-        roster: [
+        slots: [
           { role: 'vm', member_id: 'alice' },
           { role: 'cam-1', member_id: 'alice' }
         ]
@@ -446,7 +446,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-02-15',
         day_of_week: 'Sunday',
-        roster: []
+        slots: []
       }]
 
       const result = validateEventAssignments(events, mockMembers, [], [], { [CONSTRAINT_KEYS.ONLY_ONCE_PER_EVENT]: true }, {})
@@ -458,7 +458,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-02-15',
         day_of_week: 'Sunday',
-        roster: [
+        slots: [
           { role: 'vm', member_id: null },
           { role: 'cam-1', member_id: '' }
         ]
@@ -474,12 +474,12 @@ describe('assignmentValidator', () => {
         {
           date: '2026-02-15',
           day_of_week: 'Sunday',
-          roster: [{ role: 'vm', member_id: 'alice' }]
+          slots: [{ role: 'vm', member_id: 'alice' }]
         },
         {
           date: '2026-02-15',
           day_of_week: 'Sunday',
-          roster: [
+          slots: [
             { role: 'vm', member_id: 'bob' },
             { role: 'cam-1', member_id: 'bob' }
           ]
@@ -500,7 +500,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-02-15',
         day_of_week: 'Sunday',
-        roster: [
+        slots: [
           { role: 'vm', member_id: 'alice' },
           { role: 'cam-1', member_id: 'alice' },
           { role: 'cam-2', member_id: 'alice' }
@@ -531,7 +531,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-02-15',
         day_of_week: 'Sunday',
-        roster: [{ role: 'multi-vm', member_id: 'dana' }]
+        slots: [{ role: 'multi-vm', member_id: 'dana' }]
       }]
 
       const result = validateEventAssignments(events, understudyMembers, [], [], rosterConstraints, {})
@@ -545,12 +545,12 @@ describe('assignmentValidator', () => {
         {
           date: '2026-02-08',
           day_of_week: 'Sunday',
-          roster: [{ role: 'multi-vm-understudy', member_id: 'dana' }]
+          slots: [{ role: 'multi-vm-understudy', member_id: 'dana' }]
         },
         {
           date: '2026-02-15',
           day_of_week: 'Sunday',
-          roster: [{ role: 'multi-vm', member_id: 'dana' }]
+          slots: [{ role: 'multi-vm', member_id: 'dana' }]
         }
       ]
 
@@ -563,7 +563,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-02-15',
         day_of_week: 'Sunday',
-        roster: [{ role: 'multi-vm', member_id: 'fred' }]
+        slots: [{ role: 'multi-vm', member_id: 'fred' }]
       }]
 
       const result = validateEventAssignments(events, understudyMembers, [], [], rosterConstraints, {})
@@ -575,7 +575,7 @@ describe('assignmentValidator', () => {
       const events = [{
         date: '2026-02-15',
         day_of_week: 'Sunday',
-        roster: [{ role: 'multi-vm', member_id: 'dana' }]
+        slots: [{ role: 'multi-vm', member_id: 'dana' }]
       }]
 
       const result = validateEventAssignments(events, understudyMembers, [], [], {}, {})

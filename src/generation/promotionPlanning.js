@@ -39,7 +39,7 @@ import { isMemberIncluded } from '../schema/rosterSchema'
  * @param {Array} events    cloned, chronologically-sorted events (mutated)
  * @param {Array} members   normalized members
  * @param {EligibilityChecker} eligibilityChecker
- * @param {AssignmentTracker} tracker  already reflects seeded understudy sessions
+ * @param {AssignmentCounters} tracker  already reflects seeded understudy sessions
  * @param {Object} [options]
  * @param {ActionLogger} [options.logger]
  * @returns {number} number of promotions committed
@@ -80,8 +80,8 @@ export function planPromotions(events, members, eligibilityChecker, tracker, opt
     // Open real base-role slots (empty), chronologically.
     const openSlots = []
     events.forEach((event, eventIndex) => {
-      if (!Array.isArray(event.roster)) return
-      event.roster.forEach((slot, roleIndex) => {
+      if (!Array.isArray(event.slots)) return
+      event.slots.forEach((slot, roleIndex) => {
         if (slot.role === baseRole && !slot.member_id) {
           openSlots.push({ eventIndex, roleIndex, event })
         }
@@ -110,13 +110,13 @@ export function planPromotions(events, members, eligibilityChecker, tracker, opt
 
     const recordTentative = (traineeId, slotIdx) => {
       const { event, roleIndex } = openSlots[slotIdx]
-      event.roster[roleIndex].member_id = traineeId
+      event.slots[roleIndex].member_id = traineeId
       tracker.recordAssignment(traineeId, event.date, event.day_of_week, baseRole)
     }
     const undoTentative = (traineeId, slotIdx) => {
       const { event, roleIndex } = openSlots[slotIdx]
       tracker.removeAssignment(traineeId, event.date, event.day_of_week, baseRole)
-      event.roster[roleIndex].member_id = null
+      event.slots[roleIndex].member_id = null
     }
 
     const dfs = (ti) => {
@@ -129,7 +129,7 @@ export function planPromotions(events, members, eligibilityChecker, tracker, opt
       for (const slotIdx of feasibleBase.get(t.id)) {
         if (usedSlots.has(slotIdx)) continue
         const { event, roleIndex } = openSlots[slotIdx]
-        const currentRoster = event.roster.filter(s => s.member_id)
+        const currentRoster = event.slots.filter(s => s.member_id)
         if (!eligibilityChecker.isEligible(t.id, baseRole, event, currentRoster).eligible) continue
 
         usedSlots.add(slotIdx)
@@ -152,7 +152,7 @@ export function planPromotions(events, members, eligibilityChecker, tracker, opt
     // Commit the best assignment: pin each promotion so later phases keep it.
     best.forEach(({ traineeId, slotIdx }) => {
       const { event, roleIndex } = openSlots[slotIdx]
-      const slot = event.roster[roleIndex]
+      const slot = event.slots[roleIndex]
       slot.member_id = traineeId
       slot.isGenerated = true
       slot._pinnedPromotion = true
@@ -179,7 +179,7 @@ export function planPromotions(events, members, eligibilityChecker, tracker, opt
 /** Strip the transient pin flag from all slots (call once planning + search done). */
 export function clearPromotionPins(events) {
   events.forEach(event => {
-    event.roster?.forEach(slot => {
+    event.slots?.forEach(slot => {
       if (slot._pinnedPromotion) delete slot._pinnedPromotion
     })
   })

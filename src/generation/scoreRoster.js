@@ -23,7 +23,7 @@ export function scoreRoster(state, memberPreferences, rosterPreferences) {
   let emptySlots = 0
 
   events.forEach(event => {
-    event.roster?.forEach(assignment => {
+    event.slots?.forEach(assignment => {
       if (!assignment.member_id) {
         emptySlots++
         return
@@ -74,7 +74,7 @@ export function scoreRoster(state, memberPreferences, rosterPreferences) {
 function countConsecutiveWeekendViolations(events) {
   const datesByMember = {}
   events.forEach(event => {
-    event.roster?.forEach(assignment => {
+    event.slots?.forEach(assignment => {
       if (!assignment.member_id) return
       ;(datesByMember[assignment.member_id] ||= []).push(event.date)
     })

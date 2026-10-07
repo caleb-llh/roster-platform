@@ -572,7 +572,7 @@ teams:
       ## Feb–Apr 2026    ##
       #####################
       - name: "Feb–Apr 2026"
-        roster:
+        roster_period:
           start_date: '2026-02-01'
           end_date: '2026-04-30'
         roster_constraints:
@@ -609,7 +609,7 @@ teams:
             date: '2026-02-07'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: rae
                 isGenerated: true
@@ -621,7 +621,7 @@ teams:
             date: '2026-02-08'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: ozborn
                 isGenerated: true
@@ -633,7 +633,7 @@ teams:
             date: '2026-02-14'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: caleb
                 isGenerated: true
@@ -645,7 +645,7 @@ teams:
             date: '2026-02-15'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: nanxin
                 isGenerated: true
@@ -657,7 +657,7 @@ teams:
             date: '2026-02-21'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: ozborn
                 isGenerated: false
@@ -669,7 +669,7 @@ teams:
             date: '2026-02-22'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: denise
                 isGenerated: true
@@ -681,7 +681,7 @@ teams:
             date: '2026-02-28'
             day_of_week: Saturday
             reporting_time: 3:30 PM
-            roster:
+            slots:
               - role: multi-vm
                 member_id: isaac-matthew
               - role: main-cam
@@ -702,7 +702,7 @@ teams:
             date: '2026-03-01'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: amanda
                 isGenerated: true
@@ -714,7 +714,7 @@ teams:
             date: '2026-03-07'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: denise
                 isGenerated: true
@@ -726,7 +726,7 @@ teams:
             date: '2026-03-08'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: jason
                 isGenerated: true
@@ -738,7 +738,7 @@ teams:
             date: '2026-03-14'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: isaac-matthew
                 isGenerated: true
@@ -750,7 +750,7 @@ teams:
             date: '2026-03-15'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: rae
                 isGenerated: true
@@ -762,7 +762,7 @@ teams:
             date: '2026-03-21'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: nanxin
                 isGenerated: true
@@ -774,7 +774,7 @@ teams:
             date: '2026-03-22'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: caleb
                 isGenerated: true
@@ -786,7 +786,7 @@ teams:
             date: '2026-03-28'
             day_of_week: Saturday
             reporting_time: 3:30 PM
-            roster:
+            slots:
               - role: multi-vm
                 member_id: rasey
               - role: main-cam
@@ -807,7 +807,7 @@ teams:
             date: '2026-03-29'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: rystine
                 isGenerated: true
@@ -819,7 +819,7 @@ teams:
             date: '2026-04-04'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: viv
                 isGenerated: true
@@ -831,7 +831,7 @@ teams:
             date: '2026-04-05'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: jia-lin
                 isGenerated: true
@@ -843,7 +843,7 @@ teams:
             date: '2026-04-11'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: nanxin
                 isGenerated: true
@@ -855,7 +855,7 @@ teams:
             date: '2026-04-12'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: rae
                 isGenerated: true
@@ -867,7 +867,7 @@ teams:
             date: '2026-04-18'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: grace
                 isGenerated: true
@@ -879,7 +879,7 @@ teams:
             date: '2026-04-19'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: viv
                 isGenerated: true
@@ -891,7 +891,7 @@ teams:
             date: '2026-04-25'
             day_of_week: Saturday
             reporting_time: 3:30 PM
-            roster:
+            slots:
               - role: multi-vm
                 member_id: grace
               - role: main-cam
@@ -911,7 +911,7 @@ teams:
             date: '2026-04-26'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: rystine
                 isGenerated: true
@@ -924,7 +924,7 @@ teams:
       ## Aug–Oct 2026    ##
       #####################
       - name: "Aug–Oct 2026"
-        roster:
+        roster_period:
           start_date: '2026-08-01'
           end_date: '2026-10-31'
         member_preferences:
@@ -940,7 +940,7 @@ teams:
             date: '2026-08-01'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: kate
               - role: main-cam
@@ -952,7 +952,7 @@ teams:
             date: '2026-08-02'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: caleb
               - role: main-cam
@@ -962,7 +962,7 @@ teams:
             date: '2026-08-08'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: rasey
               - role: main-cam
@@ -972,7 +972,7 @@ teams:
             date: '2026-08-09'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: rystine
               - role: main-cam
@@ -982,7 +982,7 @@ teams:
             date: '2026-08-15'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: kate
               - role: main-cam
@@ -992,7 +992,7 @@ teams:
             date: '2026-08-16'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: caleb
               - role: main-cam
@@ -1002,7 +1002,7 @@ teams:
             date: '2026-08-22'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: ozborn
                 isGenerated: true
@@ -1014,7 +1014,7 @@ teams:
             date: '2026-08-23'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: rystine
                 isGenerated: true
@@ -1026,7 +1026,7 @@ teams:
             date: '2026-08-29'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: main-cam
                 member_id: rystine
                 isGenerated: false
@@ -1040,7 +1040,7 @@ teams:
             date: '2026-08-30'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: grace
                 isGenerated: true
@@ -1052,7 +1052,7 @@ teams:
             date: '2026-09-05'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: kate
                 isGenerated: false
@@ -1064,7 +1064,7 @@ teams:
             date: '2026-09-06'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: rystine
                 isGenerated: true
@@ -1076,7 +1076,7 @@ teams:
             date: '2026-09-12'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: denise
                 isGenerated: true
@@ -1088,7 +1088,7 @@ teams:
             date: '2026-09-13'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: viv
                 isGenerated: true
@@ -1100,7 +1100,7 @@ teams:
             date: '2026-09-19'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: ozborn
                 isGenerated: true
@@ -1112,7 +1112,7 @@ teams:
             date: '2026-09-20'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: isaac-matthew
                 isGenerated: true
@@ -1124,7 +1124,7 @@ teams:
             date: '2026-09-26'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: rasey
                 isGenerated: true
@@ -1136,7 +1136,7 @@ teams:
             date: '2026-09-27'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: rystine
                 isGenerated: true
@@ -1148,7 +1148,7 @@ teams:
             date: '2026-10-03'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: rae
                 isGenerated: true
@@ -1160,7 +1160,7 @@ teams:
             date: '2026-10-04'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: nanxin
                 isGenerated: true
@@ -1172,7 +1172,7 @@ teams:
             date: '2026-10-10'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: denise
                 isGenerated: true
@@ -1184,7 +1184,7 @@ teams:
             date: '2026-10-11'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: viv
                 isGenerated: true
@@ -1196,7 +1196,7 @@ teams:
             date: '2026-10-17'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: jane
                 isGenerated: false
@@ -1208,7 +1208,7 @@ teams:
             date: '2026-10-18'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: rae
                 isGenerated: true
@@ -1220,7 +1220,7 @@ teams:
             date: '2026-10-24'
             day_of_week: Saturday
             reporting_time: 4:00 PM
-            roster:
+            slots:
               - role: vm
                 member_id: ozborn
                 isGenerated: false
@@ -1232,7 +1232,7 @@ teams:
             date: '2026-10-25'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: vm
                 member_id: rasey
                 isGenerated: true
@@ -1244,7 +1244,7 @@ teams:
             date: '2026-10-31'
             day_of_week: Saturday
             reporting_time: 3:30 PM
-            roster:
+            slots:
               - role: multi-vm
                 member_id: grace
                 isGenerated: false
@@ -1282,7 +1282,7 @@ teams:
           - name: projection
     rosters:
       - name: "Feb–Apr 2026"
-        roster:
+        roster_period:
           start_date: '2026-02-01'
           end_date: '2026-04-30'
         events:
@@ -1290,14 +1290,14 @@ teams:
             date: '2026-02-08'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: projection
                 member_id: rystine
           - name: Sunday Service
             date: '2026-02-15'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: projection
                 member_id: grace
 
@@ -1315,7 +1315,7 @@ teams:
           - name: barista
     rosters:
       - name: "Feb–Apr 2026"
-        roster:
+        roster_period:
           start_date: '2026-02-01'
           end_date: '2026-04-30'
         events:
@@ -1323,14 +1323,14 @@ teams:
             date: '2026-02-08'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: barista
                 member_id: viv
           - name: Sunday Service
             date: '2026-02-15'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: barista
                 member_id: denise
 
@@ -1348,7 +1348,7 @@ teams:
           - name: teacher
     rosters:
       - name: "Feb–Apr 2026"
-        roster:
+        roster_period:
           start_date: '2026-02-01'
           end_date: '2026-04-30'
         events:
@@ -1356,13 +1356,13 @@ teams:
             date: '2026-02-08'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: teacher
                 member_id: rasey
           - name: Sunday Service
             date: '2026-02-15'
             day_of_week: Sunday
             reporting_time: 9:00 AM
-            roster:
+            slots:
               - role: teacher
                 member_id: rae

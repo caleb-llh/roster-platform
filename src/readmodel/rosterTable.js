@@ -32,7 +32,7 @@ export function buildExportColumns(events, roles) {
   const maxCount = {}
   ;(events || []).forEach(e => {
     const perEvent = {}
-    e.roster?.forEach(s => { if (s.role) perEvent[s.role] = (perEvent[s.role] || 0) + 1 })
+    e.slots?.forEach(s => { if (s.role) perEvent[s.role] = (perEvent[s.role] || 0) + 1 })
     Object.entries(perEvent).forEach(([role, n]) => {
       if (n > (maxCount[role] || 0)) maxCount[role] = n
     })
@@ -83,8 +83,8 @@ export function buildExportRows(events, columns, { validationResults, memberLabe
     // Group this event's assignments by role so duplicate roles (e.g. two
     // "roving-cam" slots) can be placed into their own columns positionally.
     const byRole = {}
-    if (event.roster) {
-      event.roster.forEach(assignment => {
+    if (event.slots) {
+      event.slots.forEach(assignment => {
         ;(byRole[assignment.role] = byRole[assignment.role] || []).push(assignment.member_id)
       })
     }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { computeRosterDiff, slotDiffStatus } from './rosterDiff'
 
-const ev = (date, roster, name = 'Service') => ({ date, name, roster })
+const ev = (date, roster, name = 'Service') => ({ date, name, slots: roster })
 
 describe('computeRosterDiff', () => {
   it('reports no changes for identical arrays', () => {

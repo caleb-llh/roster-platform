@@ -32,7 +32,7 @@
 /**
  * The uniform value returned by every provider (and by useRosterData).
  *
- * @typedef {Object} RosterProvider
+ * @typedef {Object} StorageProvider
  * @property {any} data                       Parsed working document (or null).
  *   May carry a transient `data.warnings` (string[]): document-level, non-fatal
  *   warnings surfaced by the provider on load — the merge of `runAllValidators`
@@ -43,6 +43,12 @@
  * @property {any} originalData               Snapshot for diffing (or null).
  * @property {{type: string, message: string}|null} error
  * @property {boolean} loading
+ * @property {object} effectiveStateWithExternal  THE shared derived pipeline value — the
+ *   memoized `State with external` (committed ⋈ draft → toState → +external) that
+ *   the UI renders from and that commands/the generator judge against. Derived,
+ *   never persisted. See specs/data-layer.md → "Data flow: one producer, many consumers".
+ * @property {any[]} committedEvents       Last-saved events (toState(data).events),
+ *   the "before" side for diffing the draft against. Derived.
  * @property {(any[]|null)} draftEvents    Uncommitted working events, or null when clean.
  * @property {any[]} effectiveEvents       What the UI should render: draftEvents ?? data.events.
  * @property {boolean} hasUncommitted      Whether an uncommitted draft exists.
@@ -152,7 +158,7 @@ export const appendActionLog = (setActionLog) => (entryOrEntries) => {
  *
  * @type {readonly string[]}
  */
-export const PROVIDER_KEYS = Object.freeze([
+export const STORAGE_KEYS = Object.freeze([
   // document
   'data', 'originalData', 'error', 'loading', 'actionLog',
   // tenant/selection
@@ -168,13 +174,17 @@ export const PROVIDER_KEYS = Object.freeze([
 /**
  * The keys the SESSION layer (`useSession`) adds on top of a provider: the
  * draft/commit + undo/redo overlay and the edit command surface. Together with
- * `PROVIDER_KEYS` these form the full composed surface (`ROSTER_PROVIDER_KEYS`)
+ * `STORAGE_KEYS` these form the full composed surface (`ROSTER_PROVIDER_KEYS`)
  * that the UI consumes (composed in App's mode-specific wrappers as
  * `useSession(provider)`).
  *
  * @type {readonly string[]}
  */
 export const SESSION_KEYS = Object.freeze([
+  // the shared derived pipeline (one producer, many consumers): the memoized
+  // `State with external` the UI/commands/generator all read, plus the
+  // last-saved events for diffing the draft against.
+  'effectiveStateWithExternal', 'committedEvents',
   // draft/history overlay
   'draftEvents', 'effectiveEvents', 'hasUncommitted', 'canUndo', 'canRedo',
   'undo', 'redo', 'commitDraft', 'discardDraft',
@@ -187,13 +197,13 @@ export const SESSION_KEYS = Object.freeze([
 /**
  * The full composed surface handed to AppInner (provider + Session), built by
  * App's mode-specific wrappers as `useSession(provider)`. This is the
- * machine-checkable form of the `RosterProvider` typedef above and
+ * machine-checkable form of the `StorageProvider` typedef above and
  * is what components depend on. The conformance test asserts that
  * `useSession(provider)` returns exactly these keys.
  *
  * @type {readonly string[]}
  */
 export const ROSTER_PROVIDER_KEYS = Object.freeze([
-  ...PROVIDER_KEYS,
+  ...STORAGE_KEYS,
   ...SESSION_KEYS,
 ])

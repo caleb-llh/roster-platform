@@ -16,7 +16,7 @@ import { isMemberIncluded } from '../schema/rosterSchema'
 
 /**
  * Get all available members for an event based on roles and constraints
- * @param {Object} event - Event object with date and roster
+ * @param {Object} event - Event object with date and slots
  * @param {Array} members - All members
  * @param {Array} constraints - Constraint objects
  * @param {Array} [allEvents] - All events; enables listing promoted trainees
@@ -24,12 +24,12 @@ import { isMemberIncluded } from '../schema/rosterSchema'
  * @returns {Object} - Object with role -> available members mapping
  */
 export const getAvailableMembersForEvent = (event, members, constraints, allEvents = null) => {
-  if (!event.roster || !Array.isArray(event.roster)) return {}
+  if (!event.slots || !Array.isArray(event.slots)) return {}
 
   const events = allEvents || [event]
   const availabilityByRole = {}
 
-  // A role may appear in more than one slot of the same event (the roster is a
+  // A role may appear in more than one slot of the same event (the slots are a
   // positional array, so duplicate roles are legal — e.g. two `roving-cam`).
   // Availability for a role is the SAME regardless of how many slots it has, so
   // we key by role name and compute it once. But "assigned" must reflect ANY
@@ -37,12 +37,12 @@ export const getAvailableMembersForEvent = (event, members, constraints, allEven
   // member covering the first of two duplicate slots is still marked assigned
   // (previously the last slot's assignment overwrote the earlier one).
   const assignedIdsByRole = {}
-  event.roster.forEach(assignment => {
+  event.slots.forEach(assignment => {
     if (!assignment.member_id) return
     ;(assignedIdsByRole[assignment.role] ||= new Set()).add(assignment.member_id)
   })
 
-  event.roster.forEach(assignment => {
+  event.slots.forEach(assignment => {
     const role = assignment.role
     if (availabilityByRole[role]) return // already computed for this role
 

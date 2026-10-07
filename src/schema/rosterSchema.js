@@ -11,7 +11,15 @@ export const YAML_FIELDS = {
   MEMBERS: 'members',
   EVENTS: 'events',
   ROLES: 'roles',
-  ROSTER_PERIOD: 'roster',  // Note: 'roster' in YAML contains start_date/end_date
+  // The scheduling window `{ start_date, end_date }`. Named `roster_period` to
+  // disambiguate it from the two other senses of "roster" (the entity and the
+  // per-event slot array). Legacy files keyed this block `roster:`; the
+  // normalize-on-load shim (state/normalizeDocument.js) rewrites them.
+  ROSTER_PERIOD: 'roster_period',
+  // The per-event positional slot array `[{ role, member_id }, …]`. Named
+  // `slots` to disambiguate from the roster entity/period. Legacy files keyed
+  // this `roster:` nested under each event; the shim rewrites them.
+  SLOTS: 'slots',
   ROSTER_CONSTRAINTS: 'roster_constraints',
   ROSTER_PREFERENCES: 'roster_preferences',
   MEMBER_PREFERENCES: 'member_preferences',

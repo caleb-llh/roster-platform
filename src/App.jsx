@@ -4,13 +4,12 @@ import { formatDate, formatDateRange } from './lib/calendarUtils'
 import { calculateRosterStats } from './readmodel/rosterStats'
 import { validateEventAssignments } from './evaluation/assignmentValidator'
 import { generateRoster } from './generation'
-import { toState } from './state/derivedState'
 import { computeRosterDiff } from './readmodel/rosterDiff'
 import { computeAvailabilityByRole } from './readmodel/benchDepth'
 import { memberNameById } from './readmodel/memberLookup'
 import { detectMode } from './data/mode'
-import { useLocalRosterProvider } from './data/useLocalRosterProvider'
-import { useSupabaseRosterProvider } from './data/useSupabaseRosterProvider'
+import { useLocalProvider } from './data/useLocalProvider'
+import { useSupabaseProvider } from './data/useSupabaseProvider'
 import { useSession } from './session/useSession'
 import { getActiveConstraints, getActivePreferences, getConstraintDescription, getPreferenceDescription, MEMBER_PREF_FIELDS } from './schema/rosterSchema'
 import { ErrorDisplay, GlassFab } from './components/glassPrimitives'
@@ -62,7 +61,8 @@ function AppInner({ auth, roster }) {
     canUndo,
     canRedo,
     hasUncommitted,
-    effectiveEvents,
+    effectiveStateWithExternal,
+    committedEvents,
     actionLog,
     permissions,
     role,
@@ -70,7 +70,6 @@ function AppInner({ auth, roster }) {
     activeTeamId,
     activeTeamName,
     memberTeams,
-    externalAssignments,
     selectTeam,
     rosters,
     activeRosterId,
@@ -93,13 +92,12 @@ function AppInner({ auth, roster }) {
     setError 
   } = roster
 
-  // The document the UI renders from: committed data with the uncommitted draft
-  // events overlaid (effectiveEvents === draftEvents ?? data.events). All
-  // derived state and validation run against this, so pending edits are visible
-  // everywhere before they are saved.
-  const effectiveData = data ? { ...data, events: effectiveEvents } : data
-
-  // Derived state using utility function
+  // Everything derived — the rendered roster, the engine inputs, the stats —
+  // reads the ONE shared `effectiveStateWithExternal` produced by Session
+  // (committed ⋈ draft → toState → + externalAssignments). The UI never re-walks
+  // the pipeline, so the render path and the command/generator path can never
+  // diverge on the same inputs. See specs/data-layer.md → "Data flow: one
+  // producer, many consumers".
   const {
     members,
     events,
@@ -109,11 +107,13 @@ function AppInner({ auth, roster }) {
     memberPreferences,
     rosterConstraints,
     rosterPreferences,
-    rosterPeriod
-  } = toState(effectiveData)
+    rosterPeriod,
+    externalAssignments
+  } = effectiveStateWithExternal
 
-  // Committed (last-saved) events, for diffing against the draft.
-  const committedEvents = toState(data).events
+  // Committed (last-saved) events, for diffing against the draft. Session
+  // derives this from the committed document so the diff's "before" side is
+  // never confused with the effective "after" side.
   const rosterDiff = computeRosterDiff(committedEvents, events)
   // Name-only label for the change-review list (diff stores member_id).
   const getMemberName = (memberId) => memberNameById(members, memberId)
@@ -231,7 +231,7 @@ function AppInner({ auth, roster }) {
       // slots filled by earlier, still-uncommitted runs), so on a mostly-full
       // roster it reads e.g. "53" when this click only filled 1 empty slot.
       const emptyBefore = events.reduce(
-        (n, ev) => n + (ev.roster?.filter((r) => !r.member_id).length ?? 0),
+        (n, ev) => n + (ev.slots?.filter((r) => !r.member_id).length ?? 0),
         0
       )
 
@@ -448,7 +448,7 @@ function AppInner({ auth, roster }) {
   // pending (it does not apply until confirmRemoveSlot).
   const handleRemoveRosterSlot = (eventDate, roleIndex) => {
     const event = events.find(e => e.date === eventDate)
-    const slot = event?.roster?.[roleIndex]
+    const slot = event?.slots?.[roleIndex]
     if (!slot) return
     const result = removeSlot({ eventDate, roleIndex }, { preview: true })
     if (!result.nextEvents) return
@@ -560,12 +560,12 @@ function AppInner({ auth, roster }) {
 
   // Check if there are unassigned roles
   const hasUnassignedRoles = events.some(event => 
-    event.roster && event.roster.some(r => !r.member_id)
+    event.slots && event.slots.some(r => !r.member_id)
   )
   
   const unassignedRolesCount = events.reduce((count, event) => {
-    if (!event.roster) return count
-    return count + event.roster.filter(r => !r.member_id).length
+    if (!event.slots) return count
+    return count + event.slots.filter(r => !r.member_id).length
   }, 0)
 
   if (loading) return <div className="min-h-screen bg-white/40 flex items-center justify-center"><div className="text-gray-600">Loading...</div></div>
@@ -1047,12 +1047,12 @@ function AppInner({ auth, roster }) {
 // wrapper is rendered, so the other provider's hook (and its mount effects,
 // e.g. Supabase's network RPCs) never runs.
 function LocalApp({ auth }) {
-  const roster = useSession(useLocalRosterProvider())
+  const roster = useSession(useLocalProvider())
   return <AppInner auth={auth} roster={roster} />
 }
 
 function ProductionApp({ auth }) {
-  const roster = useSession(useSupabaseRosterProvider())
+  const roster = useSession(useSupabaseProvider())
   return <AppInner auth={auth} roster={roster} />
 }
 

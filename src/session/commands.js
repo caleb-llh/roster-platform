@@ -2,7 +2,7 @@
  * Session command surface (pure).
  *
  * Each command is a pure function `(state, args) => Result`, where `state` is
- * the derived roster state (from `toState`) plus `externalAssignments`, and
+ * the derived state (from `toState`) plus `externalAssignments`, and
  * `Result` is:
  *
  *   {
@@ -80,8 +80,8 @@ export const assign = (state, { eventDate, roleIndex, memberId }) => {
   let logEntry = null
 
   const nextEvents = events.map((event) => {
-    if (event.date !== eventDate || !event.roster?.[roleIndex]) return event
-    const nextRoster = event.roster.map((slot, idx) => {
+    if (event.date !== eventDate || !event.slots?.[roleIndex]) return event
+    const nextRoster = event.slots.map((slot, idx) => {
       if (idx !== roleIndex) return slot
       const previous = slot.member_id || null
       const where = `${event.date} ${event.name} / ${slot.role}`
@@ -95,7 +95,7 @@ export const assign = (state, { eventDate, roleIndex, memberId }) => {
         : { level: 'info', category: 'insert', group: 'manual', message: `Assigned ${nameOf(memberId)} to ${where}` }
       return { ...slot, member_id: memberId, isGenerated: false }
     })
-    return { ...event, roster: nextRoster }
+    return { ...event, slots: nextRoster }
   })
 
   return {
@@ -117,10 +117,10 @@ export const addSlot = (state, { eventDate, role }) => {
   let added = false
   const nextEvents = events.map((event) => {
     if (event.date !== eventDate) return event
-    const roster = event.roster || []
+    const roster = event.slots || []
     if (roster.some((slot) => slot.role === role)) return event
     added = true
-    return { ...event, roster: [...roster, { role, member_id: null }] }
+    return { ...event, slots: [...roster, { role, member_id: null }] }
   })
   if (!added) return noop
   const event = events.find((e) => e.date === eventDate)
@@ -140,12 +140,12 @@ export const addSlot = (state, { eventDate, role }) => {
 export const removeSlot = (state, { eventDate, roleIndex }) => {
   const { events, members } = state
   const event = events.find((e) => e.date === eventDate)
-  const slot = event?.roster?.[roleIndex]
+  const slot = event?.slots?.[roleIndex]
   if (!slot) return noop
   const nameOf = nameOfIn(members)
   const nextEvents = events.map((e) => {
     if (e.date !== eventDate) return e
-    return { ...e, roster: e.roster.filter((_, idx) => idx !== roleIndex) }
+    return { ...e, slots: e.slots.filter((_, idx) => idx !== roleIndex) }
   })
   const occupant = slot.member_id ? ` (currently ${nameOf(slot.member_id)})` : ''
   return {
@@ -171,8 +171,8 @@ export const swap = (state, { source, target }) => {
   const eventA = events.find((e) => e.date === source.eventDate)
   const eventB = events.find((e) => e.date === target.eventDate)
   if (!eventA || !eventB) return noop
-  const slotA = eventA.roster?.[source.roleIndex]
-  const slotB = eventB.roster?.[target.roleIndex]
+  const slotA = eventA.slots?.[source.roleIndex]
+  const slotB = eventB.slots?.[target.roleIndex]
   if (!slotA || !slotB) return noop
   const memberA = slotA.member_id || null
   const memberB = slotB.member_id || null
@@ -188,7 +188,7 @@ export const swap = (state, { source, target }) => {
 
   const nextEvents = events.map((event) => {
     if (event !== eventA && event !== eventB) return event
-    const nextRoster = event.roster.map((slot, idx) => {
+    const nextRoster = event.slots.map((slot, idx) => {
       const isSlotA = event === eventA && idx === source.roleIndex
       const isSlotB = event === eventB && idx === target.roleIndex
       if (isSlotA) {
@@ -201,7 +201,7 @@ export const swap = (state, { source, target }) => {
       }
       return slot
     })
-    return { ...event, roster: nextRoster }
+    return { ...event, slots: nextRoster }
   })
 
   const message = memberA && memberB
@@ -237,15 +237,15 @@ export const clearGenerated = (state) => {
   let count = 0
   const affected = []
   const nextEvents = events.map((event) => {
-    if (!event.roster?.some((s) => s.isGenerated)) return event
+    if (!event.slots?.some((s) => s.isGenerated)) return event
     affected.push(event.date)
-    const nextRoster = event.roster.map((slot) => {
+    const nextRoster = event.slots.map((slot) => {
       if (!slot.isGenerated) return slot
       count++
       const { isGenerated, ...rest } = slot
       return { ...rest, member_id: null }
     })
-    return { ...event, roster: nextRoster }
+    return { ...event, slots: nextRoster }
   })
   if (count === 0) return noop
   return {

@@ -109,7 +109,7 @@ function findBestMove(state, eligibilityChecker, evaluate, currentScore) {
 function eligibleForSlot(state, eligibilityChecker, slot) {
   const event = state.events[slot.eventIndex]
   const role = state.getSlot(slot).role
-  const currentRoster = event.roster.filter(r => r.member_id)
+  const currentRoster = event.slots.filter(r => r.member_id)
   return eligibilityChecker.getEligibleMembers(role, event, currentRoster)
 }
 
@@ -130,8 +130,8 @@ function swapIsFeasible(state, eligibilityChecker, slotA, slotB) {
   const invA = state.applyMove({ slot: slotA, memberId: null })
   const invB = state.applyMove({ slot: slotB, memberId: null })
 
-  const rosterA = eventA.roster.filter(r => r.member_id)
-  const rosterB = eventB.roster.filter(r => r.member_id)
+  const rosterA = eventA.slots.filter(r => r.member_id)
+  const rosterB = eventB.slots.filter(r => r.member_id)
   const bIntoA = eligibilityChecker.isEligible(memberB, roleA, eventA, rosterA).eligible
   const aIntoB = eligibilityChecker.isEligible(memberA, roleB, eventB, rosterB).eligible
 

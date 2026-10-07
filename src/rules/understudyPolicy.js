@@ -69,7 +69,7 @@ export function isRoleCapable(member, slotRole) {
 
 /**
  * Count how many understudy sessions a member has completed for base role `X`
- * on dates STRICTLY EARLIER than `beforeDate`, by scanning the roster of every
+ * on dates STRICTLY EARLIER than `beforeDate`, by scanning the slots of every
  * event. Used by the UI to decide whether a trainee has been "promoted" (become
  * eligible to fill the real role X) — the same understudy-before-role rule the
  * generator enforces, but computed from the events themselves rather than a
@@ -77,7 +77,7 @@ export function isRoleCapable(member, slotRole) {
  *
  * @param {string} memberId
  * @param {string} baseRole            the real role (e.g. "multi-vm")
- * @param {Array}  events              all events (each with `date` + `roster[]`)
+ * @param {Array}  events              all events (each with `date` + `slots[]`)
  * @param {string} beforeDate          YYYY-MM-DD; only earlier sessions count
  * @returns {number} completed understudy sessions before `beforeDate`
  */
@@ -87,7 +87,7 @@ export function countUnderstudySessionsBefore(memberId, baseRole, events, before
   let count = 0
   for (const event of events) {
     if (!event?.date || event.date >= beforeDate) continue
-    for (const slot of event.roster || []) {
+    for (const slot of event.slots || []) {
       if (slot.role === slotRole && slot.member_id === memberId) count++
     }
   }

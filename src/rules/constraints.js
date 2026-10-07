@@ -116,7 +116,7 @@ export const CONSTRAINTS = [
     check: (placement, ctx) => {
       const clashers = ctx.overlappingEvents(placement)
       for (const other of clashers) {
-        if (other.roster?.some(s => s.member_id === placement.memberId)) {
+        if (other.slots?.some(s => s.member_id === placement.memberId)) {
           return {
             code: 'clash',
             params: {

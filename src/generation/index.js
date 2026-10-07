@@ -38,7 +38,7 @@
  * Returns: { events, stats, fairnessMetrics, quality, log, logEntries }
  */
 
-import { AssignmentTracker } from '../state/assignmentTracker'
+import { AssignmentCounters } from '../state/assignmentCounters'
 import { EligibilityChecker } from '../evaluation/eligibilityChecker'
 import { ScoringEngine } from './scoringEngine'
 import { WorkingRoster } from '../state/workingRoster'
@@ -132,7 +132,7 @@ function runGeneration(
   const rng = createRng(seed)
 
   // Initialize components
-  const tracker = new AssignmentTracker(members, events, rosterPeriod)
+  const tracker = new AssignmentCounters(members, events, rosterPeriod)
   const eligibilityChecker = new EligibilityChecker(members, memberConstraints, rosterConstraints, tracker, { externalAssignments })
   const scoringEngine = new ScoringEngine(rosterPreferences, memberPreferences, tracker)
   
@@ -147,9 +147,10 @@ function runGeneration(
   // the scan reflects current assignments.
   eligibilityChecker.events = sortedEvents
   
-  // Reversible state layer: all assignments go through applyMove so the tracker
-  // and events stay in lock-step (and so the same primitives power local search).
-  const state = new WorkingRoster(sortedEvents, tracker)
+  // Reversible scratch layer: all assignments go through applyMove so the
+  // counters and events stay in lock-step (and so the same primitives power
+  // local search).
+  const working = new WorkingRoster(sortedEvents, tracker)
 
   // Default behaviour: generation only FILLS EMPTY SLOTS — it must not reshuffle
   // assignments that already exist (including ones an earlier, still-uncommitted
@@ -160,7 +161,7 @@ function runGeneration(
   // returning so it never leaks into the roster data.
   if (!optimizeExisting) {
     sortedEvents.forEach(event => {
-      event.roster?.forEach(roleAssignment => {
+      event.slots?.forEach(roleAssignment => {
         if (roleAssignment.member_id) roleAssignment._preExisting = true
       })
     })
@@ -191,17 +192,17 @@ function runGeneration(
   // --- Phase 1: greedy construction (initial solution) ---
   logger.debug('Phase 1: greedy construction')
   sortedEvents.forEach((event, eventIndex) => {
-    if (!event.roster) return
+    if (!event.slots) return
     
     // Get current roster (what's already assigned in this event)
-    const currentRoster = event.roster.filter(r => r.member_id)
+    const currentRoster = event.slots.filter(r => r.member_id)
     
     // Process each role in the event. Understudy ("X-understudy") slots are
     // processed BEFORE real slots so trainees get their shadow session locked
     // in first; their promotion into the real role is handled up front by the
     // Phase 0.5 promotion planner. Original slot indices are preserved so moves
-    // target the correct roster entry.
-    const orderedSlots = event.roster
+    // target the correct slot entry.
+    const orderedSlots = event.slots
       .map((roleAssignment, roleIndex) => ({ roleAssignment, roleIndex }))
       .sort((a, b) => {
         const au = isUnderstudyRole(a.roleAssignment.role) ? 0 : 1
@@ -242,7 +243,7 @@ function runGeneration(
       
       // Assign the best-scored member via the reversible move layer
       const bestMember = rankedMembers[0]
-      state.applyMove({ slot: { eventIndex, roleIndex }, memberId: bestMember.memberId })
+      working.applyMove({ slot: { eventIndex, roleIndex }, memberId: bestMember.memberId })
       currentRoster.push(roleAssignment)
       
       logger.debug(
@@ -266,14 +267,14 @@ function runGeneration(
   // Hill-climb until no improving move exists (with a safety iteration cap).
   if (localSearch) {
     logger.debug('Phase 2: local search')
-    const before = scoreRoster(state, memberPreferences, rosterPreferences)
+    const before = scoreRoster(working, memberPreferences, rosterPreferences)
     const { iterations } = optimizeRoster(
-      state,
+      working,
       eligibilityChecker,
       (s) => scoreRoster(s, memberPreferences, rosterPreferences),
       { logger }
     )
-    const after = scoreRoster(state, memberPreferences, rosterPreferences)
+    const after = scoreRoster(working, memberPreferences, rosterPreferences)
     recomputeStats(sortedEvents, stats)
     logger.info(
       `Phase 2 done: ${iterations} iteration(s), ` +
@@ -287,7 +288,7 @@ function runGeneration(
   // Strip the transient `_preExisting` lock markers so they never leak into the
   // returned roster data (they exist only for this run's local-search locking).
   sortedEvents.forEach(event => {
-    event.roster?.forEach(roleAssignment => {
+    event.slots?.forEach(roleAssignment => {
       if (roleAssignment._preExisting) delete roleAssignment._preExisting
     })
   })
@@ -312,7 +313,7 @@ function recomputeStats(events, stats) {
   let generated = 0
   const unassignable = []
   events.forEach(event => {
-    event.roster?.forEach(roleAssignment => {
+    event.slots?.forEach(roleAssignment => {
       if (roleAssignment.member_id) {
         assigned++
         if (roleAssignment.isGenerated) generated++

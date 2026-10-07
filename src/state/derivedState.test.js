@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { toState, resolveState } from './derivedState'
-import { isTenantShape, tenantSelection, resolveTenant, memberTeams, withRosterEvents, deriveExternalAssignments, validateTenantRosters } from './tenantResolver'
+import { toState, assembleStateWithExternal } from './derivedState'
+import { isTenantShape, tenantSelection, selectRosterDocument, memberTeams, withRosterEvents, deriveExternalAssignments, validateTenantRosters } from './tenantResolver'
 import { CONSTRAINT_KEYS, PREFERENCE_KEYS } from '../schema/rosterSchema'
 import { DEFAULT_ROSTER_CONSTRAINTS, DEFAULT_ROSTER_PREFERENCES } from '../config/rosterDefaults'
 
@@ -211,7 +211,7 @@ describe('derivedState', () => {
 
     it('should extract roster period from data', () => {
       const data = {
-        roster: {
+        roster_period: {
           start_date: '2026-02-01',
           end_date: '2026-04-30'
         }
@@ -224,7 +224,7 @@ describe('derivedState', () => {
 
     it('should handle complete roster data structure', () => {
       const data = {
-        roster: {
+        roster_period: {
           start_date: '2026-02-01',
           end_date: '2026-04-30'
         },
@@ -424,18 +424,18 @@ describe('derivedState', () => {
     })
   })
 
-  // resolveState is the convenience aggregator naming the resolved
+  // assembleStateWithExternal is the pure combine naming the resolved
   // derived-state contract; for a single team it must be identical to
   // toState plus empty/no-op cross-team inputs.
-  describe('resolveState (seam)', () => {
+  describe('assembleStateWithExternal (seam)', () => {
     const data = {
-      roster: { start_date: '2026-02-01', end_date: '2026-04-30' },
+      roster_period: { start_date: '2026-02-01', end_date: '2026-04-30' },
       members: [
         { id: 'alice', name: 'Alice', roles: ['vm', 'cam-1'] },
         { id: 'bob', name: 'Bob', roles: ['vm', { name: 'cam-1', understudy: true }], active: false },
       ],
       declared_roles: ['vm', 'cam-1'],
-      events: [{ date: '2026-02-07', roster: [{ role: 'vm', member_id: 'alice' }] }],
+      events: [{ date: '2026-02-07', slots: [{ role: 'vm', member_id: 'alice' }] }],
       member_constraints: [{ member_id: 'alice', unavailable_dates: ['2026-02-15'] }],
       member_preferences: [{ member_id: 'alice', days: ['Sunday'] }],
       roster_constraints: { [CONSTRAINT_KEYS.ONLY_ONCE_PER_EVENT]: true },
@@ -444,7 +444,7 @@ describe('derivedState', () => {
 
     it('is identity over toState for the shared keys (single team)', () => {
       const base = toState(data)
-      const resolved = resolveState(data)
+      const resolved = assembleStateWithExternal(base)
       // Every key toState produces is byte-for-byte identical.
       for (const key of Object.keys(base)) {
         expect(resolved[key]).toEqual(base[key])
@@ -455,7 +455,7 @@ describe('derivedState', () => {
     })
 
     it('adds an empty no-op externalAssignments by default', () => {
-      const resolved = resolveState(data)
+      const resolved = assembleStateWithExternal(toState(data))
       expect(resolved.externalAssignments).toEqual({})
       // Load is derived, never a separate stored input.
       expect(resolved.externalLoad).toBeUndefined()
@@ -463,12 +463,12 @@ describe('derivedState', () => {
 
     it('passes through the provided externalAssignments verbatim', () => {
       const externalAssignments = { alice: ['2026-02-07', '2026-02-14'] }
-      const resolved = resolveState(data, { externalAssignments })
+      const resolved = assembleStateWithExternal(toState(data), { externalAssignments })
       expect(resolved.externalAssignments).toBe(externalAssignments)
     })
 
-    it('handles null data like toState + empty inputs', () => {
-      const resolved = resolveState(null)
+    it('handles a null-document State like toState + empty inputs', () => {
+      const resolved = assembleStateWithExternal(toState(null))
       expect(resolved.members).toEqual([])
       expect(resolved.events).toEqual([])
       expect(resolved.externalAssignments).toEqual({})
@@ -500,13 +500,13 @@ describe('derivedState', () => {
           ],
           rosters: [
             {
-              roster: { start_date: '2026-02-01', end_date: '2026-03-31' },
-              events: [{ date: '2026-02-07', roster: [{ role: 'lead', member_id: '' }] }],
+              roster_period: { start_date: '2026-02-01', end_date: '2026-03-31' },
+              events: [{ date: '2026-02-07', slots: [{ role: 'lead', member_id: '' }] }],
               roster_constraints: { MAX_ASSIGNMENTS_PER_MONTH: 3 },
             },
             {
-              roster: { start_date: '2026-04-01', end_date: '2026-05-31' },
-              events: [{ date: '2026-04-04', roster: [{ role: 'lead', member_id: '' }] }],
+              roster_period: { start_date: '2026-04-01', end_date: '2026-05-31' },
+              events: [{ date: '2026-04-04', slots: [{ role: 'lead', member_id: '' }] }],
               // This period, Bob is not active (e.g. on sabbatical).
               member_overrides: [{ member_id: 'm-bob', include: false }],
             },
@@ -518,7 +518,7 @@ describe('derivedState', () => {
           team_members: [
             { member_id: 'm-alice', include: true, roles: [{ name: 'host' }] },
           ],
-          rosters: [{ roster: { start_date: '2026-02-01', end_date: '2026-03-31' }, events: [] }],
+          rosters: [{ roster_period: { start_date: '2026-02-01', end_date: '2026-03-31' }, events: [] }],
         },
       ],
     }
@@ -539,15 +539,15 @@ describe('derivedState', () => {
 
     it('flat documents resolve to one default team + roster', () => {
       const flat = { members: [{ id: 'a', name: 'A' }], events: [] }
-      // isTenantShape false → resolveTenant returns input untouched.
-      expect(resolveTenant(flat, {})).toBe(flat)
+      // isTenantShape false → selectRosterDocument returns input untouched.
+      expect(selectRosterDocument(flat, {})).toBe(flat)
       const sel = tenantSelection(flat)
       expect(sel.teams).toHaveLength(1)
       expect(sel.teams[0].rosters).toHaveLength(1)
     })
 
     it('joins registry + team_members into the flat member shape', () => {
-      const flat = resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' })
+      const flat = selectRosterDocument(tenant, { teamId: 'team-0', rosterId: 'roster-0' })
       const state = toState(flat)
       expect(state.members.map(m => m.id)).toEqual(['m-alice', 'm-bob'])
       // Per-team roles; understudy normalization applies downstream.
@@ -561,8 +561,8 @@ describe('derivedState', () => {
     })
 
     it('resolves the SAME member to different per-team roles', () => {
-      const worship = toState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
-      const hospitality = toState(resolveTenant(tenant, { teamId: 'team-1', rosterId: 'roster-0' }))
+      const worship = toState(selectRosterDocument(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
+      const hospitality = toState(selectRosterDocument(tenant, { teamId: 'team-1', rosterId: 'roster-0' }))
       expect(worship.members.find(m => m.id === 'm-alice').roles).toEqual(['lead', 'support'])
       expect(hospitality.members.find(m => m.id === 'm-alice').roles).toEqual(['host'])
       // Bob is not on Hospitality.
@@ -570,7 +570,7 @@ describe('derivedState', () => {
     })
 
     it('surfaces global unavailability as member_constraints for the team', () => {
-      const state = toState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
+      const state = toState(selectRosterDocument(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
       const alice = state.memberConstraints.find(c => c.member_id === 'm-alice')
       expect(alice.unavailable_dates).toEqual(['2026-02-14', { start: '2026-03-05', end: '2026-03-10' }])
       // The registry member's free-text note travels with the constraint.
@@ -578,23 +578,23 @@ describe('derivedState', () => {
       // Bob has none → no constraint row.
       expect(state.memberConstraints.find(c => c.member_id === 'm-bob')).toBeUndefined()
       // Global unavailability follows the member across teams.
-      const hosp = toState(resolveTenant(tenant, { teamId: 'team-1', rosterId: 'roster-0' }))
+      const hosp = toState(selectRosterDocument(tenant, { teamId: 'team-1', rosterId: 'roster-0' }))
       expect(hosp.memberConstraints.find(c => c.member_id === 'm-alice').unavailable_dates).toHaveLength(2)
     })
 
     it('selects a specific roster within a team', () => {
-      const r1 = toState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-1' }))
+      const r1 = toState(selectRosterDocument(tenant, { teamId: 'team-0', rosterId: 'roster-1' }))
       expect(r1.rosterPeriod.start_date).toBe('2026-04-01')
       expect(r1.events[0].date).toBe('2026-04-04')
     })
 
     it('applies a roster member_override for include over the team default', () => {
       // Team default: Bob is include:true. roster-0 has no override → active.
-      const r0 = toState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
+      const r0 = toState(selectRosterDocument(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
       expect(r0.members.find(m => m.id === 'm-bob').include).toBe(true)
       // roster-1 overrides Bob to include:false → still on the team, but inactive
       // (eligibility/generator treat include:false as opted out).
-      const r1 = toState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-1' }))
+      const r1 = toState(selectRosterDocument(tenant, { teamId: 'team-0', rosterId: 'roster-1' }))
       expect(r1.members.find(m => m.id === 'm-bob').include).toBe(false)
       // Alice has no override → unaffected in both rosters.
       expect(r0.members.find(m => m.id === 'm-alice').include).toBe(true)
@@ -602,7 +602,7 @@ describe('derivedState', () => {
     })
 
     it('defaults to the first team + roster when selection omitted', () => {
-      const state = toState(resolveTenant(tenant, {}))
+      const state = toState(selectRosterDocument(tenant, {}))
       expect(state.rosterPeriod.start_date).toBe('2026-02-01')
       expect(state.members.map(m => m.id)).toEqual(['m-alice', 'm-bob'])
     })
@@ -623,19 +623,19 @@ describe('derivedState', () => {
             roster_constraints: { MAX_ASSIGNMENTS_PER_MONTH: 4, ENFORCE_CROSS_TEAM_CLASH: true },
             rosters: [
               {
-                roster: { start_date: '2026-02-01', end_date: '2026-03-31' },
+                roster_period: { start_date: '2026-02-01', end_date: '2026-03-31' },
                 events: [],
                 roster_constraints: { MAX_ASSIGNMENTS_PER_MONTH: 3 },
               },
               // No roster-level constraints → team+tenant only.
-              { roster: { start_date: '2026-04-01', end_date: '2026-05-31' }, events: [] },
+              { roster_period: { start_date: '2026-04-01', end_date: '2026-05-31' }, events: [] },
             ],
           },
         ],
       }
 
       it('merges tenant → team → roster with later layers winning', () => {
-        const state = toState(resolveTenant(layered, { teamId: 'team-0', rosterId: 'roster-0' }))
+        const state = toState(selectRosterDocument(layered, { teamId: 'team-0', rosterId: 'roster-0' }))
         const c = state.rosterConstraints
         // Roster wins over team (4) and tenant (5).
         expect(c.MAX_ASSIGNMENTS_PER_MONTH).toBe(3)
@@ -646,7 +646,7 @@ describe('derivedState', () => {
       })
 
       it('falls back to team then tenant when a roster omits the key', () => {
-        const state = toState(resolveTenant(layered, { teamId: 'team-0', rosterId: 'roster-1' }))
+        const state = toState(selectRosterDocument(layered, { teamId: 'team-0', rosterId: 'roster-1' }))
         const c = state.rosterConstraints
         // Team wins over tenant when the roster has no layer.
         expect(c.MAX_ASSIGNMENTS_PER_MONTH).toBe(4)
@@ -656,9 +656,9 @@ describe('derivedState', () => {
 
       it('leaves flat single-team docs unchanged (no injected constraint object)', () => {
         const flat = { members: [{ id: 'a', name: 'A' }], events: [] }
-        // No layer supplied → resolveTenant is a no-op on flat input, and a doc
+        // No layer supplied → selectRosterDocument is a no-op on flat input, and a doc
         // with only defaults still yields the source-code defaults.
-        const state = toState(resolveTenant(flat, {}))
+        const state = toState(selectRosterDocument(flat, {}))
         expect(state.rosterConstraints).toEqual({ ...DEFAULT_ROSTER_CONSTRAINTS })
       })
     })
@@ -670,7 +670,7 @@ describe('derivedState', () => {
       it('auto-enables cross-team keys for a multi-team tenant', () => {
         // `tenant` has two teams (Worship + Hospitality) and no explicit
         // cross-team constraints, so both keys default ON.
-        const state = toState(resolveTenant(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
+        const state = toState(selectRosterDocument(tenant, { teamId: 'team-0', rosterId: 'roster-0' }))
         expect(state.rosterConstraints.ENFORCE_CROSS_TEAM_CAPS).toBe(true)
         expect(state.rosterConstraints.ENFORCE_CROSS_TEAM_CLASH).toBe(true)
       })
@@ -688,11 +688,11 @@ describe('derivedState', () => {
               name: 'Video',
               roles: [{ name: 'cam' }],
               team_members: [{ member_id: 'm-alice', include: true, roles: [{ name: 'cam' }] }],
-              rosters: [{ roster: { start_date: '2026-02-01', end_date: '2026-03-31' }, events: [] }],
+              rosters: [{ roster_period: { start_date: '2026-02-01', end_date: '2026-03-31' }, events: [] }],
             },
           ],
         }
-        const state = toState(resolveTenant(single, { teamId: 'team-0', rosterId: 'roster-0' }))
+        const state = toState(selectRosterDocument(single, { teamId: 'team-0', rosterId: 'roster-0' }))
         // Absent key = off (there is no default for the cross-team keys — they
         // are OFF by absence), so it reads falsy rather than an explicit false.
         expect(state.rosterConstraints.ENFORCE_CROSS_TEAM_CLASH).toBeFalsy()
@@ -708,7 +708,7 @@ describe('derivedState', () => {
               : t
           ),
         }
-        const state = toState(resolveTenant(opted, { teamId: 'team-0', rosterId: 'roster-0' }))
+        const state = toState(selectRosterDocument(opted, { teamId: 'team-0', rosterId: 'roster-0' }))
         // Team layer explicitly turned the auto-default back off.
         expect(state.rosterConstraints.ENFORCE_CROSS_TEAM_CLASH).toBe(false)
         // The other auto-default is untouched.
@@ -727,8 +727,8 @@ describe('derivedState', () => {
                   ...t,
                   rosters: [
                     {
-                      roster: { start_date: '2026-02-01', end_date: '2026-03-31' },
-                      events: [{ date: '2026-02-08', roster: [{ role: 'host', member_id: 'm-alice' }] }],
+                      roster_period: { start_date: '2026-02-01', end_date: '2026-03-31' },
+                      events: [{ date: '2026-02-08', slots: [{ role: 'host', member_id: 'm-alice' }] }],
                     },
                   ],
                 }
@@ -750,7 +750,7 @@ describe('derivedState', () => {
                   ...t,
                   rosters: t.rosters.map(r => ({
                     ...r,
-                    events: [{ date: r.roster.start_date, roster: [{ role: 'lead', member_id: 'm-alice' }] }],
+                    events: [{ date: r.roster_period.start_date, slots: [{ role: 'lead', member_id: 'm-alice' }] }],
                   })),
                 }
               : t
@@ -783,9 +783,9 @@ describe('derivedState', () => {
               ? {
                   ...t,
                   rosters: [
-                    { roster: { start_date: '2026-02-01', end_date: '2026-03-31' }, events: [] },
+                    { roster_period: { start_date: '2026-02-01', end_date: '2026-03-31' }, events: [] },
                     // Overlaps the first period (March).
-                    { roster: { start_date: '2026-03-15', end_date: '2026-04-30' }, events: [] },
+                    { roster_period: { start_date: '2026-03-15', end_date: '2026-04-30' }, events: [] },
                   ],
                 }
               : t
@@ -804,9 +804,9 @@ describe('derivedState', () => {
             {
               ...tenant.teams[0],
               rosters: [
-                { roster: { start_date: '2026-02-01', end_date: '2026-03-31' }, events: [] },
+                { roster_period: { start_date: '2026-02-01', end_date: '2026-03-31' }, events: [] },
                 // Starts on the previous roster's last day.
-                { roster: { start_date: '2026-03-31', end_date: '2026-04-30' }, events: [] },
+                { roster_period: { start_date: '2026-03-31', end_date: '2026-04-30' }, events: [] },
               ],
             },
           ],
@@ -821,8 +821,8 @@ describe('derivedState', () => {
             {
               ...tenant.teams[0],
               rosters: [
-                { roster: { start_date: '2026-02-01' }, events: [] }, // no end_date
-                { roster: { start_date: '2026-02-15', end_date: '2026-03-31' }, events: [] },
+                { roster_period: { start_date: '2026-02-01' }, events: [] }, // no end_date
+                { roster_period: { start_date: '2026-02-15', end_date: '2026-03-31' }, events: [] },
               ],
             },
           ],
@@ -847,16 +847,16 @@ describe('derivedState', () => {
     })
 
     describe('withRosterEvents (Phase 1 write-back)', () => {
-      const edited = [{ date: '2026-02-07', roster: [{ role: 'lead', member_id: 'm-alice' }] }]
+      const edited = [{ date: '2026-02-07', slots: [{ role: 'lead', member_id: 'm-alice' }] }]
 
       it('writes events back into the addressed roster without mutating the input', () => {
         const next = withRosterEvents(tenant, { teamId: 'team-0', rosterId: 'roster-0' }, edited)
         // Input untouched (still an empty member_id).
-        expect(tenant.teams[0].rosters[0].events[0].roster[0].member_id).toBe('')
+        expect(tenant.teams[0].rosters[0].events[0].slots[0].member_id).toBe('')
         // New doc has the edit.
         expect(next.teams[0].rosters[0].events).toEqual(edited)
         // Resolving the new doc surfaces the edited events.
-        expect(toState(resolveTenant(next, { teamId: 'team-0', rosterId: 'roster-0' })).events)
+        expect(toState(selectRosterDocument(next, { teamId: 'team-0', rosterId: 'roster-0' })).events)
           .toEqual(edited)
       })
 
@@ -874,9 +874,9 @@ describe('derivedState', () => {
       it('round-trips: edit team-0/roster-0, switch away, come back preserves it', () => {
         const next = withRosterEvents(tenant, { teamId: 'team-0', rosterId: 'roster-1' }, edited)
         // roster-1 now has the edit; roster-0 still original.
-        const r1 = toState(resolveTenant(next, { teamId: 'team-0', rosterId: 'roster-1' }))
+        const r1 = toState(selectRosterDocument(next, { teamId: 'team-0', rosterId: 'roster-1' }))
         expect(r1.events).toEqual(edited)
-        const r0 = toState(resolveTenant(next, { teamId: 'team-0', rosterId: 'roster-0' }))
+        const r0 = toState(selectRosterDocument(next, { teamId: 'team-0', rosterId: 'roster-0' }))
         expect(r0.events).toEqual(tenant.teams[0].rosters[0].events)
       })
 

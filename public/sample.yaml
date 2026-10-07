@@ -3,7 +3,7 @@
 #################################
 
 # The roster period defines the date range for scheduling
-roster:
+roster_period:
   start_date: "2026-02-01"  # First day of the roster period
   end_date: "2026-03-31"     # Last day of the roster period
 
@@ -80,7 +80,7 @@ members:
 #   date: event date (YYYY-MM-DD format)
 #   day_of_week: day of the week
 #   reporting_time: when members should arrive (24-hour format HH:MM)
-#   roster: list of roles and assigned member IDs (leave member_id empty for unassigned)
+#   slots: list of roles and assigned member IDs (leave member_id empty for unassigned)
 #   reminder: optional message sent to assigned members
 
 events:
@@ -88,7 +88,7 @@ events:
     date: "2026-02-07"
     day_of_week: "Saturday"
     reporting_time: "2:00 PM"
-    roster:
+    slots:
       - role: lead
         member_id:           # Leave empty for automatic assignment
       - role: support
@@ -99,7 +99,7 @@ events:
     date: "2026-02-08"
     day_of_week: "Sunday"
     reporting_time: "9:00 AM"
-    roster:
+    slots:
       - role: lead
         member_id: 
     reminder: "Check equipment before starting."
@@ -108,7 +108,7 @@ events:
     date: "2026-02-14"
     day_of_week: "Saturday"
     reporting_time: "2:00 PM"
-    roster:
+    slots:
       - role: lead
         member_id: 
       - role: support
@@ -118,7 +118,7 @@ events:
     date: "2026-02-15"
     day_of_week: "Sunday"
     reporting_time: "9:00 AM"
-    roster:
+    slots:
       - role: lead
         member_id: member-1-alice  # Pre-assigned to Alice
   
@@ -126,7 +126,7 @@ events:
     date: "2026-02-28"
     day_of_week: "Saturday"
     reporting_time: "2:00 PM"
-    roster:
+    slots:
       - role: lead
         member_id:
       - role: support
@@ -141,7 +141,7 @@ events:
     # so this morning service and the evening one below can share a member.
     start: "2026-03-01T09:00"
     end: "2026-03-01T11:00"
-    roster:
+    slots:
       - role: lead
         member_id:
 
@@ -151,7 +151,7 @@ events:
     reporting_time: "6:00 PM"
     start: "2026-03-01T18:00"
     end: "2026-03-01T20:00"
-    roster:
+    slots:
       - role: lead
         member_id:
 

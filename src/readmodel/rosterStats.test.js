@@ -13,21 +13,21 @@ describe('rosterStats', () => {
     const events = [
       {
         date: '2026-02-07',
-        roster: [
+        slots: [
           { role: 'vm', member_id: 'john' },
           { role: 'cam-1', member_id: 'jane' }
         ]
       },
       {
         date: '2026-02-14',
-        roster: [
+        slots: [
           { role: 'vm', member_id: 'john' },
           { role: 'cam-1', member_id: null }
         ]
       },
       {
         date: '2026-03-07',
-        roster: [
+        slots: [
           { role: 'vm', member_id: 'jane' }
         ]
       }
@@ -107,7 +107,7 @@ describe('rosterStats', () => {
       const moreEvents = [
         {
           date: '2026-02-07',
-          roster: [
+          slots: [
             { role: 'vm', member_id: 'john' },
             { role: 'cam-1', member_id: 'john' },
             { role: 'cam-2', member_id: 'john' }
@@ -115,7 +115,7 @@ describe('rosterStats', () => {
         },
         {
           date: '2026-02-14',
-          roster: [
+          slots: [
             { role: 'vm', member_id: 'jane' }
           ]
         }
@@ -158,7 +158,7 @@ describe('rosterStats', () => {
     it('should handle events without roster field', () => {
       const eventsNoRoster = [
         { date: '2026-02-07' },
-        { date: '2026-02-14', roster: null }
+        { date: '2026-02-14', slots: null }
       ]
       
       const stats = calculateRosterStats(eventsNoRoster, members, rosterPeriod)
@@ -205,9 +205,9 @@ describe('rosterStats', () => {
 
     it('fairness metrics update when the roster changes (real-time)', () => {
       const unbalanced = [
-        { date: '2026-02-07', roster: [{ role: 'vm', member_id: 'john' }] },
-        { date: '2026-02-14', roster: [{ role: 'vm', member_id: 'john' }] },
-        { date: '2026-02-21', roster: [{ role: 'vm', member_id: 'john' }] }
+        { date: '2026-02-07', slots: [{ role: 'vm', member_id: 'john' }] },
+        { date: '2026-02-14', slots: [{ role: 'vm', member_id: 'john' }] },
+        { date: '2026-02-21', slots: [{ role: 'vm', member_id: 'john' }] }
       ]
       const stats = calculateRosterStats(unbalanced, members, rosterPeriod)
 
@@ -243,7 +243,7 @@ describe('rosterStats', () => {
 
     it('reports null avgGapDays for members with fewer than two shifts', () => {
       const single = [
-        { date: '2026-02-07', roster: [{ role: 'vm', member_id: 'john' }] }
+        { date: '2026-02-07', slots: [{ role: 'vm', member_id: 'john' }] }
       ]
       const stats = calculateRosterStats(single, members, rosterPeriod)
       const john = stats.memberStats.find(m => m.id === 'john')
@@ -276,7 +276,7 @@ describe('rosterStats', () => {
     it('flags a currently-empty slot that has no eligible member', () => {
       const events = [{
         name: 'Sunday Service', date: '2026-08-16',
-        roster: [
+        slots: [
           { role: 'vm', member_id: 'alice' },
           { role: 'main-cam', member_id: null },
         ],
@@ -296,7 +296,7 @@ describe('rosterStats', () => {
     it('drops the slot from the list once it is filled (real-time)', () => {
       const events = [{
         name: 'Sunday Service', date: '2026-08-16',
-        roster: [
+        slots: [
           { role: 'vm', member_id: 'alice' },
           { role: 'main-cam', member_id: 'charlie' }, // now filled
         ],
@@ -308,7 +308,7 @@ describe('rosterStats', () => {
     it('does not flag an empty slot that still has an eligible member', () => {
       const events = [{
         name: 'Sunday Service', date: '2026-08-16',
-        roster: [{ role: 'main-cam', member_id: null }],
+        slots: [{ role: 'main-cam', member_id: null }],
       }]
       const stats = calculateRosterStats(events, members, rosterPeriod, {}, enforceRoles)
       expect(stats.unassignableRoles).toHaveLength(0)

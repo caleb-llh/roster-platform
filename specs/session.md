@@ -1,14 +1,25 @@
 # Session — the command surface
 
 The **Session layer** is the "time" layer that sits *above* a pure-CRUD provider
-([`useSession.js`](../src/session/useSession.js)). It owns two concerns:
+([`useSession.js`](../src/session/useSession.js)). It owns three concerns:
 
 1. The **draft/commit + undo/redo** overlay. That model — its separation of
    commit from history, the "commit does not end history" invariant, and how the
    draft resets on a new committed document — is specified in
    [data-layer.md](data-layer.md#draftcommit-is-separate-from-undoredo-history).
    This file does **not** restate it.
-2. The **command surface** — the named domain commands the UI (and, eventually,
+2. The **derived pipeline**. Session is the single producer of the derived
+   stages: it reads the provider's committed `document` and overlays the draft to
+   build the **effective document**, casts it with `toState` to a **State**, and
+   combines in `externalAssignments` to a **State with external** — exposed as one
+   memoized `effectiveStateWithExternal` value (plus `committedEvents` for
+   diffing). Every
+   consumer (UI render, commands, generator) reads that one value. The "one
+   producer, many consumers" invariant, the stage lifetimes, and the full
+   walkthroughs are owned by
+   [data-layer.md](data-layer.md#data-flow-one-producer-many-consumers); this file
+   does **not** restate them.
+3. The **command surface** — the named domain commands the UI (and, eventually,
    an inbound bot) drives. That is what this file owns.
 
 See [architecture.md](architecture.md) for the Session-above-Provider layering
@@ -31,10 +42,14 @@ Every domain mutation is expressed **once**, as a pure function in
 }
 ```
 
-- `state` is the derived roster state (from [`toState`](../src/state/derivedState.js))
-  over the **effective** document (committed + uncommitted draft overlaid), plus
-  the provider's `externalAssignments`. It is recomputed per call so a command
-  always sees the latest draft.
+- `state` (the command's input parameter) is the derived roster `State`
+  (from [`toState`](../src/state/derivedState.js)) over the **effective**
+  document (committed + uncommitted draft overlaid), plus the provider's
+  `externalAssignments` — i.e. a `State with external` (see
+  [glossary.md](glossary.md)). Session derives this once as a memoized value
+  (`effectiveStateWithExternal`) and the command reads that same value — so a
+  command always judges against exactly what the UI renders. See
+  [data-layer.md](data-layer.md#data-flow-one-producer-many-consumers).
 - The commands own **only** the pure mutation (`nextEvents`) and the rule
   **verdict**. They contain no React, no persistence, and no view prose beyond
   the intrinsic audit line — so they are unit-testable without a renderer
@@ -42,7 +57,7 @@ Every domain mutation is expressed **once**, as a pure function in
 
 [`useSession`](../src/session/useSession.js) wires each command via `runCommand(fn)`:
 it checks edit permission, runs the pure function against the current
-`commandState()`, applies `nextEvents` to the draft, and returns the
+`effectiveStateWithExternal` value, applies `nextEvents` to the draft, and returns the
 verdict/logEntry/preview to the caller. **Why pure command + thin wrapper:** it
 puts the one gate on a *named* action, so a UI click and an inbound bot command
 are true peers through one surface — which is why per-action commands exist

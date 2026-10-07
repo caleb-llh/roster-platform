@@ -12,13 +12,13 @@ import {
 
 // Minimal events fixtures (only the fields the draft logic touches).
 const committed = [
-  { date: '2026-02-07', roster: [{ role: 'lead', member_id: 'a' }] },
+  { date: '2026-02-07', slots: [{ role: 'lead', member_id: 'a' }] },
 ]
 const edit1 = [
-  { date: '2026-02-07', roster: [{ role: 'lead', member_id: 'b' }] },
+  { date: '2026-02-07', slots: [{ role: 'lead', member_id: 'b' }] },
 ]
 const edit2 = [
-  { date: '2026-02-07', roster: [{ role: 'lead', member_id: 'c' }] },
+  { date: '2026-02-07', slots: [{ role: 'lead', member_id: 'c' }] },
 ]
 
 describe('useDraftHistory pure transitions', () => {

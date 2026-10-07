@@ -54,7 +54,7 @@ control). No separate modal; edit in place on the card.
    a second persistence path. Ratified: member edits are **staged as a draft and
    committed in one transaction (reviewed publish)**, mirroring the roster
    draft/commit feel even though members are normalized rows — see
-   [multi-tenant.md](multi-tenant.md#ratified-decisions-review) /
+   [multi-tenant.md](multi-tenant.md#ratified-decisions) /
    [data-layer.md](data-layer.md).
 4. **`member.id` is immutable** (it keys constraints/preferences and assignment
    `member_id`); editing changes display `name` only.

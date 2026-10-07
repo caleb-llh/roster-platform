@@ -15,7 +15,7 @@ describe('Roster Generator', () => {
       date: '2026-02-01',
       day_of_week: 'Sunday',
       reporting_time: '09:00',
-      roster: [
+      slots: [
         { role: 'vm', member_id: null },
         { role: 'cam-1', member_id: null }
       ]
@@ -25,7 +25,7 @@ describe('Roster Generator', () => {
       date: '2026-02-08',
       day_of_week: 'Sunday',
       reporting_time: '09:00',
-      roster: [
+      slots: [
         { role: 'vm', member_id: null },
         { role: 'cam-1', member_id: null }
       ]
@@ -66,15 +66,15 @@ describe('Roster Generator', () => {
         rosterPeriod
       )
 
-      expect(result.events[0].roster[0].member_id).toBeTruthy()
-      expect(result.events[0].roster[1].member_id).toBeTruthy()
+      expect(result.events[0].slots[0].member_id).toBeTruthy()
+      expect(result.events[0].slots[1].member_id).toBeTruthy()
       expect(result.stats.generatedAssignments).toBeGreaterThan(0)
     })
 
     it('should not overwrite existing assignments', () => {
       const members = createTestMembers()
       const events = createTestEvents()
-      events[0].roster[0].member_id = 'alice'
+      events[0].slots[0].member_id = 'alice'
       
       const result = generateRoster(
         events,
@@ -86,7 +86,7 @@ describe('Roster Generator', () => {
         rosterPeriod
       )
 
-      expect(result.events[0].roster[0].member_id).toBe('alice')
+      expect(result.events[0].slots[0].member_id).toBe('alice')
       expect(result.stats.assignedRoles).toBeGreaterThanOrEqual(1)
     })
 
@@ -97,8 +97,8 @@ describe('Roster Generator', () => {
       const events = createTestEvents()
       // Manually place charlie on cam-1 in both events (would violate spread /
       // once-per-week balance the optimizer normally tries to fix by swapping).
-      events[0].roster[1].member_id = 'charlie'
-      events[1].roster[1].member_id = 'charlie'
+      events[0].slots[1].member_id = 'charlie'
+      events[1].slots[1].member_id = 'charlie'
 
       const result = generateRoster(
         events,
@@ -111,10 +111,10 @@ describe('Roster Generator', () => {
       )
 
       // Both manual assignments survive untouched and stay unflagged.
-      expect(result.events[0].roster[1].member_id).toBe('charlie')
-      expect(result.events[1].roster[1].member_id).toBe('charlie')
-      expect(result.events[0].roster[1].isGenerated).toBeFalsy()
-      expect(result.events[1].roster[1].isGenerated).toBeFalsy()
+      expect(result.events[0].slots[1].member_id).toBe('charlie')
+      expect(result.events[1].slots[1].member_id).toBe('charlie')
+      expect(result.events[0].slots[1].isGenerated).toBeFalsy()
+      expect(result.events[1].slots[1].isGenerated).toBeFalsy()
     })
 
     it('by default only fills empty slots and does not reshuffle prior generated assignments', () => {
@@ -124,10 +124,10 @@ describe('Roster Generator', () => {
       // must treat prior assignments as fixed and only fill the still-empty slots.
       const members = createTestMembers()
       const events = createTestEvents()
-      events[0].roster[1].member_id = 'charlie'
-      events[0].roster[1].isGenerated = true
-      events[1].roster[1].member_id = 'charlie'
-      events[1].roster[1].isGenerated = true
+      events[0].slots[1].member_id = 'charlie'
+      events[0].slots[1].isGenerated = true
+      events[1].slots[1].member_id = 'charlie'
+      events[1].slots[1].isGenerated = true
 
       const result = generateRoster(
         events,
@@ -140,12 +140,12 @@ describe('Roster Generator', () => {
       )
 
       // Prior generated assignments are untouched; only the empty vm slots got filled.
-      expect(result.events[0].roster[1].member_id).toBe('charlie')
-      expect(result.events[1].roster[1].member_id).toBe('charlie')
-      expect(result.events[0].roster[0].member_id).toBeTruthy()
-      expect(result.events[1].roster[0].member_id).toBeTruthy()
+      expect(result.events[0].slots[1].member_id).toBe('charlie')
+      expect(result.events[1].slots[1].member_id).toBe('charlie')
+      expect(result.events[0].slots[0].member_id).toBeTruthy()
+      expect(result.events[1].slots[0].member_id).toBeTruthy()
       // The transient lock marker never leaks into the returned data.
-      expect(result.events[0].roster[1]._preExisting).toBeUndefined()
+      expect(result.events[0].slots[1]._preExisting).toBeUndefined()
     })
 
     it('by default leaves a beneficial swap between prior generated slots untaken', () => {
@@ -161,8 +161,8 @@ describe('Roster Generator', () => {
         { member_id: 'bob', days: ['Sunday'] },
       ]
       const events = [
-        { name: 'Sat', date: '2026-02-07', day_of_week: 'Saturday', roster: [{ role: 'cam-1', member_id: 'bob', isGenerated: true }] },
-        { name: 'Sun', date: '2026-02-15', day_of_week: 'Sunday', roster: [{ role: 'cam-1', member_id: 'alice', isGenerated: true }] },
+        { name: 'Sat', date: '2026-02-07', day_of_week: 'Saturday', slots: [{ role: 'cam-1', member_id: 'bob', isGenerated: true }] },
+        { name: 'Sun', date: '2026-02-15', day_of_week: 'Sunday', slots: [{ role: 'cam-1', member_id: 'alice', isGenerated: true }] },
       ]
 
       const result = generateRoster(
@@ -175,7 +175,7 @@ describe('Roster Generator', () => {
         { start_date: '2026-02-01', end_date: '2026-02-28' }
       )
 
-      const byDate = Object.fromEntries(result.events.map(e => [e.date, e.roster[0].member_id]))
+      const byDate = Object.fromEntries(result.events.map(e => [e.date, e.slots[0].member_id]))
       expect(byDate['2026-02-07']).toBe('bob')
       expect(byDate['2026-02-15']).toBe('alice')
     })
@@ -194,8 +194,8 @@ describe('Roster Generator', () => {
         { member_id: 'bob', days: ['Sunday'] },
       ]
       const events = [
-        { name: 'Sat', date: '2026-02-07', day_of_week: 'Saturday', roster: [{ role: 'cam-1', member_id: 'bob', isGenerated: true }] },
-        { name: 'Sun', date: '2026-02-15', day_of_week: 'Sunday', roster: [{ role: 'cam-1', member_id: 'alice', isGenerated: true }] },
+        { name: 'Sat', date: '2026-02-07', day_of_week: 'Saturday', slots: [{ role: 'cam-1', member_id: 'bob', isGenerated: true }] },
+        { name: 'Sun', date: '2026-02-15', day_of_week: 'Sunday', slots: [{ role: 'cam-1', member_id: 'alice', isGenerated: true }] },
       ]
       const constraints = { [CONSTRAINT_KEYS.ENFORCE_MEMBER_ROLES]: true }
 
@@ -210,7 +210,7 @@ describe('Roster Generator', () => {
         { optimizeExisting: true }
       )
 
-      const byDate = Object.fromEntries(result.events.map(e => [e.date, e.roster[0].member_id]))
+      const byDate = Object.fromEntries(result.events.map(e => [e.date, e.slots[0].member_id]))
       // The swap happened: each member now works their preferred day.
       expect(byDate['2026-02-07']).toBe('alice')
       expect(byDate['2026-02-15']).toBe('bob')
@@ -246,7 +246,7 @@ describe('Roster Generator', () => {
         name: 'Service',
         date: '2026-02-01',
         day_of_week: 'Sunday',
-        roster: [{ role: 'vm', member_id: null }]
+        slots: [{ role: 'vm', member_id: null }]
       }]
       
       const result = generateRoster(
@@ -259,7 +259,7 @@ describe('Roster Generator', () => {
         rosterPeriod
       )
 
-      expect(result.events[0].roster[0].member_id).toBeFalsy()
+      expect(result.events[0].slots[0].member_id).toBeFalsy()
       expect(result.stats.unassignableRoles).toHaveLength(1)
     })
 
@@ -269,7 +269,7 @@ describe('Roster Generator', () => {
         name: 'Service',
         date: '2026-02-01',
         day_of_week: 'Sunday',
-        roster: [{ role: 'vm', member_id: null }]
+        slots: [{ role: 'vm', member_id: null }]
       }]
       const constraints = [{
         member_id: 'alice',
@@ -286,7 +286,7 @@ describe('Roster Generator', () => {
         rosterPeriod
       )
 
-      expect(result.events[0].roster[0].member_id).toBeFalsy()
+      expect(result.events[0].slots[0].member_id).toBeFalsy()
     })
 
     it('should enforce ONLY_ONCE_PER_EVENT', () => {
@@ -295,7 +295,7 @@ describe('Roster Generator', () => {
         name: 'Service',
         date: '2026-02-01',
         day_of_week: 'Sunday',
-        roster: [
+        slots: [
           { role: 'vm', member_id: null },
           { role: 'cam-1', member_id: null }
         ]
@@ -311,7 +311,7 @@ describe('Roster Generator', () => {
         rosterPeriod
       )
 
-      const assignedMembers = result.events[0].roster
+      const assignedMembers = result.events[0].slots
         .filter(r => r.member_id)
         .map(r => r.member_id)
       
@@ -326,13 +326,13 @@ describe('Roster Generator', () => {
           name: 'Saturday Service',
           date: '2026-02-07',
           day_of_week: 'Saturday',
-          roster: [{ role: 'vm', member_id: null }]
+          slots: [{ role: 'vm', member_id: null }]
         },
         {
           name: 'Sunday Service',
           date: '2026-02-08',
           day_of_week: 'Sunday',
-          roster: [{ role: 'vm', member_id: null }]
+          slots: [{ role: 'vm', member_id: null }]
         }
       ]
       
@@ -346,8 +346,8 @@ describe('Roster Generator', () => {
         rosterPeriod
       )
 
-      const saturdayVm = result.events[0].roster[0].member_id
-      const sundayVm = result.events[1].roster[0].member_id
+      const saturdayVm = result.events[0].slots[0].member_id
+      const sundayVm = result.events[1].slots[0].member_id
       
       if (saturdayVm && sundayVm) {
         expect(saturdayVm).not.toBe(sundayVm)
@@ -362,7 +362,7 @@ describe('Roster Generator', () => {
         name: `Service ${i + 1}`,
         date: `2026-02-${String((i + 1) * 7).padStart(2, '0')}`,
         day_of_week: 'Sunday',
-        roster: [{ role: 'cam-1', member_id: null }]
+        slots: [{ role: 'cam-1', member_id: null }]
       }))
       
       const result = generateRoster(
@@ -377,7 +377,7 @@ describe('Roster Generator', () => {
 
       const assignmentCounts = {}
       result.events.forEach(event => {
-        event.roster.forEach(r => {
+        event.slots.forEach(r => {
           if (r.member_id) {
             assignmentCounts[r.member_id] = (assignmentCounts[r.member_id] || 0) + 1
           }
@@ -435,7 +435,7 @@ describe('Roster Generator', () => {
         name: 'Service',
         date: '2026-02-01',
         day_of_week: 'Sunday',
-        roster: [{ role: 'vm', member_id: null }]
+        slots: [{ role: 'vm', member_id: null }]
       }]
       
       const result = generateRoster(
@@ -462,7 +462,7 @@ describe('Roster Generator', () => {
         name: 'Sunday Service',
         date: '2026-02-01',
         day_of_week: 'Sunday',
-        roster: [{ role: 'vm', member_id: null }]
+        slots: [{ role: 'vm', member_id: null }]
       }]
       const preferences = [
         { member_id: 'alice', days: ['Sunday'] }
@@ -479,7 +479,7 @@ describe('Roster Generator', () => {
       )
 
       // Alice prefers Sunday, should likely be assigned
-      expect(result.events[0].roster[0].member_id).toBe('alice')
+      expect(result.events[0].slots[0].member_id).toBe('alice')
     })
 
     it('should consider member role preferences in scoring', () => {
@@ -491,7 +491,7 @@ describe('Roster Generator', () => {
         name: 'Sunday Service',
         date: '2026-02-01',
         day_of_week: 'Sunday',
-        roster: [
+        slots: [
           { role: 'vm', member_id: null },
           { role: 'cam-1', member_id: null }
         ]
@@ -511,7 +511,7 @@ describe('Roster Generator', () => {
       )
 
       // Alice prefers cam-1, should be assigned to cam-1 role
-      const aliceAssignment = result.events[0].roster.find(r => r.member_id === 'alice')
+      const aliceAssignment = result.events[0].slots.find(r => r.member_id === 'alice')
       expect(aliceAssignment).toBeTruthy()
       expect(aliceAssignment.role).toBe('cam-1')
     })
@@ -526,7 +526,7 @@ describe('Roster Generator', () => {
         name: 'Service',
         date: '2026-02-01',
         day_of_week: 'Sunday',
-        roster: [{ role: 'support', member_id: null }]
+        slots: [{ role: 'support', member_id: null }]
       }]
       const preferences = [
         { member_id: 'bob', roles: ['support'] }
@@ -543,7 +543,7 @@ describe('Roster Generator', () => {
       )
 
       // Bob has role preference for support, should be preferred
-      expect(result.events[0].roster[0].member_id).toBe('bob')
+      expect(result.events[0].slots[0].member_id).toBe('bob')
     })
 
     it('should handle combined day and role preferences', () => {
@@ -557,7 +557,7 @@ describe('Roster Generator', () => {
           name: 'Saturday Service',
           date: '2026-02-01',
           day_of_week: 'Saturday',
-          roster: [
+          slots: [
             { role: 'support', member_id: null }
           ]
         }
@@ -578,7 +578,7 @@ describe('Roster Generator', () => {
 
       // Alice has both day (Saturday) and role (support) preferences
       // She should be strongly preferred with combined preference bonus
-      expect(result.events[0].roster[0].member_id).toBe('alice')
+      expect(result.events[0].slots[0].member_id).toBe('alice')
     })
   })
 
@@ -598,7 +598,7 @@ describe('Roster Generator', () => {
       )
 
       expect(typeof result.quality).toBe('number')
-      expect(result.events[0].roster[0].member_id).toBeTruthy()
+      expect(result.events[0].slots[0].member_id).toBeTruthy()
     })
 
     it('should produce deterministic results with same input', () => {
@@ -707,7 +707,7 @@ describe('Roster Generator', () => {
         const d = new Date(event.date)
         const weekKey = `${d.getFullYear()}-W${Math.floor(d.getTime() / (7 * 864e5))}`
         perWeek[weekKey] = perWeek[weekKey] || []
-        event.roster.forEach(r => { if (r.member_id) perWeek[weekKey].push(r.member_id) })
+        event.slots.forEach(r => { if (r.member_id) perWeek[weekKey].push(r.member_id) })
       })
       Object.values(perWeek).forEach(ids => {
         expect(new Set(ids).size).toBe(ids.length)
@@ -725,7 +725,7 @@ describe('Roster Generator', () => {
       )
 
       result.events.forEach(event => {
-        event.roster.forEach(r => {
+        event.slots.forEach(r => {
           if (r.member_id) {
             expect(byId[r.member_id].roles).toContain(r.role)
           }
@@ -757,8 +757,8 @@ describe('Roster Generator', () => {
         { id: 'ben', name: 'Ben', include: true, roles: ['vm'] },
       ]
       const events = [
-        { name: 'S1', date: '2026-02-01', day_of_week: 'Sunday', reporting_time: '09:00', roster: [{ role: 'vm', member_id: null }] },
-        { name: 'S2', date: '2026-02-08', day_of_week: 'Sunday', reporting_time: '09:00', roster: [{ role: 'vm', member_id: null }] },
+        { name: 'S1', date: '2026-02-01', day_of_week: 'Sunday', reporting_time: '09:00', slots: [{ role: 'vm', member_id: null }] },
+        { name: 'S2', date: '2026-02-08', day_of_week: 'Sunday', reporting_time: '09:00', slots: [{ role: 'vm', member_id: null }] },
       ]
       const constraints = {
         [CONSTRAINT_KEYS.ENFORCE_MEMBER_ROLES]: true,
@@ -775,8 +775,8 @@ describe('Roster Generator', () => {
         constraints, preferences, rosterPeriod
       )
 
-      const first = result.events[0].roster[0].member_id
-      const second = result.events[1].roster[0].member_id
+      const first = result.events[0].slots[0].member_id
+      const second = result.events[1].slots[0].member_id
       expect(first).toBeTruthy()
       expect(second).toBeTruthy()
       expect(first).not.toBe(second)

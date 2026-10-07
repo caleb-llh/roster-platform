@@ -25,6 +25,26 @@ The spec is authoritative:
 - When code and the spec disagree, that is a bug in one of them — reconcile it,
   don't ignore it.
 
+**Binding specs are timeless.** A binding spec (every file in [`specs/`](specs/)
+that is *not* a `*.plan.md`) describes the system in **present tense, as it is**.
+It carries no status or sequencing framing — no "Phase 2 landed", "not yet
+built", "IN PROGRESS", "step N of the overhaul", "was moved / now removed", and
+no status blockquote. That framing rots the moment work moves and turns a spec
+into a migration narrative. Instead:
+
+- **Unbuilt / sequenced work** lives in a `*.plan.md` — that is what plan docs
+  are for.
+- **Completed migration records** live in [`specs/history/`](specs/history/),
+  clearly labelled non-binding, kept for the *why*.
+- **When a plan or phase lands**, fold its decisions into the owning spec as
+  plain present-tense behaviour and let the sequencing drop away. A plan doc
+  retires by folding its durable parts into the owning spec and deleting itself.
+
+Describing genuine *future product* intent ("a bot write-path is foreshadowed",
+"the tenant-scoped model") is fine — that is design, not refactor bookkeeping.
+The algorithm's own runtime pipeline phases (generation Phase 0/0.5/1/2) are
+timeless behaviour, not sequencing.
+
 ## The feedback loop (mandatory)
 
 Every bug fix or feature MUST close this loop **within the same change**:

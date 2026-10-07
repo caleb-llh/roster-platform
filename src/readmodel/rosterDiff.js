@@ -4,7 +4,7 @@
  * to answer "who is affected?" before the draft is saved.
  *
  * The comparison is positional per event/slot, matching the data structure
- * (`event.roster` is a positional array — see specs/data-layer.md). A slot
+ * (`event.slots` is a positional array — see specs/data-layer.md). A slot
  * is identified by `(event.date, roleIndex)`. We report, per slot, one of:
  *   - 'added'    : slot exists in draft but not in committed (role requirement added)
  *   - 'removed'  : slot exists in committed but not in draft (role requirement removed)
@@ -47,16 +47,16 @@ export function computeRosterDiff(committed, draft) {
   const bump = (map, id) => { if (id) map.set(id, (map.get(id) || 0) + 1) }
 
   // Tally committed occupants.
-  committedEvents.forEach(e => (e.roster || []).forEach(s => bump(beforeCounts, s.member_id)))
-  draftEvents.forEach(e => (e.roster || []).forEach(s => bump(afterCounts, s.member_id)))
+  committedEvents.forEach(e => (e.slots || []).forEach(s => bump(beforeCounts, s.member_id)))
+  draftEvents.forEach(e => (e.slots || []).forEach(s => bump(afterCounts, s.member_id)))
 
   // Walk the union of event dates.
   const allDates = new Set([...committedByDate.keys(), ...draftByDate.keys()])
   for (const date of allDates) {
     const cEvent = committedByDate.get(date)
     const dEvent = draftByDate.get(date)
-    const cRoster = cEvent?.roster || []
-    const dRoster = dEvent?.roster || []
+    const cRoster = cEvent?.slots || []
+    const dRoster = dEvent?.slots || []
     const name = dEvent?.name ?? cEvent?.name ?? ''
     const maxLen = Math.max(cRoster.length, dRoster.length)
 

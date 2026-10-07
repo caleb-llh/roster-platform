@@ -27,7 +27,7 @@ describe('Promotion planning (Phase 0.5)', () => {
     date,
     day_of_week: day,
     reporting_time: '09:00',
-    roster: roles.map(role => ({ role, member_id: null })),
+    slots: roles.map(role => ({ role, member_id: null })),
   })
 
   it('promotes a trainee even when ordinary slots would exhaust their monthly cap', () => {
@@ -53,10 +53,10 @@ describe('Promotion planning (Phase 0.5)', () => {
     )
 
     // Dana understudied in week 1...
-    const understudy = result.events[0].roster.find(r => r.role === 'multi-vm-understudy')
+    const understudy = result.events[0].slots.find(r => r.role === 'multi-vm-understudy')
     expect(understudy.member_id).toBe('dana')
     // ...and is promoted into the real multi-vm in week 4 despite the monthly cap.
-    const promotion = result.events[3].roster.find(r => r.role === 'multi-vm')
+    const promotion = result.events[3].slots.find(r => r.role === 'multi-vm')
     expect(promotion.member_id).toBe('dana')
     // The pin flag is transient and must not leak into the output.
     expect(promotion._pinnedPromotion).toBeUndefined()
@@ -84,7 +84,7 @@ describe('Promotion planning (Phase 0.5)', () => {
 
     const performers = result.events
       .filter(e => e.date >= '2026-04-01')
-      .map(e => e.roster.find(r => r.role === 'multi-vm')?.member_id)
+      .map(e => e.slots.find(r => r.role === 'multi-vm')?.member_id)
       .filter(Boolean)
 
     // Both trainees perform the real role (order not important).
